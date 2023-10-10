@@ -11,7 +11,15 @@ void generate_sine_wave(float* buffer, int freq, int length) {
   }
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+  if(argc < 3) {
+    fprintf(stderr, "Usage: %s <speaker-device-name> <bluetooth-device-name>\n", argv[0]);
+    return 1;
+  }
+  
+  const char *speaker_device_name = argv[1];
+  const char *bluetooth_device_name = argv[2];
+  
   static const pa_sample_spec ss = {
     .format = PA_SAMPLE_FLOAT32,
     .rate = SAMPLE_RATE,
@@ -22,12 +30,12 @@ int main() {
   int ret = 1;
   int error;
 
-  if (!(s_speaker = pa_simple_new(NULL, "Speaker", PA_STREAM_PLAYBACK, "alsa_output.pci-0000_00_1f.3.analog-stereo", "Playback", &ss, NULL, NULL, &error))) {
+  if (!(s_speaker = pa_simple_new(NULL, "Speaker", PA_STREAM_PLAYBACK, speaker_device_name, "Playback", &ss, NULL, NULL, &error))) {
     fprintf(stderr, "PA Error: %s\n", pa_strerror(error));
     goto finish;
   }
 
-  if (!(s_bluetooth = pa_simple_new(NULL, "Bluetooth", PA_STREAM_PLAYBACK, "bluez_sink.98_D3_31_40_CD_46.a2dp_sink", "Playback", &ss, NULL, NULL, &error))) {
+  if (!(s_bluetooth = pa_simple_new(NULL, "Bluetooth", PA_STREAM_PLAYBACK, bluetooth_device_name, "Playback", &ss, NULL, NULL, &error))) {
     fprintf(stderr, "PA Error: %s\n", pa_strerror(error));
     goto finish;
   }
