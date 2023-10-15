@@ -3,17 +3,9 @@
 #include <alsa/asoundlib.h>
 #include <math.h>
 
-int initialize_params (snd_pcm_t *pcm) {
-  return snd_pcm_set_params(pcm,
-                            SND_PCM_FORMAT_U16_LE,
-                            SND_PCM_ACCESS_RW_INTERLEAVED,
-                            1,
-                            44100,
-                            0, //no resampling
-                            1000); // latency 1ms
-}
-
 char *device = "plughw:CARD=PCH,DEV=0";            /* playback device */
+
+
 int main(void)
 {
   int err;
@@ -25,37 +17,58 @@ int main(void)
     printf("Playback open error!: %s\n", snd_strerror(err));
     return -1;
   }
-  err = snd_pcm_set_params(handle,
-                           SND_PCM_FORMAT_U16_LE,
-                           SND_PCM_ACCESS_RW_INTERLEAVED,
-                           1,
-                           44100,
-                           0, //no resampling
-                           1000); //1ms
+
+  snd_pcm_hw_params_t *hw_params;
+  snd_pcm_hw_params_malloc(&hw_params);
+  snd_pcm_hw_params_any(handle, hw_params);
+  snd_pcm_hw_params_set_access(handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
+  snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_U16_LE);
+  snd_pcm_hw_params_set_rate(handle, hw_params, 44100, 0);
+  snd_pcm_hw_params_set_channels(handle, hw_params, 1);
+  buffer_size = 256;
+  snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, &buffer_size);
+  period_size = 128;
+  snd_pcm_hw_params_set_period_size_near(handle, hw_params, &period_size, 0);
+  snd_pcm_hw_params(handle, hw_params);
+  snd_pcm_hw_params_free(hw_params);
+  
   if (err < 0) {   /* 0.5sec */
     printf("Playback open error: %s\n", snd_strerror(err));
     exit(EXIT_FAILURE);
   }
- 
+  
   snd_pcm_get_params(handle, &buffer_size, &period_size);
   printf("frames %ld, period size %ld\n", buffer_size, period_size);
   
   //generate sin
-  unsigned int length = 44100 * 10;
-  uint16_t buffer[length];
-  for (unsigned int i = 0; i < length; ++i) {
-    buffer[i] = (uint16_t)(32767.5 + 32767.5 * sin(2 * M_PI * 440 * i / 44100));
-  }
-  err = snd_pcm_writei(handle, buffer, length);
-  if (err == -EPIPE) {
-    printf("Underrun occurred: %s\n", snd_strerror(err));
-  } else if (err < 0) {
-    printf("error %s\n", snd_strerror(err));
+
+  double phase = 0;
+  while (1) {
+    unsigned short buffer[period_size];
+    for (unsigned int i = 0; i < period_size; ++i) {
+      phase += (2.0 * M_PI * 100.0 / 44100.0);
+      buffer[i] = (unsigned short)(32767.5 + 32767.5 * sin(phase));
+      if (phase >= 2.0 * M_PI) {
+        phase -= 2.0 * M_PI;
+      }
+    }
+
+    err = snd_pcm_writei(handle, buffer, period_size);
+    if (err == -EPIPE) {
+      printf("Underrun occurred: %s\n", snd_strerror(err));
+      snd_pcm_prepare(handle);
+    } else if (err == -EAGAIN) {
+    } else if (err < 0) {
+      printf("error %s\n", snd_strerror(err));
+      goto cleanup;
+    }
   }
   
+ cleanup:
   err = snd_pcm_drain(handle);
   if (err < 0)
     printf("snd_pcm_drain failed: %s\n", snd_strerror(err));
   snd_pcm_close(handle);
+  printf("closed\n");
   return 0;
 }
