@@ -1,4 +1,4 @@
-LDFLAGS = -lpulse -lpulse-simple -lm
+LDFLAGS = -lasound -lm
 CFLAGS = -Wall
 
 all: main.c
