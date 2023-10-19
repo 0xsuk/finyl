@@ -3,11 +3,37 @@
 #include <alsa/asoundlib.h>
 #include <math.h>
 
-char *device = "plughw:CARD=PCH,DEV=0";            /* playback device */
+char* device = "plughw:CARD=PCH,DEV=0";            /* playback device */
 
+#define maximum_chunks  32
+#define chunk_size 2097152 //(2048 * 1024);
 
-int main(void)
-{
+struct track {
+  unsigned short* chunks[maximum_chunks];
+  int nchunks;
+  double index;
+  double speed;
+  track* nil;
+  
+  unsigned short get_sample() {
+    int position = floor(this->index);
+    int ichunk = floor(position / chunk_size);
+    int isample = position - (chunk_size * ichunk);
+    unsigned short* chunk = this->chunks[ichunk];
+    return chunk[isample];
+  }
+
+  void reset_index() {
+    this->index = 0;
+  }
+};
+
+unsigned short* make_chunk() {
+  unsigned short chunk[chunk_size];
+  return chunk;
+}
+
+int start_alsa() {
   int err;
   snd_pcm_t *handle;
   snd_pcm_uframes_t buffer_size;
@@ -25,9 +51,9 @@ int main(void)
   snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_U16_LE);
   snd_pcm_hw_params_set_rate(handle, hw_params, 44100, 0);
   snd_pcm_hw_params_set_channels(handle, hw_params, 1);
-  buffer_size = 256;
+  buffer_size = 64;
   snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, &buffer_size);
-  period_size = 128;
+  period_size = 32;
   snd_pcm_hw_params_set_period_size_near(handle, hw_params, &period_size, 0);
   snd_pcm_hw_params(handle, hw_params);
   snd_pcm_hw_params_free(hw_params);
@@ -46,7 +72,7 @@ int main(void)
   while (1) {
     unsigned short buffer[period_size];
     for (unsigned int i = 0; i < period_size; ++i) {
-      phase += (2.0 * M_PI * 100.0 / 44100.0);
+      phase += (2.0 * M_PI * 440.0 / 44100.0);
       buffer[i] = (unsigned short)(32767.5 + 32767.5 * sin(phase));
       if (phase >= 2.0 * M_PI) {
         phase -= 2.0 * M_PI;
@@ -70,5 +96,11 @@ int main(void)
     printf("snd_pcm_drain failed: %s\n", snd_strerror(err));
   snd_pcm_close(handle);
   printf("closed\n");
+  return 0;
+}
+
+
+int main() {
+  printf("end of stream\n");
   return 0;
 }
