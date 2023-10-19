@@ -8,28 +8,37 @@ char* device = "plughw:CARD=PCH,DEV=0";            /* playback device */
 #define maximum_chunks  32
 #define chunk_size 2097152 //(2048 * 1024);
 
-struct track {
+typedef struct {
   unsigned short* chunks[maximum_chunks];
   int nchunks;
   double index;
   double speed;
-  track* nil;
-  
-  unsigned short get_sample() {
-    int position = floor(this->index);
-    int ichunk = floor(position / chunk_size);
-    int isample = position - (chunk_size * ichunk);
-    unsigned short* chunk = this->chunks[ichunk];
-    return chunk[isample];
-  }
+  struct track* next;
+} track;
 
-  void reset_index() {
-    this->index = 0;
-  }
-};
+void init_track(track* t) {
+  t->nchunks = 0;
+  t->index = 0;
+  t->speed = 0;
+  t->next = NULL;
+}
+
+unsigned short get_sample(track* t) {
+  int position = floor(t->index);
+  int ichunk = position / chunk_size;
+  int isample = position - (chunk_size * ichunk);
+  unsigned short* chunk = t->chunks[ichunk];
+  return chunk[isample];
+}
+
+void reset_index(track* t) {
+  t->index = 0;
+}
+
 
 unsigned short* make_chunk() {
-  unsigned short chunk[chunk_size];
+  unsigned short *chunk = malloc(chunk_size * sizeof(unsigned short));
+  if (chunk == NULL) return NULL;
   return chunk;
 }
 
