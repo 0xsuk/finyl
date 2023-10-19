@@ -3,7 +3,9 @@
 #include <alsa/asoundlib.h>
 #include <math.h>
 
-char* device = "plughw:CARD=PCH,DEV=0";            /* playback device */
+/* sysdefault:CARD=XDJRX */
+char* device = "sysdefault:CARD=PCH";
+/* char* device = "plughw:CARD=PCH,DEV=0";            /\* playback device *\/ */
 
 #define maximum_chunks  32
 #define chunk_size 2097152 //(2048 * 1024);
@@ -83,7 +85,25 @@ void read_file(char* filename, track* t) {
   pclose(fp);
 }
 
-int start_alsa() {
+void setup_alsa_params(snd_pcm_t *handle, snd_pcm_uframes_t *buffer_size, snd_pcm_uframes_t *period_size) {
+  snd_pcm_hw_params_t *hw_params;
+  snd_pcm_hw_params_malloc(&hw_params);
+  snd_pcm_hw_params_any(handle, hw_params);
+  snd_pcm_hw_params_set_access(handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
+  snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_U16_LE);
+  snd_pcm_hw_params_set_rate(handle, hw_params, 44100, 0);
+  snd_pcm_hw_params_set_channels(handle, hw_params, 1);
+  *buffer_size = 64;
+  snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, buffer_size);
+  *period_size = 32;
+  snd_pcm_hw_params_set_period_size_near(handle, hw_params, period_size, 0);
+  snd_pcm_hw_params(handle, hw_params);
+  snd_pcm_hw_params_free(hw_params);
+  
+  snd_pcm_get_params(handle, buffer_size, period_size);
+}
+
+int setup_alsa() {
   int err;
   snd_pcm_t *handle;
   snd_pcm_uframes_t buffer_size;
@@ -93,27 +113,9 @@ int start_alsa() {
     printf("Playback open error!: %s\n", snd_strerror(err));
     return -1;
   }
-
-  snd_pcm_hw_params_t *hw_params;
-  snd_pcm_hw_params_malloc(&hw_params);
-  snd_pcm_hw_params_any(handle, hw_params);
-  snd_pcm_hw_params_set_access(handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
-  snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_U16_LE);
-  snd_pcm_hw_params_set_rate(handle, hw_params, 44100, 0);
-  snd_pcm_hw_params_set_channels(handle, hw_params, 1);
-  buffer_size = 64;
-  snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, &buffer_size);
-  period_size = 32;
-  snd_pcm_hw_params_set_period_size_near(handle, hw_params, &period_size, 0);
-  snd_pcm_hw_params(handle, hw_params);
-  snd_pcm_hw_params_free(hw_params);
   
-  if (err < 0) {   /* 0.5sec */
-    printf("Playback open error: %s\n", snd_strerror(err));
-    exit(EXIT_FAILURE);
-  }
+  setup_alsa_params(handle, &buffer_size, &period_size);
   
-  snd_pcm_get_params(handle, &buffer_size, &period_size);
   printf("frames %ld, period size %ld\n", buffer_size, period_size);
   
   //generate sin
@@ -149,11 +151,11 @@ int start_alsa() {
   return 0;
 }
 
-
 int main() {
   track t;
   init_track(&t);
-  read_file("evis.mp3", &t);
+  /* read_file("evis.mp3", &t); */
+  setup_alsa();
   printf("end of stream\n");
   return 0;
 }
