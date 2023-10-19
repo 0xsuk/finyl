@@ -18,6 +18,9 @@ typedef struct {
   double speed;
 } track;
 
+track left_track;
+track right_track;
+
 void init_track(track* t) {
   t->nchunks = 0;
   t->length = 0;
@@ -47,25 +50,25 @@ void reset_index(track* t) {
 }
 
 unsigned short* make_chunk() {
-  unsigned short *chunk = malloc(chunk_size * sizeof(unsigned short));
+  unsigned short* chunk = malloc(chunk_size * sizeof(unsigned short));
   if (chunk == NULL) return NULL;
   return chunk;
 }
 
-void read_file(char* filename, track* t) {
-  FILE *fp;
+FILE* open_pcm_stream(char* filename) {
   char command[256];
   snprintf(command, sizeof(command), "ffmpeg -i %s -f u16le -ar 44100 -ac 1 -", filename);
-
-  
-  unsigned short *chunk = make_chunk();
-  
-  fp = popen(command, "r");
+  FILE* fp = popen(command, "r");
   if (fp == NULL) {
     printf("popen failed\n");
     exit(1);
   }
-  
+
+  return fp;
+}
+
+void read_pcm(FILE* fp, track* t) {
+  unsigned short* chunk = make_chunk();
   while (1) {
     unsigned long count = fread(chunk, sizeof(unsigned short), chunk_size, fp);
     t->chunks[t->nchunks] = chunk;
@@ -83,46 +86,34 @@ void read_file(char* filename, track* t) {
   }
   
   _print_track(t);
+}
+
+void read_file(char* filename, track* t) {
+  FILE* fp = open_pcm_stream(filename);
+  read_pcm(fp, t);
   pclose(fp);
 }
 
-void setup_alsa_params(snd_pcm_t *handle, snd_pcm_uframes_t *buffer_size, snd_pcm_uframes_t *period_size) {
-  snd_pcm_hw_params_t *hw_params;
+void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
+  snd_pcm_hw_params_t* hw_params;
   snd_pcm_hw_params_malloc(&hw_params);
   snd_pcm_hw_params_any(handle, hw_params);
   snd_pcm_hw_params_set_access(handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
   snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_U16_LE);
   snd_pcm_hw_params_set_rate(handle, hw_params, 44100, 0);
   snd_pcm_hw_params_set_channels(handle, hw_params, 1);
-  *buffer_size = 512;
   snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, buffer_size);
-  *period_size = 256;
   snd_pcm_hw_params_set_period_size_near(handle, hw_params, period_size, 0);
   snd_pcm_hw_params(handle, hw_params);
   snd_pcm_hw_params_free(hw_params);
-  
   snd_pcm_get_params(handle, buffer_size, period_size);
 }
 
-int setup_alsa(track *t) {
-  int err;
-  snd_pcm_t *handle;
-  snd_pcm_uframes_t buffer_size;
-  snd_pcm_uframes_t period_size;
-  
-  if ((err = snd_pcm_open(&handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
-    printf("Playback open error!: %s\n", snd_strerror(err));
-    return -1;
-  }
-  
-  setup_alsa_params(handle, &buffer_size, &period_size);
-  
-  printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
-  
+void run(track* t, snd_pcm_t* handle, snd_pcm_uframes_t period_size) {
   t->speed = 1;
-  
+  int err = 0;
+  unsigned short buffer[period_size];
   while (1) {
-    unsigned short buffer[period_size];
     for (unsigned int i = 0; i < period_size; ++i) {
       buffer[i] = get_sample(t);
       t->index = t->index + t->speed;
@@ -148,14 +139,31 @@ int setup_alsa(track *t) {
     printf("snd_pcm_drain failed: %s\n", snd_strerror(err));
   snd_pcm_close(handle);
   printf("closed\n");
-  return 0;
 }
 
-int main() {
+void setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
+  int err;
+  if ((err = snd_pcm_open(handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+    printf("Playback open error!: %s\n", snd_strerror(err));
+    exit(1);
+  }
+  setup_alsa_params(*handle, buffer_size, period_size);
+  printf("buffer_size %ld, period_size %ld\n", *buffer_size, *period_size);
+}
+
+int main(int argc, char** argv) {
+  if (argc != 2) {
+    printf("Usage: ./final filename\n");
+    exit(0);
+  }
   track t;
+  snd_pcm_t* handle;
+  snd_pcm_uframes_t buffer_size = 512;
+  snd_pcm_uframes_t period_size = 256;
+  setup_alsa(&handle, &buffer_size, &period_size);
+  printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
   init_track(&t);
-  read_file("702.mp3", &t);
-  setup_alsa(&t);
-  printf("end of stream\n");
+  read_file(argv[1], &t);
+  run(&t, handle, period_size);
   return 0;
 }
