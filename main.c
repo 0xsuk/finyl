@@ -23,6 +23,15 @@ void init_track(track* t) {
   t->next = NULL;
 }
 
+void _print_track(track* t) {
+  printf("track{\n");
+  printf("\tnchunks: %d\n", t->nchunks);
+  printf("\tindex: %lf\n", t->index);
+  printf("\tspeed: %lf\n", t->speed);
+  printf("\tnext: %p\n", t->next);
+  printf("}\n");
+}
+
 unsigned short get_sample(track* t) {
   int position = floor(t->index);
   int ichunk = position / chunk_size;
@@ -35,11 +44,43 @@ void reset_index(track* t) {
   t->index = 0;
 }
 
-
 unsigned short* make_chunk() {
   unsigned short *chunk = malloc(chunk_size * sizeof(unsigned short));
   if (chunk == NULL) return NULL;
   return chunk;
+}
+
+void read_file(char* filename, track* t) {
+  FILE *fp;
+  char command[256];
+  snprintf(command, sizeof(command), "ffmpeg -i %s -f u16be -ar 44100 -ac 1 -", filename);
+
+  
+  unsigned short *chunk = make_chunk();
+  
+  fp = popen(command, "r");
+  if (fp == NULL) {
+    printf("popen failed\n");
+    exit(1);
+  }
+  
+  while (1) {
+    unsigned long count = fread(chunk, sizeof(unsigned short), chunk_size, fp);
+    t->chunks[t->nchunks] = chunk;
+    t->nchunks++;
+    if (count < chunk_size) {
+      break;
+    }
+    if (t->nchunks == maximum_chunks) {
+      printf("File is too large");
+      break;
+    }
+    chunk = make_chunk();
+    /* fwrite(path, 1, 1, stdout); */
+  }
+  
+  _print_track(t);
+  pclose(fp);
 }
 
 int start_alsa() {
@@ -87,7 +128,7 @@ int start_alsa() {
         phase -= 2.0 * M_PI;
       }
     }
-
+    
     err = snd_pcm_writei(handle, buffer, period_size);
     if (err == -EPIPE) {
       printf("Underrun occurred: %s\n", snd_strerror(err));
@@ -110,6 +151,9 @@ int start_alsa() {
 
 
 int main() {
+  track t;
+  init_track(&t);
+  read_file("evis.mp3", &t);
   printf("end of stream\n");
   return 0;
 }
