@@ -4,8 +4,8 @@
 #include <math.h>
 
 /* sysdefault:CARD=XDJRX */
-char* device = "sysdefault:CARD=PCH";
-/* char* device = "plughw:CARD=PCH,DEV=0";            /\* playback device *\/ */
+/* char* device = "sysdefault:CARD=PCH"; */
+char* device = "plughw:CARD=PCH,DEV=0";            /* playback device */
 
 #define maximum_chunks  32
 #define chunk_size 2097152 //(2048 * 1024);
@@ -13,24 +13,24 @@ char* device = "sysdefault:CARD=PCH";
 typedef struct {
   unsigned short* chunks[maximum_chunks];
   int nchunks;
+  int length;
   double index;
   double speed;
-  struct track* next;
 } track;
 
 void init_track(track* t) {
   t->nchunks = 0;
+  t->length = 0;
   t->index = 0;
   t->speed = 0;
-  t->next = NULL;
 }
 
 void _print_track(track* t) {
-  printf("track{\n");
+  printf("track {\n");
   printf("\tnchunks: %d\n", t->nchunks);
+  printf("\tlength: %d\n", t->length);
   printf("\tindex: %lf\n", t->index);
   printf("\tspeed: %lf\n", t->speed);
-  printf("\tnext: %p\n", t->next);
   printf("}\n");
 }
 
@@ -55,7 +55,7 @@ unsigned short* make_chunk() {
 void read_file(char* filename, track* t) {
   FILE *fp;
   char command[256];
-  snprintf(command, sizeof(command), "ffmpeg -i %s -f u16be -ar 44100 -ac 1 -", filename);
+  snprintf(command, sizeof(command), "ffmpeg -i %s -f u16le -ar 44100 -ac 1 -", filename);
 
   
   unsigned short *chunk = make_chunk();
@@ -70,6 +70,7 @@ void read_file(char* filename, track* t) {
     unsigned long count = fread(chunk, sizeof(unsigned short), chunk_size, fp);
     t->chunks[t->nchunks] = chunk;
     t->nchunks++;
+    t->length += count;
     if (count < chunk_size) {
       break;
     }
@@ -93,9 +94,9 @@ void setup_alsa_params(snd_pcm_t *handle, snd_pcm_uframes_t *buffer_size, snd_pc
   snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_U16_LE);
   snd_pcm_hw_params_set_rate(handle, hw_params, 44100, 0);
   snd_pcm_hw_params_set_channels(handle, hw_params, 1);
-  *buffer_size = 64;
+  *buffer_size = 512;
   snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, buffer_size);
-  *period_size = 32;
+  *period_size = 256;
   snd_pcm_hw_params_set_period_size_near(handle, hw_params, period_size, 0);
   snd_pcm_hw_params(handle, hw_params);
   snd_pcm_hw_params_free(hw_params);
@@ -103,7 +104,7 @@ void setup_alsa_params(snd_pcm_t *handle, snd_pcm_uframes_t *buffer_size, snd_pc
   snd_pcm_get_params(handle, buffer_size, period_size);
 }
 
-int setup_alsa() {
+int setup_alsa(track *t) {
   int err;
   snd_pcm_t *handle;
   snd_pcm_uframes_t buffer_size;
@@ -116,18 +117,17 @@ int setup_alsa() {
   
   setup_alsa_params(handle, &buffer_size, &period_size);
   
-  printf("frames %ld, period size %ld\n", buffer_size, period_size);
+  printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
   
-  //generate sin
-
-  double phase = 0;
+  t->speed = 1;
+  
   while (1) {
     unsigned short buffer[period_size];
     for (unsigned int i = 0; i < period_size; ++i) {
-      phase += (2.0 * M_PI * 440.0 / 44100.0);
-      buffer[i] = (unsigned short)(32767.5 + 32767.5 * sin(phase));
-      if (phase >= 2.0 * M_PI) {
-        phase -= 2.0 * M_PI;
+      buffer[i] = get_sample(t);
+      t->index = t->index + t->speed;
+      if (t->index >= t->length) {
+        reset_index(t);
       }
     }
     
@@ -154,8 +154,8 @@ int setup_alsa() {
 int main() {
   track t;
   init_track(&t);
-  /* read_file("evis.mp3", &t); */
-  setup_alsa();
+  read_file("702.mp3", &t);
+  setup_alsa(&t);
   printf("end of stream\n");
   return 0;
 }
