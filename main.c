@@ -2,6 +2,7 @@
 
 #include <alsa/asoundlib.h>
 #include <math.h>
+#include <stdbool.h>
 
 /* sysdefault:CARD=XDJRX */
 /* char* device = "sysdefault:CARD=PCH"; */
@@ -101,7 +102,7 @@ void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pc
   snd_pcm_hw_params_set_access(handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
   snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_U16_LE);
   snd_pcm_hw_params_set_rate(handle, hw_params, 44100, 0);
-  snd_pcm_hw_params_set_channels(handle, hw_params, 1);
+  snd_pcm_hw_params_set_channels(handle, hw_params, 2); // each channel for each track
   snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, buffer_size);
   snd_pcm_hw_params_set_period_size_near(handle, hw_params, period_size, 0);
   snd_pcm_hw_params(handle, hw_params);
@@ -112,10 +113,11 @@ void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pc
 void run(track* t, snd_pcm_t* handle, snd_pcm_uframes_t period_size) {
   t->speed = 1;
   int err = 0;
-  unsigned short buffer[period_size];
+  unsigned short buffer[period_size*2];
   while (1) {
-    for (unsigned int i = 0; i < period_size; ++i) {
-      buffer[i] = get_sample(t);
+    for (unsigned int i = 0; i < period_size*2; i=i+2) {
+      buffer[i] = 0;
+      buffer[i+1] = get_sample(t);
       t->index = t->index + t->speed;
       if (t->index >= t->length) {
         reset_index(t);
