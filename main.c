@@ -3,16 +3,27 @@
 #include <alsa/asoundlib.h>
 #include <math.h>
 #include <stdbool.h>
+#include <pigpio.h>
 
 /* sysdefault:CARD=XDJRX */
 /* char* device = "sysdefault:CARD=PCH"; */
-char* device = "plughw:CARD=PCH,DEV=0";            /* playback device */
+char* device = "hw:CARD=Headphones,DEV=0";            /* playback device */
 
 #define maximum_chunks  32
 #define chunk_size 2097152 //(2048 * 1024);
+#define AS5600_I2C_ADDR 0x36
+
+//angle is 0 to 4095
+//duration delta is the same as period of snd_pcm_writei, meaning duration between each snd_pcm_writei is the duration delta
+//Song plays at the normal speed, when record spins at the normal speed. (Note record's normal spin speed is irrelevant to the original bpm of the song)
+/* int d_std_angle = 10; //for duration delta, angle change is normally 10. If so, song plays at the original speed. If delta angle is less than d_std_angle, song is playing slow */
+double samples_per_angle = 10; // number of samples that corresponds to 1 angle, when record spins at the normal speed. 22 = 44100 / 2000, angle change per sec is 2000
+int left_sensor = 0;
+int left_angle = 0;
+int right_sensor = 0;
 
 typedef struct {
-  unsigned short* chunks[maximum_chunks];
+  signed short* chunks[maximum_chunks];
   int nchunks;
   int length;
   double index;
@@ -38,11 +49,11 @@ void _print_track(track* t) {
   printf("}\n");
 }
 
-unsigned short get_sample(track* t) {
+signed short get_sample(track* t) {
   int position = floor(t->index);
   int ichunk = position / chunk_size;
   int isample = position - (chunk_size * ichunk);
-  unsigned short* chunk = t->chunks[ichunk];
+  signed short* chunk = t->chunks[ichunk];
   return chunk[isample];
 }
 
@@ -50,15 +61,15 @@ void reset_index(track* t) {
   t->index = 0;
 }
 
-unsigned short* make_chunk() {
-  unsigned short* chunk = malloc(chunk_size * sizeof(unsigned short));
+signed short* make_chunk() {
+  signed short* chunk = malloc(chunk_size * sizeof(signed short));
   if (chunk == NULL) return NULL;
   return chunk;
 }
 
 FILE* open_pcm_stream(char* filename) {
   char command[256];
-  snprintf(command, sizeof(command), "ffmpeg -i %s -f u16le -ar 44100 -ac 1 -", filename);
+  snprintf(command, sizeof(command), "ffmpeg -i %s -f s16le -ar 44100 -ac 1 -", filename);
   FILE* fp = popen(command, "r");
   if (fp == NULL) {
     printf("popen failed\n");
@@ -69,9 +80,9 @@ FILE* open_pcm_stream(char* filename) {
 }
 
 void read_pcm(FILE* fp, track* t) {
-  unsigned short* chunk = make_chunk();
+  signed short* chunk = make_chunk();
   while (1) {
-    unsigned long count = fread(chunk, sizeof(unsigned short), chunk_size, fp);
+    signed long count = fread(chunk, sizeof(signed short), chunk_size, fp);
     t->chunks[t->nchunks] = chunk;
     t->nchunks++;
     t->length += count;
@@ -100,7 +111,7 @@ void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pc
   snd_pcm_hw_params_malloc(&hw_params);
   snd_pcm_hw_params_any(handle, hw_params);
   snd_pcm_hw_params_set_access(handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
-  snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_U16_LE);
+  snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_S16_LE);
   snd_pcm_hw_params_set_rate(handle, hw_params, 44100, 0);
   snd_pcm_hw_params_set_channels(handle, hw_params, 2); // each channel for each track
   snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, buffer_size);
@@ -113,7 +124,7 @@ void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pc
 void run(track* t, snd_pcm_t* handle, snd_pcm_uframes_t period_size) {
   t->speed = 1;
   int err = 0;
-  unsigned short buffer[period_size*2];
+  signed short buffer[period_size*2];
   while (1) {
     for (unsigned int i = 0; i < period_size*2; i=i+2) {
       buffer[i] = 0;
@@ -160,8 +171,8 @@ int main(int argc, char** argv) {
   }
   track t;
   snd_pcm_t* handle;
-  snd_pcm_uframes_t buffer_size = 512;
-  snd_pcm_uframes_t period_size = 256;
+  snd_pcm_uframes_t buffer_size = 1024 * 2;
+  snd_pcm_uframes_t period_size = 1024;
   setup_alsa(&handle, &buffer_size, &period_size);
   printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
   init_track(&t);
