@@ -121,15 +121,46 @@ void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pc
   snd_pcm_get_params(handle, buffer_size, period_size);
 }
 
+int read_angle() {
+  int high = i2cReadByteData(left_sensor, 0x0E);
+  int low = i2cReadByteData(left_sensor, 0x0F);
+  if (high < 0 || low < 0) {
+    fprintf(stderr, "Failed to read from as5600\n");
+    return -1;
+  }
+  int angle = (high << 8) | low; // 0 to 4095
+  printf("angle %d\n", angle);
+  return angle;
+}
+
 void run(track* t, snd_pcm_t* handle, snd_pcm_uframes_t period_size) {
   t->speed = 1;
   int err = 0;
   signed short buffer[period_size*2];
   while (1) {
-    for (unsigned int i = 0; i < period_size*2; i=i+2) {
+    int angle = read_angle();
+    if (angle < 0) {
+      break;
+    }
+    int delta_angle = angle - left_angle;
+    if (delta_angle > 2048) {
+      //if angle is like 4095 and left_angle = 0
+      delta_angle = delta_angle - 4096;
+    }
+    if (delta_angle < -2048) {
+      //if angle is like 0 and left_angle = 4095
+      delta_angle = delta_angle + 4096;
+    }
+    left_angle = angle;
+    double nsamples = samples_per_angle * delta_angle;
+    double delta_index = nsamples / period_size;
+    
+    printf("delta_index = %.10f\n", delta_index);
+    
+    for (signed int i = 0; i < period_size*2; i=i+2) {
       buffer[i] = 0;
       buffer[i+1] = get_sample(t);
-      t->index = t->index + t->speed;
+      t->index = t->index + delta_index;
       if (t->index >= t->length) {
         reset_index(t);
       }
@@ -164,7 +195,21 @@ void setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_ufra
   printf("buffer_size %ld, period_size %ld\n", *buffer_size, *period_size);
 }
 
+void init_sensor() {
+  if (gpioInitialise() < 0) {
+    fprintf(stderr, "Failed to initialize pigpio\n");
+    exit(1);
+  }
+  left_sensor = i2cOpen(1, AS5600_I2C_ADDR, 0);
+
+  if (left_sensor < 0) {
+    fprintf(stderr, "Failed to open i2c connection\n");
+    exit(1);
+  }
+}
+
 int main(int argc, char** argv) {
+  init_sensor();
   if (argc != 2) {
     printf("Usage: ./final filename\n");
     exit(0);
