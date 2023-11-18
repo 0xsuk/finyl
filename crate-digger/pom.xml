@@ -19,6 +19,16 @@
       <artifactId>crate-digger</artifactId>
       <version>0.1.6</version>
     </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.7.32</version> <!-- Use the latest version available -->
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.2.6</version> <!-- Use the latest version available -->
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -54,7 +64,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.3.3</version>
+        <version>3.2.0</version>
         <executions>
           <execution>
             <phase>package</phase>
