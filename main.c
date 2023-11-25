@@ -3,42 +3,47 @@
 #include <alsa/asoundlib.h>
 #include <math.h>
 #include <stdbool.h>
-#include <pigpio.h>
 
 /* sysdefault:CARD=XDJRX */
 /* char* device = "sysdefault:CARD=PCH"; */
-char* device = "hw:CARD=Headphones,DEV=0";            /* playback device */
+char* device = "default";            /* playback device */
 
 #define maximum_chunks  32
 #define chunk_size 2097152 //(2048 * 1024);
-#define AS5600_I2C_ADDR 0x36
 
-//angle is 0 to 4095
-//duration delta is the same as period of snd_pcm_writei, meaning duration between each snd_pcm_writei is the duration delta
-//Song plays at the normal speed, when record spins at the normal speed. (Note record's normal spin speed is irrelevant to the original bpm of the song)
-/* int d_std_angle = 10; //for duration delta, angle change is normally 10. If so, song plays at the original speed. If delta angle is less than d_std_angle, song is playing slow */
-double samples_per_angle = 10; // number of samples that corresponds to 1 angle, when record spins at the normal speed. 22 = 44100 / 2000, angle change per sec is 2000
-int left_sensor = 0;
-int left_angle = 0;
-int right_sensor = 0;
+typedef enum {
+  no_stem = 0, //normal track
+  two_stems, //vocal and inst track
+  three_stems, //vocal and inst and drum
+} stem;
 
+
+typedef signed short sample;
+typedef sample* chunks;
 typedef struct {
-  signed short* chunks[maximum_chunks];
-  int nchunks;
+  chunks std_channel[maximum_chunks]; //array of chunks, chunk is array of pcm
+  chunks voc_channel[maximum_chunks];
+  chunks inst_channel[maximum_chunks]; //include drum when two_stems
+  chunks drum_channel[maximum_chunks];
+  int nchunks; //the number of chunks in a channel
   int length;
   double index;
   double speed;
+  stem stem;
 } track;
 
 track left_track;
 track right_track;
 
 void init_track(track* t) {
+  t->stem = no_stem;
   t->nchunks = 0;
   t->length = 0;
   t->index = 0;
   t->speed = 0;
 }
+
+
 
 void _print_track(track* t) {
   printf("track {\n");
@@ -46,14 +51,15 @@ void _print_track(track* t) {
   printf("\tlength: %d\n", t->length);
   printf("\tindex: %lf\n", t->index);
   printf("\tspeed: %lf\n", t->speed);
+  printf("\tstem: %d\n", t->stem);
   printf("}\n");
 }
 
-signed short get_sample(track* t) {
+sample get_sample(track* t, chunks* channel) {
   int position = floor(t->index);
   int ichunk = position / chunk_size;
   int isample = position - (chunk_size * ichunk);
-  signed short* chunk = t->chunks[ichunk];
+  sample* chunk = channel[ichunk];
   return chunk[isample];
 }
 
@@ -61,15 +67,15 @@ void reset_index(track* t) {
   t->index = 0;
 }
 
-signed short* make_chunk() {
-  signed short* chunk = malloc(chunk_size * sizeof(signed short));
+sample* make_chunk() {
+  sample* chunk = malloc(chunk_size * sizeof(sample));
   if (chunk == NULL) return NULL;
   return chunk;
 }
 
 FILE* open_pcm_stream(char* filename) {
   char command[256];
-  snprintf(command, sizeof(command), "ffmpeg -i %s -f s16le -ar 44100 -ac 1 -", filename);
+  snprintf(command, sizeof(command), "ffmpeg -i %s -f s16le -ar 44100 -ac 1 -v quiet -", filename);
   FILE* fp = popen(command, "r");
   if (fp == NULL) {
     printf("popen failed\n");
@@ -79,31 +85,89 @@ FILE* open_pcm_stream(char* filename) {
   return fp;
 }
 
-void read_pcm(FILE* fp, track* t) {
-  signed short* chunk = make_chunk();
+void read_pcm(FILE* fp, int* nchunks, int* length, chunks* channel) {
+  sample* chunk = make_chunk();
   while (1) {
-    signed long count = fread(chunk, sizeof(signed short), chunk_size, fp);
-    t->chunks[t->nchunks] = chunk;
-    t->nchunks++;
-    t->length += count;
+    signed long count = fread(chunk, sizeof(sample), chunk_size, fp);
+    channel[*nchunks] = chunk;
+    (*nchunks)++;
+    *length += count;
     if (count < chunk_size) {
       break;
     }
-    if (t->nchunks == maximum_chunks) {
+    if (*nchunks == maximum_chunks) {
       printf("File is too large");
       break;
     }
     chunk = make_chunk();
     /* fwrite(path, 1, 1, stdout); */
   }
-  
-  _print_track(t);
 }
 
-void read_file(char* filename, track* t) {
-  FILE* fp = open_pcm_stream(filename);
-  read_pcm(fp, t);
-  pclose(fp);
+bool has_stems(char* filename) {
+  if (strstr(filename, "TODO")) {
+    return true;
+  }
+  return false;
+}
+
+int read_file(char* filename, track* t) {
+    t->stem = no_stem;
+    FILE* fp = open_pcm_stream(filename);
+    read_pcm(fp, &t->nchunks, &t->length, t->std_channel);
+    pclose(fp);
+    return 0;
+}
+
+void read_stem(char* filename, int* nchunks, int* length, chunks* channel) {
+  FILE* stem = open_pcm_stream(filename); //TODO fix filename
+  read_pcm(stem, nchunks, length, channel);
+  pclose(stem);
+}
+
+int read_two_stems(char* filename, track* t) {
+  t->stem = two_stems;
+  
+  read_stem(filename, &t->nchunks, &t->length, t->voc_channel);
+  
+  int inst_nchunks = 0;
+  int inst_length = 0;
+  read_stem(filename, &inst_nchunks, &inst_length, t->inst_channel);
+  if (!(inst_nchunks == t->nchunks && inst_length == t->nchunks)) {
+    printf("inst and voc has to be same length\n");
+    return -1;
+  }
+  return 0;
+}
+
+int read_three_stems(char* filename, track* t) {
+  t->stem = three_stems;
+      
+  read_stem(filename, &t->nchunks, &t->length, t->voc_channel);
+  
+  int inst_nchunks = 0;
+  int inst_length = 0;
+  read_stem(filename, &inst_nchunks, &inst_length, t->inst_channel);
+  if (!(inst_nchunks == t->nchunks && inst_length == t->nchunks)) {
+    printf("inst and voc has to be same length\n");
+    return -1;
+  }
+  int drum_nchunks = 0;
+  int drum_length = 0;
+  read_stem(filename, &drum_nchunks, &drum_length, t->drum_channel);
+  if (!(drum_nchunks == t->nchunks && drum_length == t->nchunks)) {
+    printf("drum and voc has to be same length\n");
+    return -1;
+  }
+  return 0;
+}
+
+void load_track(char* filename, track* t) {
+  //do matching to tell stem
+  init_track(t);
+  read_two_stems(filename, t);
+
+  _print_track(t);
 }
 
 void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
@@ -121,46 +185,26 @@ void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pc
   snd_pcm_get_params(handle, buffer_size, period_size);
 }
 
-int read_angle() {
-  int high = i2cReadByteData(left_sensor, 0x0E);
-  int low = i2cReadByteData(left_sensor, 0x0F);
-  if (high < 0 || low < 0) {
-    fprintf(stderr, "Failed to read from as5600\n");
-    return -1;
-  }
-  int angle = (high << 8) | low; // 0 to 4095
-  printf("angle %d\n", angle);
-  return angle;
-}
-
 void run(track* t, snd_pcm_t* handle, snd_pcm_uframes_t period_size) {
   t->speed = 1;
   int err = 0;
-  signed short buffer[period_size*2];
+  sample buffer[period_size*2];
   while (1) {
-    int angle = read_angle();
-    if (angle < 0) {
-      break;
-    }
-    int delta_angle = angle - left_angle;
-    if (delta_angle > 2048) {
-      //if angle is like 4095 and left_angle = 0
-      delta_angle = delta_angle - 4096;
-    }
-    if (delta_angle < -2048) {
-      //if angle is like 0 and left_angle = 4095
-      delta_angle = delta_angle + 4096;
-    }
-    left_angle = angle;
-    double nsamples = samples_per_angle * delta_angle;
-    double delta_index = nsamples / period_size;
-    
-    printf("delta_index = %.10f\n", delta_index);
-    
     for (signed int i = 0; i < period_size*2; i=i+2) {
       buffer[i] = 0;
-      buffer[i+1] = get_sample(t);
-      t->index = t->index + delta_index;
+      
+      sample smpl = 0;
+      
+      if (t->stem == no_stem) {
+        smpl = get_sample(t, t->std_channel);
+      } else {
+        sample voc = get_sample(t, t->voc_channel);
+        sample inst = get_sample(t, t->inst_channel);
+        
+        smpl = (voc + inst) / 2;
+      }
+      buffer[i+1] = smpl;
+      t->index = t->index + 1;
       if (t->index >= t->length) {
         reset_index(t);
       }
@@ -195,23 +239,9 @@ void setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_ufra
   printf("buffer_size %ld, period_size %ld\n", *buffer_size, *period_size);
 }
 
-void init_sensor() {
-  if (gpioInitialise() < 0) {
-    fprintf(stderr, "Failed to initialize pigpio\n");
-    exit(1);
-  }
-  left_sensor = i2cOpen(1, AS5600_I2C_ADDR, 0);
-
-  if (left_sensor < 0) {
-    fprintf(stderr, "Failed to open i2c connection\n");
-    exit(1);
-  }
-}
-
 int main(int argc, char** argv) {
-  init_sensor();
   if (argc != 2) {
-    printf("Usage: ./final filename\n");
+    printf("Usage: ./finyl filename\n");
     exit(0);
   }
   track t;
@@ -220,8 +250,7 @@ int main(int argc, char** argv) {
   snd_pcm_uframes_t period_size = 1024;
   setup_alsa(&handle, &buffer_size, &period_size);
   printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
-  init_track(&t);
-  read_file(argv[1], &t);
+  load_track(argv[1], &t);
   run(&t, handle, period_size);
   return 0;
 }

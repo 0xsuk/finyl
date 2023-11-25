@@ -1,0 +1,1 @@
+if filename has corresponding stem files, always load stems instead of original.

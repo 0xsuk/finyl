@@ -1,0 +1,29 @@
+- dj software for stem separeted (vocal and no_vocal for each track, for now) audio mixing.
+
+
+- use 2 mono to stereo cables
+  - mixed audio for headphone cue from one channel -> use stereo cable
+  - mixed audio for speaker from another channel -> use stereo cable
+  - computationally expensive
+  - no true stereo
+  - two track from one channel, headphone from other channel
+  
+(alternate choice might be
+- use audio mixer for
+  - controlling volume of each deck.
+  - headphone cueing: headphone cueing without audio mixer means PC have to stream raw audio for headphone and volumed audio for speaker. PC is basically has only two channel headphone jack, so each audio (raw and volumed) has to be mono.
+  - one track from one channel, other track from other channel
+)
+
+- plays 2 stems at the same time(same for play, cue, loop)
+- different effect sets for 2 stems (different for eq, filter)
+
+- support realtime stem separation using demucs
+- support ahead of time separated track loading.
+  - option 1: load audio file that contains stems as different channels
+    - less storage
+    - no standalone acapella, instrument file.
+  - option 2: load audio files, each for each stem.
+    - triple storage
+    - standalone acapella/inst
+  - (Choice)option 3 (1 and 2): Choose option 1 or 2 according to the file name
