@@ -1,3 +1,5 @@
 mvn clean install (sometimes error, ignore)
 mvn clean compile
 mvn exec:java (-q is optional)
+mvn clean package (builds jar)
+java -jar target/final-1.0-SNAPSHOT.jar
