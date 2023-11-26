@@ -1,0 +1,21 @@
+
+QM Vamp Plugins
+===============
+
+To Install
+==========
+
+This package contains plugins compiled for Linux on 64-bit processors.
+
+To install them, copy the following files:
+
+   qm-vamp-plugins.so
+   qm-vamp-plugins.cat
+   qm-vamp-plugins.n3
+
+to one of the following directories:
+
+   /usr/local/lib/vamp/
+   /usr/lib/vamp/
+   $HOME/vamp/
+
