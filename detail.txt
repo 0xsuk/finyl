@@ -1,1 +1,12 @@
-if filename has corresponding stem files, always load stems instead of original.
+- plays 2 stems at the same time(same for play, cue, loop)
+- different effect sets for 2 stems (different for eq, filter)
+
+- support realtime stem separation using demucs
+- support ahead of time separated track loading.
+  - option 1: load audio file that contains stems as different channels
+    - less storage
+    - no standalone acapella, instrument file.
+  - option 2: load audio files, each for each stem.
+    - triple storage
+    - standalone acapella/inst
+  - (Choice)option 3 (1 and 2): Choose option 1 or 2 according to the file name

@@ -1,5 +1,8 @@
-- dj software for stem separeted (vocal and no_vocal for each track, for now) audio mixing.
-
+- open source dj system
+- for realtime/ahead-of-time stem separeted (vocal and instrument for each track, for now. drums coming?) audio mixing.
+- portable. works on rasberry pi.
+- client/server architecture. Works independenty to GUI client
+- works with Rekordbox-exported USB
 
 - use 2 mono to stereo cables
   - mixed audio for headphone cue from one channel -> use stereo cable
@@ -15,15 +18,3 @@
   - one track from one channel, other track from other channel
 )
 
-- plays 2 stems at the same time(same for play, cue, loop)
-- different effect sets for 2 stems (different for eq, filter)
-
-- support realtime stem separation using demucs
-- support ahead of time separated track loading.
-  - option 1: load audio file that contains stems as different channels
-    - less storage
-    - no standalone acapella, instrument file.
-  - option 2: load audio files, each for each stem.
-    - triple storage
-    - standalone acapella/inst
-  - (Choice)option 3 (1 and 2): Choose option 1 or 2 according to the file name
