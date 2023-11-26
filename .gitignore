@@ -2,4 +2,5 @@
 /compile_commands.json
 /finyl
 /*.mp3
-/crate-digger/target/
+/crate-digger/target/*
+!/crate-digger/target/final-1.0-SNAPSHOT.jar
