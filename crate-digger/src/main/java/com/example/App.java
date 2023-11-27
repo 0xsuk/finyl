@@ -11,7 +11,7 @@ import java.util.*;
 class Out {
     private static ObjectMapper objm = new ObjectMapper();
     public String error = null;
-    public ArrayList<String> playlists = null;
+    public Map<Long, String> playlists = new HashMap<>();
     
     public Out() {
     }
@@ -33,7 +33,32 @@ public class App {
     // org.deepsymmetry.cratedigger.pdb.RekordboxAnlz$WavePreviewTag
     // org.deepsymmetry.cratedigger.pdb.RekordboxAnlz$CueTag
     // org.deepsymmetry.cratedigger.pdb.RekordboxAnlz$CueTag
-
+    static public File usb;
+    static public File pdb;
+    static public String op;
+    static public ArrayList<String> params;
+    static public Database database;
+    
+    public static void parseArgs(String[] args) {
+        must(args.length > 2);
+        usb = new File(args[0]);
+        if (!usb.exists()) {
+            outError("usb not found");
+        }
+        pdb = new File(usb, "/PIONEER/rekordbox/export.pdb");
+        if (!pdb.exists()) {
+            outError("pdb not found for this usb");
+        }
+        op = args[1];
+        if (args.length > 2) {
+            params = new ArrayList<>(Arrays.asList(Arrays.copyOfRange(args, 2, args.length)));
+        }
+        try {
+            database = new Database(pdb);
+        } catch (IOException e) {
+            outError("failed to read database");
+        }
+    }
     
     public static RekordboxAnlz.BeatGridTag findBeatGridTag(RekordboxAnlz anlz) {
         for (RekordboxAnlz.TaggedSection section : anlz.sections()) {
@@ -52,6 +77,7 @@ public class App {
     }
     
     public static void printBeatGridTag(RekordboxAnlz.BeatGridTag bgtag) {
+        
         System.out.println("lenBeats:" + bgtag.lenBeats());
     }
     
@@ -103,11 +129,25 @@ public class App {
         return entries;
     }
     
-    public static void outPlaylists(String filepath) {
+    public static void outBeatGrid() {
+    }
+    
+    public static void outTrack() {
+    }
+    
+    public static void outPlaylists() {
         Out out = new Out();
-        out.playlists = new ArrayList<>();
-        out.playlists.add("filepath:" + filepath);
+        
+        Map<Long, List<Database.PlaylistFolderEntry>> pfindex = database.playlistFolderIndex;
+        //basically pfindex is map of single set
+        for (Map.Entry<Long, List<Database.PlaylistFolderEntry>> entry : pfindex.entrySet()) {
+            for (Database.PlaylistFolderEntry e : entry.getValue()) {
+                out.playlists.put(e.id, e.name);
+            }
+        }
+        
         out.print();
+        System.exit(0);
     }
     
     
@@ -115,17 +155,22 @@ public class App {
         Out out = new Out();
         out.error = error;
         out.print();
+        System.exit(0);
+    }
+    
+    public static void must(Boolean test) {
+        if (!test) {
+            outError("assertion failed");
+        }
     }
     
     public static void main(String[] args) {
-        String op = args[0];
-        
+        parseArgs(args);
         switch (op) {
         case "playlists":
-            outPlaylists("asdfasdf");
-            break;
+            outPlaylists();
         default:
-            outError("command usage");
+            must(false);
         }
 
         // File pdb = new File("./export.pdb");
