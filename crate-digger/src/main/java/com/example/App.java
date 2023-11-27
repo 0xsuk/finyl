@@ -5,6 +5,8 @@ import org.deepsymmetry.cratedigger.Database;
 import org.deepsymmetry.cratedigger.pdb.*;
 import io.kaitai.struct.RandomAccessFileKaitaiStream;
 import java.io.File;
+import java.nio.file.Files;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
@@ -86,9 +88,6 @@ class Track {
             }
         }
     }
-    
-    
-
     
     public static RekordboxPdb.TrackRow getTrackRow(long id) {
         Map<Long, RekordboxPdb.TrackRow> map = App.database.trackIndex;
@@ -178,6 +177,7 @@ class Track {
 }
 
 class Out {
+    static private FileWriter fw;
     private static ObjectMapper objm = new ObjectMapper();
     public String error = null;
     public Map<Long, String> playlists = new HashMap<>(); //id to playlist name
@@ -186,10 +186,58 @@ class Out {
     public Out() {
     }
 
-    public void print() {
+    public static void open() {
         try {
-            System.out.println(objm.writeValueAsString(this));
-        } catch (JsonProcessingException e) {
+            fw = new FileWriter(Files.createTempFile("finyl-output", ".json").toFile());
+        
+        } catch (IOException e) {
+            System.out.println("failed to open output file:" + e);
+            System.exit(1);
+        }
+    }
+    
+    public static void writeTrack() {
+        Out out = new Out();
+    }
+    
+    public static void writePlaylists() {
+        Out out = new Out();
+        
+        Map<Long, List<Database.PlaylistFolderEntry>> pfindex = App.database.playlistFolderIndex;
+        //basically pfindex is map of single set
+        for (Map.Entry<Long, List<Database.PlaylistFolderEntry>> entry : pfindex.entrySet()) {
+            for (Database.PlaylistFolderEntry e : entry.getValue()) {
+                out.playlists.put(e.id, e.name);
+            }
+        }
+        
+        out.write();
+        System.exit(0);
+    }
+    
+    public static void writeAllTracks() {
+        Out out = new Out();
+        Map<Long, RekordboxPdb.TrackRow> map = App.database.trackIndex;
+        for (Map.Entry<Long, RekordboxPdb.TrackRow> entry : map.entrySet()) {
+            RekordboxPdb.TrackRow tr = entry.getValue();
+            Track t = new Track(tr);
+            out.tracks.add(t);
+        }
+        out.write();
+        System.exit(0);
+    }
+    
+    public static void writeError(String error) {
+        Out out = new Out();
+        out.error = error;
+        out.write();
+        System.exit(0);
+    }
+    
+    public void write() {
+        try {
+            fw.write(objm.writeValueAsString(this));
+        } catch (IOException e) {
         }
     }
 }
@@ -213,11 +261,11 @@ public class App {
         must(args.length >= 2);
         usb = new File(args[0]);
         if (!usb.exists()) {
-            outError("usb not found");
+            Out.writeError("usb not found");
         }
         pdb = new File(usb, "/PIONEER/rekordbox/export.pdb");
         if (!pdb.exists()) {
-            outError("pdb not found for this usb");
+            Out.writeError("pdb not found for this usb");
         }
         op = args[1];
         if (args.length > 2) {
@@ -226,62 +274,24 @@ public class App {
         try {
             database = new Database(pdb);
         } catch (IOException e) {
-            outError("failed to read database");
+            Out.writeError("failed to read database");
         }
-    }
-    
-    
-    public static void outTrack() {
-    }
-    
-    public static void outPlaylists() {
-        Out out = new Out();
-        
-        Map<Long, List<Database.PlaylistFolderEntry>> pfindex = database.playlistFolderIndex;
-        //basically pfindex is map of single set
-        for (Map.Entry<Long, List<Database.PlaylistFolderEntry>> entry : pfindex.entrySet()) {
-            for (Database.PlaylistFolderEntry e : entry.getValue()) {
-                out.playlists.put(e.id, e.name);
-            }
-        }
-        
-        out.print();
-        System.exit(0);
-    }
-    
-    
-    public static void outAllTracks() {
-        Out out = new Out();
-        Map<Long, RekordboxPdb.TrackRow> map = database.trackIndex;
-        for (Map.Entry<Long, RekordboxPdb.TrackRow> entry : map.entrySet()) {
-            RekordboxPdb.TrackRow tr = entry.getValue();
-            Track t = new Track(tr);
-            out.tracks.add(t);
-        }
-        out.print();
-        System.exit(0);
-    }
-    
-    public static void outError(String error) {
-        Out out = new Out();
-        out.error = error;
-        out.print();
-        System.exit(0);
     }
     
     public static void must(Boolean test) {
         if (!test) {
-            outError("assertion failed");
+            Out.writeError("assertion failed");
         }
     }
     
     public static void main(String[] args) {
+        Out.open();
         parseArgs(args);
         switch (op) {
         case "playlists":
-            outPlaylists();
+            Out.writePlaylists();
         case "all-tracks":
-            outAllTracks();
+            Out.writeAllTracks();
         default:
             must(false);
         }
