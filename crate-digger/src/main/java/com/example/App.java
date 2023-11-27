@@ -8,6 +8,35 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+class Beat {
+    public long tempo; //for dynamic tempo?
+    public long time;
+    public int num; //1 to 4
+
+    public Beat(long tempo, long time, int num) {
+        this.tempo = tempo;
+        this.time = time;
+        this.num = num;
+    }
+}
+
+class Cue {
+    public long type; //memory cue or loop
+    public long time;
+
+    public Cue(long type, long time) {
+        this.type = type;
+        this.time = time;
+    }
+}
+
+class TrackDetail {
+    public Track t;
+    public ArrayList<Cue> cues;
+    public ArrayList<Beat> beats;
+    
+}
+
 class Track {
     public long id;
     public long musickeyid;
@@ -16,15 +45,135 @@ class Track {
     public String filepath;
     public String filename;
     public String title;
+    public String anlzPath;
     
-    public Track(long id, long musickeyid, long tempo, long filesize, String filepath, String filename, String title) {
-      this.id = id;
-      this.musickeyid = musickeyid;
-      this.tempo = tempo;
-      this.filesize = filesize;
-      this.filepath = filepath;
-      this.filename = filename;
-      this.title = title;
+    public Track(RekordboxPdb.TrackRow tr)  {
+        this.id = tr.id();
+        this.musickeyid = tr.keyId();
+        this.tempo = tr.tempo();
+        this.filesize = tr.fileSize();
+        this.filepath = Database.getText(tr.filePath());
+        this.filename = Database.getText(tr.filename());
+        this.title = Database.getText(tr.title());
+        this.anlzPath = getAnlzPath(tr);
+    }
+    
+    public static void printBeatGridBeat(RekordboxAnlz.BeatGridBeat bgbeat) {
+        System.out.println("\tbeatNumber:" + bgbeat.beatNumber());
+        System.out.println("\ttempo:" + bgbeat.tempo());
+        System.out.println("\ttime:" + bgbeat.time());
+    }
+    
+    public static void printBeatGridTag(RekordboxAnlz.BeatGridTag bgtag) {
+        
+        System.out.println("lenBeats:" + bgtag.lenBeats());
+    }
+    
+    public static void printCueEntry(RekordboxAnlz.CueEntry entry) {
+        System.out.println("\thotCue:" + entry.hotCue());
+        System.out.println("\ttime:" + entry.time());
+        System.out.println("\ttype:" + entry.type());
+    }
+    
+    public static void printCueTag(RekordboxAnlz.CueTag cuetag) {
+        System.out.println("lenCues:" + cuetag.lenCues());
+        System.out.println("memoryCount:" + cuetag.memoryCount());
+        System.out.println("type:" + cuetag.type().id());
+        
+        if (cuetag.lenCues() > 0) {
+            for (RekordboxAnlz.CueEntry entry : cuetag.cues()) {
+                printCueEntry(entry);
+            }
+        }
+    }
+    
+    
+
+    
+    public static RekordboxPdb.TrackRow getTrackRow(long id) {
+        Map<Long, RekordboxPdb.TrackRow> map = App.database.trackIndex;
+        for (Map.Entry<Long, RekordboxPdb.TrackRow> entry : map.entrySet()) {
+            long _id = entry.getKey();
+            if (id == _id) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+    
+    public static String getAnlzPath(RekordboxPdb.TrackRow tr) {
+        return new File(App.usb, Database.getText(tr.analyzePath())).getAbsolutePath();
+    }
+    
+    public static RekordboxAnlz getAnlz(RekordboxPdb.TrackRow tr) {
+        String anlzpath = getAnlzPath(tr);
+        try {
+            return new RekordboxAnlz(new RandomAccessFileKaitaiStream(anlzpath));
+        } catch(IOException e) {
+            return null;
+        }
+    }
+    
+    public static RekordboxAnlz.BeatGridTag findBeatGridTag(RekordboxPdb.TrackRow tr) {
+        RekordboxAnlz anlz = getAnlz(tr);
+        for (RekordboxAnlz.TaggedSection section : anlz.sections()) {
+            if (section.body() instanceof RekordboxAnlz.BeatGridTag) {
+                return (RekordboxAnlz.BeatGridTag) section.body();
+            }
+        }
+        return null;
+    }
+
+    public static ArrayList<Beat> getBeats(RekordboxPdb.TrackRow tr) {
+        ArrayList<Beat> beats = new ArrayList<>();
+        RekordboxAnlz.BeatGridTag bgtag = findBeatGridTag(tr);
+        if (bgtag == null) {
+            // no beat information
+            return beats;
+        }
+        
+        for (RekordboxAnlz.BeatGridBeat beat : bgtag.beats()) {
+            beats.add(new Beat(beat.tempo(), beat.time(), beat.beatNumber()));
+        }
+        return beats;
+    }
+    
+    public static ArrayList<RekordboxAnlz.CueTag> findCueTag(RekordboxPdb.TrackRow tr) {
+        RekordboxAnlz anlz = getAnlz(tr);
+        ArrayList<RekordboxAnlz.CueTag> cuetags = new ArrayList<>();
+        for (RekordboxAnlz.TaggedSection section : anlz.sections()) {
+            if (section.body() instanceof RekordboxAnlz.CueTag) {
+                RekordboxAnlz.CueTag cuetag = (RekordboxAnlz.CueTag) section.body();
+                cuetags.add(cuetag);
+            }
+        }
+        
+        return cuetags;
+    }
+
+    public static ArrayList<Cue> findCues(RekordboxPdb.TrackRow tr) {
+        ArrayList<RekordboxAnlz.CueTag> cuetags = findCueTag(tr);
+        ArrayList<Cue> cues = new ArrayList<>();
+        for (RekordboxAnlz.CueTag cuetag : cuetags) {
+            if (cuetag.lenCues() > 0) {
+                for (RekordboxAnlz.CueEntry ce : cuetag.cues()) {
+                    cues.add(new Cue(ce.type().id(), ce.time()));
+                }
+            }
+        }
+
+        return cues;
+    }
+    
+    public static void sortCues(ArrayList<Cue> cues) {
+        Collections.sort(cues, (cue1, cue2) -> Long.compare(cue1.time, cue2.time));
+    }
+
+    
+    public static ArrayList<Cue> getSortedCues(RekordboxPdb.TrackRow tr) {
+        ArrayList<Cue> cues = findCues(tr);
+        sortCues(cues);
+        return cues;
     }
 }
 
@@ -81,77 +230,6 @@ public class App {
         }
     }
     
-    public static RekordboxAnlz.BeatGridTag findBeatGridTag(RekordboxAnlz anlz) {
-        for (RekordboxAnlz.TaggedSection section : anlz.sections()) {
-            if (section.body() instanceof RekordboxAnlz.BeatGridTag) {
-                return (RekordboxAnlz.BeatGridTag) section.body();
-            }
-        }
-
-        return null;
-    }
-    
-    public static void printBeatGridBeat(RekordboxAnlz.BeatGridBeat bgbeat) {
-        System.out.println("\tbeatNumber:" + bgbeat.beatNumber());
-        System.out.println("\ttempo:" + bgbeat.tempo());
-        System.out.println("\ttime:" + bgbeat.time());
-    }
-    
-    public static void printBeatGridTag(RekordboxAnlz.BeatGridTag bgtag) {
-        
-        System.out.println("lenBeats:" + bgtag.lenBeats());
-    }
-    
-    public static ArrayList<RekordboxAnlz.CueTag> findCueTag(RekordboxAnlz anlz) {
-        ArrayList<RekordboxAnlz.CueTag> cuetags = new ArrayList<>();
-        for (RekordboxAnlz.TaggedSection section : anlz.sections()) {
-            if (section.body() instanceof RekordboxAnlz.CueTag) {
-                RekordboxAnlz.CueTag cuetag = (RekordboxAnlz.CueTag) section.body();
-                cuetags.add(cuetag);
-            }
-        }
-
-        return cuetags;
-    }
-    
-    public static void printCueEntry(RekordboxAnlz.CueEntry entry) {
-        System.out.println("\thotCue:" + entry.hotCue());
-        System.out.println("\ttime:" + entry.time());
-        System.out.println("\ttype:" + entry.type());
-    }
-    
-    public static void printCueTag(RekordboxAnlz.CueTag cuetag) {
-        System.out.println("lenCues:" + cuetag.lenCues());
-        System.out.println("memoryCount:" + cuetag.memoryCount());
-        System.out.println("type:" + cuetag.type().id());
-        
-        if (cuetag.lenCues() > 0) {
-            sortCueEntries(cuetag.cues());
-            for (RekordboxAnlz.CueEntry entry : cuetag.cues()) {
-                printCueEntry(entry);
-            }
-        }
-    }
-    
-    public static void sortCueEntries(ArrayList<RekordboxAnlz.CueEntry> entries) {
-        Collections.sort(entries, (entry1, entry2) -> Long.compare(entry1.time(), entry2.time()));
-    }
-    
-    public static ArrayList<RekordboxAnlz.CueEntry> getSortedCueEntries(ArrayList<RekordboxAnlz.CueTag> cuetags) {
-        ArrayList<RekordboxAnlz.CueEntry> entries = new ArrayList<>();
-
-        for (RekordboxAnlz.CueTag cuetag : cuetags) {
-            if (cuetag.lenCues() > 0) {
-                entries.addAll(cuetag.cues());
-            }
-        }
-
-        sortCueEntries(entries);
-        return entries;
-    }
-    
-    public static void outBeatGrid() {
-    }
     
     public static void outTrack() {
     }
@@ -176,11 +254,10 @@ public class App {
         Out out = new Out();
         Map<Long, RekordboxPdb.TrackRow> map = database.trackIndex;
         for (Map.Entry<Long, RekordboxPdb.TrackRow> entry : map.entrySet()) {
-            RekordboxPdb.TrackRow r = entry.getValue();
-            Track t = new Track(r.id(), r.keyId(), r.tempo(), r.fileSize(), Database.getText(r.filePath()), Database.getText(r.filename()), Database.getText(r.title()));
+            RekordboxPdb.TrackRow tr = entry.getValue();
+            Track t = new Track(tr);
             out.tracks.add(t);
         }
-        
         out.print();
         System.exit(0);
     }
@@ -208,65 +285,5 @@ public class App {
         default:
             must(false);
         }
-
-        // File pdb = new File("./export.pdb");
-        // try {
-        //     Database database = new Database(pdb);
-        //     Map<Long, RekordboxPdb.TrackRow> map = database.trackIndex;
-        //     for (Map.Entry<Long, RekordboxPdb.TrackRow> entry : map.entrySet()) {
-        //         Long key = entry.getKey();
-        //         RekordboxPdb.TrackRow row = entry.getValue();
-        //         String path = "/media/null/22BC-F655" + Database.getText(row.filePath());
-        //         String anlzPath = "/media/null/22BC-F655" + Database.getText(row.analyzePath());
-        //         RekordboxAnlz anlz = new RekordboxAnlz(new RandomAccessFileKaitaiStream(anlzPath));
-
-        //         // if (!path.contains("Woman Trouble")) {
-        //         // continue;
-        //         // }
-                
-        //         if (key != 203) {
-        //             continue;
-        //         }
-                
-        //         System.out.println("filename:" + path);
-        //         System.out.println("key:" + key);
-        //         System.out.println("row.tempo:" + row.tempo());
-                
-        //         RekordboxAnlz.BeatGridTag bgtag = findBeatGridTag(anlz);
-
-        //         if (bgtag == null) {
-        //             System.out.println("No beat grid");
-        //         }
-                
-        //         printBeatGridTag(bgtag);
-                
-        //         ArrayList<RekordboxAnlz.CueTag> cuetags = findCueTag(anlz);
-                
-        //         ArrayList<RekordboxAnlz.CueEntry> ces = getSortedCueEntries(cuetags);
-                
-        //         for (RekordboxAnlz.CueEntry ce : ces) {
-        //             printCueEntry(ce);
-        //         }
-                
-        //         // int beatCount = (int)tag.lenBeats();
-        //         // if (beatCount == 0) {
-        //         //     System.out.println("beatCount is zero");
-        //         //     continue;
-        //         // }
-        //         // int[] beatWithinBarValues = new int[beatCount];
-        //         // int[] bpmValues = new int[beatCount];
-        //         // long[] timeWithinTrackValues = new long[beatCount];
-        //         // for (int beatNumber = 0; beatNumber < beatCount; beatNumber++) {
-        //         //     RekordboxAnlz.BeatGridBeat beat = tag.beats().get(beatNumber);
-        //         //     beatWithinBarValues[beatNumber] = beat.beatNumber();
-        //         //     bpmValues[beatNumber] = beat.tempo();
-        //         //     timeWithinTrackValues[beatNumber] = beat.time();
-        //         // }
-        //         // System.out.println("first beat ms:" + timeWithinTrackValues[0]);
-        //     }
-        //     System.out.println("size is " + map.size());
-        // } catch (IOException e) {
-        //     System.out.println(e);
-        // }
     }
 }
