@@ -8,10 +8,31 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+class Track {
+    public long id;
+    public long musickeyid;
+    public long tempo;
+    public long filesize;
+    public String filepath;
+    public String filename;
+    public String title;
+    
+    public Track(long id, long musickeyid, long tempo, long filesize, String filepath, String filename, String title) {
+      this.id = id;
+      this.musickeyid = musickeyid;
+      this.tempo = tempo;
+      this.filesize = filesize;
+      this.filepath = filepath;
+      this.filename = filename;
+      this.title = title;
+    }
+}
+
 class Out {
     private static ObjectMapper objm = new ObjectMapper();
     public String error = null;
-    public Map<Long, String> playlists = new HashMap<>();
+    public Map<Long, String> playlists = new HashMap<>(); //id to playlist name
+    public ArrayList<Track> tracks = new ArrayList<>();
     
     public Out() {
     }
@@ -40,7 +61,7 @@ public class App {
     static public Database database;
     
     public static void parseArgs(String[] args) {
-        must(args.length > 2);
+        must(args.length >= 2);
         usb = new File(args[0]);
         if (!usb.exists()) {
             outError("usb not found");
@@ -151,6 +172,19 @@ public class App {
     }
     
     
+    public static void outAllTracks() {
+        Out out = new Out();
+        Map<Long, RekordboxPdb.TrackRow> map = database.trackIndex;
+        for (Map.Entry<Long, RekordboxPdb.TrackRow> entry : map.entrySet()) {
+            RekordboxPdb.TrackRow r = entry.getValue();
+            Track t = new Track(r.id(), r.keyId(), r.tempo(), r.fileSize(), Database.getText(r.filePath()), Database.getText(r.filename()), Database.getText(r.title()));
+            out.tracks.add(t);
+        }
+        
+        out.print();
+        System.exit(0);
+    }
+    
     public static void outError(String error) {
         Out out = new Out();
         out.error = error;
@@ -169,6 +203,8 @@ public class App {
         switch (op) {
         case "playlists":
             outPlaylists();
+        case "all-tracks":
+            outAllTracks();
         default:
             must(false);
         }
