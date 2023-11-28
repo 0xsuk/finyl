@@ -6,7 +6,9 @@ import org.deepsymmetry.cratedigger.pdb.*;
 import io.kaitai.struct.RandomAccessFileKaitaiStream;
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.io.FileWriter;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.*;
 
@@ -177,7 +179,7 @@ class Track {
 }
 
 class Out {
-    static private FileWriter fw;
+    static private BufferedWriter bw;
     private static ObjectMapper objm = new ObjectMapper();
     public String error = null;
     public Map<Long, String> playlists = new HashMap<>(); //id to playlist name
@@ -188,9 +190,10 @@ class Out {
 
     public static void open() {
         try {
-            fw = new FileWriter(Files.createTempFile("finyl-output", ".json").toFile());
-        
-        } catch (IOException e) {
+            String home = System.getProperty("user.home");
+            Path f = Path.of(home, ".finyl-output");
+            bw = new BufferedWriter(new FileWriter(f.toFile()));
+        } catch (Exception e) {
             System.out.println("failed to open output file:" + e);
             System.exit(1);
         }
@@ -236,8 +239,10 @@ class Out {
     
     public void write() {
         try {
-            fw.write(objm.writeValueAsString(this));
+            bw.write(objm.writeValueAsString(this));
+            bw.close(); //without this, no text is written
         } catch (IOException e) {
+            System.out.println("Failed to write:" + e);
         }
     }
 }
