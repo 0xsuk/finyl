@@ -38,7 +38,12 @@ class TrackDetail {
     public Track t;
     public ArrayList<Cue> cues;
     public ArrayList<Beat> beats;
-    
+
+    public TrackDetail(RekordboxPdb.TrackRow tr) {
+        this.t = new Track(tr);
+        this.cues = Track.getSortedCues(tr);
+        this.beats = Track.getBeats(tr);
+    }
 }
 
 class Track {
@@ -184,6 +189,7 @@ class Out {
     public String error = null;
     public Map<Long, String> playlists = new HashMap<>(); //id to playlist name
     public ArrayList<Track> tracks = new ArrayList<>();
+    public TrackDetail track = null;
     
     public Out() {
     }
@@ -200,7 +206,23 @@ class Out {
     }
     
     public static void writeTrack() {
+        App.must(App.params.size() > 0);
         Out out = new Out();
+        String tid = App.params.get(0);
+        
+        try {
+            long id = Long.parseLong(tid);
+            RekordboxPdb.TrackRow tr = Track.getTrackRow(id);
+            if (tr == null) {
+                writeError("Track not found for id = " + tid);
+            }
+            out.track = new TrackDetail(tr);
+            
+        } catch (Exception e){
+            writeError("not valid track id = " + tid);
+        }
+
+        out.write();
     }
     
     public static void writePlaylists() {
@@ -215,7 +237,6 @@ class Out {
         }
         
         out.write();
-        System.exit(0);
     }
     
     public static void writeAllTracks() {
@@ -227,14 +248,12 @@ class Out {
             out.tracks.add(t);
         }
         out.write();
-        System.exit(0);
     }
     
     public static void writeError(String error) {
         Out out = new Out();
         out.error = error;
         out.write();
-        System.exit(0);
     }
     
     public void write() {
@@ -243,7 +262,9 @@ class Out {
             bw.close(); //without this, no text is written
         } catch (IOException e) {
             System.out.println("Failed to write:" + e);
+            System.exit(1);
         }
+        System.exit(0);
     }
 }
 
@@ -258,8 +279,8 @@ public class App {
     // org.deepsymmetry.cratedigger.pdb.RekordboxAnlz$CueTag
     static public File usb;
     static public File pdb;
-    static public String op;
-    static public ArrayList<String> params;
+    static public String op = "";
+    static public ArrayList<String> params = new ArrayList<>();
     static public Database database;
     
     public static void parseArgs(String[] args) {
@@ -297,6 +318,8 @@ public class App {
             Out.writePlaylists();
         case "all-tracks":
             Out.writeAllTracks();
+        case "track":
+            Out.writeTrack();
         default:
             must(false);
         }
