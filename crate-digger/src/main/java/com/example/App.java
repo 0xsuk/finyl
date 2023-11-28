@@ -61,7 +61,7 @@ class Track {
         this.musickeyid = tr.keyId();
         this.tempo = tr.tempo();
         this.filesize = tr.fileSize();
-        this.filepath = Database.getText(tr.filePath());
+        this.filepath = getFilePath(tr;);
         this.filename = Database.getText(tr.filename());
         this.title = Database.getText(tr.title());
         this.anlzPath = getAnlzPath(tr);
@@ -105,6 +105,10 @@ class Track {
             }
         }
         return null;
+    }
+    
+    public static String getFilePath(RekordboxPdb.TrackRow tr) {
+        return new File(App.usb, Database.getText(tr.filePath())).getAbsolutePath();
     }
     
     public static String getAnlzPath(RekordboxPdb.TrackRow tr) {
