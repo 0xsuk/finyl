@@ -7,6 +7,7 @@ import io.kaitai.struct.RandomAccessFileKaitaiStream;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.stream.Collectors;
 import java.io.FileWriter;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -61,7 +62,7 @@ class Track {
         this.musickeyid = tr.keyId();
         this.tempo = tr.tempo();
         this.filesize = tr.fileSize();
-        this.filepath = getFilePath(tr;);
+        this.filepath = getFilePath(tr);
         this.filename = Database.getText(tr.filename());
         this.title = Database.getText(tr.title());
         this.anlzPath = getAnlzPath(tr);
@@ -148,6 +149,28 @@ class Track {
         return beats;
     }
     
+    public static boolean trackExist(long id) {
+        RekordboxPdb.TrackRow tr = Track.getTrackRow(id);
+        if (tr == null) {
+            return false;
+        }
+        return true;
+    }
+    
+    public static ArrayList<Track> findTracks(long playlistid) {
+        for (Map.Entry<Long, List<Long>> entry : App.database.playlistIndex.entrySet()) {
+            long pid = entry.getKey();
+            if (pid == playlistid) {
+                List<Long> tids = new ArrayList<Long>(entry.getValue());
+                tids = tids.stream().filter(tid -> trackExist(tid)).collect(Collectors.toList());
+                List<Track> tracks = tids.stream().map(tid -> new Track(getTrackRow(tid))).collect(Collectors.toList());
+                return new ArrayList<>(tracks);
+            }
+        }
+
+        return null;
+    }
+    
     public static ArrayList<RekordboxAnlz.CueTag> findCueTag(RekordboxPdb.TrackRow tr) {
         RekordboxAnlz anlz = getAnlz(tr);
         ArrayList<RekordboxAnlz.CueTag> cuetags = new ArrayList<>();
@@ -207,6 +230,28 @@ class Out {
             System.out.println("failed to open output file:" + e);
             System.exit(1);
         }
+    }
+    
+    //trakcs in playlist
+    public static void writePlaylistTrack() {
+        App.must(App.params.size() > 0);
+
+        Out out = new Out();
+        String pid = App.params.get(0);
+
+        
+        try {
+            long id = Long.parseLong(pid);
+            ArrayList<Track> tracks = Track.findTracks(id);
+            if (tracks == null) {
+                writeError("Playlist not found for id =" + id);
+            }
+            out.tracks = tracks;
+        } catch (Exception e) {
+            writeError("not valid playlist id = " + pid);
+        }
+
+        out.write();
     }
     
     public static void writeTrack() {
@@ -324,8 +369,10 @@ public class App {
             Out.writeAllTracks();
         case "track":
             Out.writeTrack();
+        case "playlist-track":
+            Out.writePlaylistTrack();
         default:
-            must(false);
+            Out.writeError("invalid operation op = " + op);
         }
     }
 }
