@@ -211,34 +211,36 @@ class Track {
 }
 
 class Out {
-    static private BufferedWriter bw;
+    private static BufferedWriter bw;
     private static ObjectMapper objm = new ObjectMapper();
+    public String usb = "";
+    public String badge = "";
     public String error = null;
     public Map<Long, String> playlists = new HashMap<>(); //id to playlist name
     public ArrayList<Track> tracks = new ArrayList<>();
     public TrackDetail track = null;
     
     public Out() {
-    }
-
-    public static void open() {
         try {
             String home = System.getProperty("user.home");
             Path f = Path.of(home, ".finyl-output");
             bw = new BufferedWriter(new FileWriter(f.toFile()));
+            usb = App.usb.getAbsolutePath();
+            badge = App.badge;
         } catch (Exception e) {
             System.out.println("failed to open output file:" + e);
             System.exit(1);
         }
+            
+    }
+
+    public static void open() {
     }
     
     //trakcs in playlist
     public static void writePlaylistTrack() {
         App.must(App.params.size() > 0);
-
-        Out out = new Out();
         String pid = App.params.get(0);
-
         
         try {
             long id = Long.parseLong(pid);
@@ -246,17 +248,16 @@ class Out {
             if (tracks == null) {
                 writeError("Playlist not found for id =" + id);
             }
-            out.tracks = tracks;
+            App.out.tracks = tracks;
         } catch (Exception e) {
             writeError("not valid playlist id = " + pid);
         }
 
-        out.write();
+        App.out.write();
     }
     
     public static void writeTrack() {
         App.must(App.params.size() > 0);
-        Out out = new Out();
         String tid = App.params.get(0);
         
         try {
@@ -265,44 +266,40 @@ class Out {
             if (tr == null) {
                 writeError("Track not found for id = " + tid);
             }
-            out.track = new TrackDetail(tr);
+            App.out.track = new TrackDetail(tr);
             
         } catch (Exception e){
             writeError("not valid track id = " + tid);
         }
 
-        out.write();
+        App.out.write();
     }
     
     public static void writePlaylists() {
-        Out out = new Out();
-        
         Map<Long, List<Database.PlaylistFolderEntry>> pfindex = App.database.playlistFolderIndex;
         //basically pfindex is map of single set
         for (Map.Entry<Long, List<Database.PlaylistFolderEntry>> entry : pfindex.entrySet()) {
             for (Database.PlaylistFolderEntry e : entry.getValue()) {
-                out.playlists.put(e.id, e.name);
+                App.out.playlists.put(e.id, e.name);
             }
         }
         
-        out.write();
+        App.out.write();
     }
     
     public static void writeAllTracks() {
-        Out out = new Out();
         Map<Long, RekordboxPdb.TrackRow> map = App.database.trackIndex;
         for (Map.Entry<Long, RekordboxPdb.TrackRow> entry : map.entrySet()) {
             RekordboxPdb.TrackRow tr = entry.getValue();
             Track t = new Track(tr);
-            out.tracks.add(t);
+            App.out.tracks.add(t);
         }
-        out.write();
+        App.out.write();
     }
     
     public static void writeError(String error) {
-        Out out = new Out();
-        out.error = error;
-        out.write();
+        App.out.error = error;
+        App.out.write();
     }
     
     public void write() {
@@ -328,28 +325,35 @@ public class App {
     // org.deepsymmetry.cratedigger.pdb.RekordboxAnlz$CueTag
     static public File usb;
     static public File pdb;
+    public static String badge; //caller of this program can ensure that output file (.finyl-output) is updated to latest call, by providing unique string as badge to each call.
     static public String op = "";
     static public ArrayList<String> params = new ArrayList<>();
     static public Database database;
+    static Out out;
     
     public static void parseArgs(String[] args) {
-        must(args.length >= 2);
-        usb = new File(args[0]);
+        if (!(args.length >= 3)) { //badge, usb, op
+            fatal("arg.length must be >= 3");
+        }
+        
+        badge = args[0];
+        
+        usb = new File(args[1]);
         if (!usb.exists()) {
-            Out.writeError("usb not found");
+            fatal("usb not found");
         }
         pdb = new File(usb, "/PIONEER/rekordbox/export.pdb");
         if (!pdb.exists()) {
-            Out.writeError("pdb not found for this usb");
+            fatal("pdb not found for this usb");
         }
-        op = args[1];
-        if (args.length > 2) {
-            params = new ArrayList<>(Arrays.asList(Arrays.copyOfRange(args, 2, args.length)));
+        op = args[2];
+        if (args.length > 3) {
+            params = new ArrayList<>(Arrays.asList(Arrays.copyOfRange(args, 3, args.length)));
         }
         try {
             database = new Database(pdb);
         } catch (IOException e) {
-            Out.writeError("failed to read database");
+            fatal("failed to read database");
         }
     }
     
@@ -359,9 +363,14 @@ public class App {
         }
     }
     
+    public static void fatal(String message) {
+        System.out.println(message);
+        System.exit(1);
+    }
+    
     public static void main(String[] args) {
-        Out.open();
         parseArgs(args);
+        out = new Out();
         switch (op) {
         case "playlists":
             Out.writePlaylists();
