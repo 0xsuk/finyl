@@ -3,4 +3,6 @@
 /finyl
 /*.mp3
 /crate-digger/target/*
-!/crate-digger/target/final-1.0-SNAPSHOT.jar
+!/crate-digger/target/fynal-1.0-SNAPSHOT.jar
+*.o
+/test-digger

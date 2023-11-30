@@ -1,3 +1,4 @@
+#include "audio.h"
 #include <alsa/asoundlib.h>
 #include <math.h>
 #include <stdbool.h>
@@ -6,31 +7,6 @@
 /* char* device = "sysdefault:CARD=PCH"; */
 char* device = "default";            /* playback device */
 
-#define maximum_chunks  32
-#define chunk_size 2097152 //(2048 * 1024);
-
-typedef enum {
-  no_stem = 0, //normal track
-  two_stems, //vocal and inst track
-  three_stems, //vocal and inst and drum
-} stem;
-
-
-typedef signed short sample;
-typedef sample* chunks;
-typedef struct {
-  int id;
-  char name[300];
-  chunks std_channel[maximum_chunks]; //array of chunks, chunk is array of pcm
-  chunks voc_channel[maximum_chunks];
-  chunks inst_channel[maximum_chunks]; //include drum when two_stems
-  chunks drum_channel[maximum_chunks];
-  int nchunks; //the number of chunks in a channel
-  int length;
-  double index;
-  double speed;
-  stem stem;
-} track;
 
 track left_track;
 track right_track;
@@ -104,7 +80,7 @@ FILE* open_pcm_stream(char* filename) {
 void read_pcm(FILE* fp, int* nchunks, int* length, chunks* channel) {
   sample* chunk = make_chunk();
   while (1) {
-    signed long count = fread(chunk, sizeof(sample), chunk_size, fp);
+    size_t count = fread(chunk, sizeof(sample), chunk_size, fp);
     channel[*nchunks] = chunk;
     (*nchunks)++;
     *length += count;
@@ -201,14 +177,34 @@ int load_track(char* filename, track* t) {
   return 0;
 }
 
-int get_playlists() {
+int run_digger(char* usb, char* op) {
   char command[1000];
-  FILE* fp = popen("java -jar crate-digger/target/finyl-1.0-SNAPSHOT.jar badge /media/null/22BC-F655/", "r");
+  snprintf(command, sizeof(command), "java -jar crate-digger/target/finyl-1.0-SNAPSHOT.jar badge %s %s", usb, op);
+  FILE* fp = popen(command, "r");
   if (fp == NULL) {
-    printf("failed to get playlists\n");
+    printf("failed to open stream for usb=%s and op=%s\n", usb, op);
     return -1;
   }
 
+  char output[10000];
+  fread(output, 1, sizeof(output), fp);
+  int status = pclose(fp);
+  if (status == -1) {
+    printf("failed to close the stream in get_playlists\n");
+    return -1;
+  }
+  status = WEXITSTATUS(status);
+  if (status == 1) {
+    //there is a fatal error, and error message is printed in output
+    printf("fatal error in run_digger. Error:\n");
+    printf("%s\n", output);
+  }
+  return 0;
+}
+
+int get_playlists(char* usb) {
+  run_digger(usb, "playlists");
+  
   return 0;
 }
 
@@ -272,5 +268,3 @@ void setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_ufra
   setup_alsa_params(*handle, buffer_size, period_size);
   printf("buffer_size %ld, period_size %ld\n", *buffer_size, *period_size);
 }
-
-
