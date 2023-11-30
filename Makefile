@@ -6,7 +6,6 @@ BUT_ENTRY = audio.o
 OBJS = $(ENTRY) $(BUT_ENTRY)
 TESTS = test-digger
 TEST_OBJS = $(addsuffix .o,$(TESTS))
-ALL = $(ENTRY) $(TEST_OBJS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(LDFLAGS)
@@ -26,5 +25,6 @@ test-digger: test-digger.o audio.o
 clean:
 	rm -f finyl \
 		listdevice \
+		$(TESTS)
 		$(ENTRY) \
 		$(TEST_OBJS)
