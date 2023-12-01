@@ -1,5 +1,5 @@
-#ifndef AUDIO_H
-#define AUDIO_H
+#ifndef FINYL_H
+#define FINYL_H
 
 #include <alsa/asoundlib.h>
 
@@ -28,6 +28,15 @@ typedef struct {
   double speed;
   stem stem;
 } track;
+int run_digger(char* usb, char* op);
+
+int get_playlists(char* usb);
+
+int get_track(char* usb, int id);
+
+int get_all_tracks(char* usb);
+
+int get_playlist_track(char* usb, int id);
 
 void init_track(track* t);
 
@@ -37,5 +46,5 @@ int load_track(char* filename, track* t);
 
 void run(track* t, snd_pcm_t* handle, snd_pcm_uframes_t period_size);
 
-int get_playlists(char* usb);
+
 #endif
