@@ -4,7 +4,7 @@ CFLAGS = -Wall -std=gnu99 # gnu99 so that popen is defined
 ENTRY = entry.o
 BUT_ENTRY = finyl.o cJSON.o
 OBJS = $(ENTRY) $(BUT_ENTRY)
-TESTS = test
+TESTS = test test-digger
 TEST_OBJS = $(addsuffix .o,$(TESTS))
 
 %.o: %.c
@@ -21,6 +21,7 @@ listdevice: listdevice.o
 
 tests: $(TESTS)
 test: test.o $(BUT_ENTRY) # this is for interactive development. not for automated test. so test.c is gitignored
+test-digger: test-digger.o $(BUT_ENTRY)
 
 clean:
 	rm -f finyl \

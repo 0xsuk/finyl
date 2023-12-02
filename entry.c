@@ -11,8 +11,6 @@ int main(int argc, char** argv) {
   track t;
   init_track(&t);
   
-  init_fo();
-  
   snd_pcm_t* handle;
   snd_pcm_uframes_t buffer_size = 1024 * 2;
   snd_pcm_uframes_t period_size = 1024;

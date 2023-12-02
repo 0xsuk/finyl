@@ -5,8 +5,6 @@
 
 #define maximum_chunks  32
 #define chunk_size 2097152 //(2048 * 1024);
-#define max_playlists_length 1000
-#define badge_length 6 //include \0
 
 typedef signed short sample;
 typedef sample* chunks;
@@ -19,11 +17,20 @@ typedef enum {
 
 typedef struct {
   int id;
-  char name[300];
+  int tempo;
+  int musickeyid;
+  int filesize;
+  char title[300];
+  char filepath[1000];
+  char filename[300];
+} track_meta;
+
+typedef struct {
   chunks std_channel[maximum_chunks]; //array of chunks, chunk is array of pcm
   chunks voc_channel[maximum_chunks];
   chunks inst_channel[maximum_chunks]; //include drum when two_stems
   chunks drum_channel[maximum_chunks];
+  track_meta meta;
   int nchunks; //the number of chunks in a channel
   int length;
   double index;
@@ -31,37 +38,12 @@ typedef struct {
   stem stem;
 } track;
 
-typedef struct {
-  int id;
-  char name[300];
-} playlist;
 
-typedef struct {
-  char usb[300];
-  char badge[badge_length];
-  char* error;
-  playlist* playlists[max_playlists_length];
-  int playlists_length;
-} finyl_output;
+void generateRandomString(char* badge, size_t size);
 
-
-void init_fo();
-
-void free_fo();
-
-int read_finyl_output();
+void ncpy(char* dest, char* src, size_t size);
 
 char* read_file_malloc(char* filename);
-
-int run_digger(char* usb, char* op);
-
-int get_playlists(char* usb);
-
-int get_track(char* usb, int id);
-
-int get_all_tracks(char* usb);
-
-int get_playlist_track(char* usb, int id);
 
 void init_track(track* t);
 
