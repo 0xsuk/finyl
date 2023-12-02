@@ -35,6 +35,16 @@ class Cue {
     }
 }
 
+class Playlist {
+    public long id;
+    public String name;
+
+    public Playlist(long id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+}
+
 class TrackDetail {
     public Track t;
     public ArrayList<Cue> cues;
@@ -216,7 +226,7 @@ class Out {
     public String usb = "";
     public String badge = "";
     public String error = null;
-    public Map<Long, String> playlists = new HashMap<>(); //id to playlist name
+    public ArrayList<Playlist> playlists = new ArrayList<>(); //id to playlist name
     public ArrayList<Track> tracks = new ArrayList<>();
     public TrackDetail track = null;
     
@@ -280,7 +290,8 @@ class Out {
         //basically pfindex is map of single set
         for (Map.Entry<Long, List<Database.PlaylistFolderEntry>> entry : pfindex.entrySet()) {
             for (Database.PlaylistFolderEntry e : entry.getValue()) {
-                App.out.playlists.put(e.id, e.name);
+                Playlist p = new Playlist(e.id, e.name);
+                App.out.playlists.add(p);
             }
         }
         

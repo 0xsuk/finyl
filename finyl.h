@@ -5,6 +5,8 @@
 
 #define maximum_chunks  32
 #define chunk_size 2097152 //(2048 * 1024);
+#define max_playlists_length 1000
+#define badge_length 6 //include \0
 
 typedef signed short sample;
 typedef sample* chunks;
@@ -28,6 +30,29 @@ typedef struct {
   double speed;
   stem stem;
 } track;
+
+typedef struct {
+  int id;
+  char name[300];
+} playlist;
+
+typedef struct {
+  char usb[300];
+  char badge[badge_length];
+  char* error;
+  playlist* playlists[max_playlists_length];
+  int playlists_length;
+} finyl_output;
+
+
+void init_fo();
+
+void free_fo();
+
+int read_finyl_output();
+
+char* read_file_malloc(char* filename);
+
 int run_digger(char* usb, char* op);
 
 int get_playlists(char* usb);

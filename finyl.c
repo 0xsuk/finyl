@@ -3,19 +3,17 @@
 #include <math.h>
 #include <stdbool.h>
 #include <sys/wait.h>
+#include "cJSON.h"
 
 /* sysdefault:CARD=XDJRX */
 /* char* device = "sysdefault:CARD=PCH"; */
 char* device = "default";            /* playback device */
+char* finyl_output_path = "/home/null/.finyl-output"; //TODO
 
+finyl_output fo;
 
 track left_track;
 track right_track;
-
-typedef struct {
-  int id;
-  char name[300];
-} playlist;
 
 void init_track(track* t) {
   t->id = -1;
@@ -27,6 +25,25 @@ void init_track(track* t) {
   t->stem = no_stem;
 }
 
+void init_fo() {
+  fo.error = NULL;
+  fo.playlists_length = 0;
+}
+
+void free_fo() {
+  for (int i = 0; i<fo.playlists_length; i++) {
+    playlist* p = fo.playlists[i];
+    free(p);
+  }
+
+  free(fo.error);
+}
+
+void _print_playlist(playlist* p) {
+  printf("\t\tid=%d\n", p->id);
+  printf("\t\tname=%s\n", p->name);
+}
+
 void _print_track(track* t) {
   printf("track {\n");
   printf("\tnchunks: %d\n", t->nchunks);
@@ -34,6 +51,18 @@ void _print_track(track* t) {
   printf("\tindex: %lf\n", t->index);
   printf("\tspeed: %lf\n", t->speed);
   printf("\tstem: %d\n", t->stem);
+  printf("}\n");
+}
+
+void _print_fo(finyl_output fo) {
+  printf("finyl output {\n");
+  printf("\tusb: %s\n", fo.usb);
+  printf("\tbadge: %s\n", fo.badge);
+  printf("\terror: %s\n", fo.error);
+  printf("\tplaylists_length: %d\n", fo.playlists_length);
+  for (int i = 0; i < fo.playlists_length; i++) {
+    _print_playlist(fo.playlists[i]);
+  }
   printf("}\n");
 }
 
@@ -58,26 +87,27 @@ sample calc_sample(track* t, stem stem) {
   return smpl;
 }
 
-void reset_index(track* t) {
-  t->index = 0;
-}
-
 sample* make_chunk() {
   sample* chunk = malloc(chunk_size * sizeof(sample));
   if (chunk == NULL) return NULL;
   return chunk;
 }
 
-FILE* open_pcm_stream(char* filename) {
+int free_chunk() {
+  //TODO
+  return 0;
+}
+
+int open_pcm_stream(FILE* fp, char* filename) {
   char command[1000];
   snprintf(command, sizeof(command), "ffmpeg -i %s -f s16le -ar 44100 -ac 1 -v quiet -", filename);
-  FILE* fp = popen(command, "r");
+  fp = popen(command, "r");
   if (fp == NULL) {
     printf("failed to open stream for %s\n", filename);
-    return NULL;
+    return -1;
   }
 
-  return fp;
+  return 0;
 }
 
 void read_pcm(FILE* fp, int* nchunks, int* length, chunks* channel) {
@@ -106,9 +136,10 @@ bool has_stems(char* filename) {
   return false;
 }
 
-int read_file(char* filename, track* t) {
+int read_audio_file(char* filename, track* t) {
     t->stem = no_stem;
-    FILE* fp = open_pcm_stream(filename);
+    FILE* fp = NULL;
+    open_pcm_stream(fp, filename);
     if (fp == NULL) {
       return -1;
     }
@@ -118,12 +149,13 @@ int read_file(char* filename, track* t) {
 }
 
 int read_stem(char* filename, int* nchunks, int* length, chunks* channel) {
-  FILE* stem = open_pcm_stream(filename); //TODO fix filename
-  if (stem == NULL) {
+  FILE* fp = NULL;
+  open_pcm_stream(fp, filename); //TODO fix filename
+  if (fp == NULL) {
     return -1;
   }
-  read_pcm(stem, nchunks, length, channel);
-  pclose(stem);
+  read_pcm(fp, nchunks, length, channel);
+  pclose(fp);
   return 0;
 }
 
@@ -180,17 +212,124 @@ int load_track(char* filename, track* t) {
   return 0;
 }
 
+void generateRandomString(char* badge, size_t size) {
+  char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  srand(time(NULL));
+  
+  int i;
+  for (i = 0; i < size - 1; ++i) {
+    int index = rand() % (sizeof(characters) - 1);
+    badge[i] = characters[index];
+  }
+  badge[size - 1] = '\0';
+}
+
+//copy only the dest amount of src to dest
+void ncpy(char* dest, char* src, size_t size) {
+  strncpy(dest, src, size);
+  dest[size - 1] = '\0';;
+}
+
+void cJSON_ncpy(cJSON* json, char* key, char* dest, size_t size) {
+  cJSON* itemj = cJSON_GetObjectItem(json, key);
+  char* item = itemj->valuestring;
+  ncpy(dest, item, size);
+}
+
+int unmarshal_finyl_output(cJSON* json) {
+    
+  cJSON_ncpy(json, "usb", fo.usb, sizeof(fo.usb));
+  cJSON_ncpy(json, "badge", fo.badge, sizeof(fo.badge));
+  cJSON* errorj = cJSON_GetObjectItem(json, "error");
+  if (cJSON_IsString(errorj)) {
+    char* error = errorj->valuestring;
+    ncpy(fo.error, error, sizeof(fo.error));
+    //do not return -1, because if badge is old, error is invalid;
+  }
+  
+  cJSON* playlists = cJSON_GetObjectItem(json, "playlists");
+  int playlists_length = cJSON_GetArraySize(playlists);
+  for (int i = 0; i<playlists_length; i++) {
+    playlist* p = (playlist*)malloc(sizeof(playlist)) ;
+    
+    cJSON* pj = cJSON_GetArrayItem(playlists, i);
+    cJSON_ncpy(pj, "name", p->name, sizeof(p->name));
+    p->id = cJSON_GetObjectItem(pj, "id")->valueint;
+
+    fo.playlists[i] = p;
+    fo.playlists_length++;
+  }
+  
+  _print_fo(fo);
+  
+  return 0;
+}
+
+int read_finyl_output() {
+  //if finyl-output json really updated from the old? check the badge
+  char* output = read_file_malloc(finyl_output_path);
+  cJSON* json = cJSON_Parse(output);
+  
+  if (unmarshal_finyl_output(json) == -1) {
+    return -1;
+  }
+  
+  cJSON_Delete(json);
+  free(output);
+  return 0;
+}
+
+char* read_file_malloc(char* filename) {
+  FILE* fp = fopen(filename, "rb");
+
+  if (fp == NULL) {
+    printf("failed to read from file = %s\n", filename);
+    return NULL;
+  }
+
+  fseek(fp, 0, SEEK_END);
+  long file_size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+
+  char* buffer = (char*)malloc(file_size + 1);
+  if (buffer == NULL) {
+    printf("failed to allocate memory for buffer in read_file\n");
+    fclose(fp);
+    return NULL;
+  }
+
+  size_t count = fread((void*)buffer, 1, file_size, fp);
+  if (count != file_size) {
+    printf("Error reading a file in read_file_malloc\n");
+    free(buffer);
+    fclose(fp);
+    return NULL;
+  }
+
+  buffer[file_size] = '\0';
+  fclose(fp);
+  return buffer;
+}
+
 int run_digger(char* usb, char* op) {
+  free_fo();
+  init_fo();
+  
   char command[1000];
-  snprintf(command, sizeof(command), "java -jar crate-digger/target/finyl-1.0-SNAPSHOT.jar badge %s %s", usb, op);
+  char badge[6];
+
+  generateRandomString(badge, sizeof(badge));
+  
+  snprintf(command, sizeof(command), "java -jar crate-digger/target/finyl-1.0-SNAPSHOT.jar %s %s %s", badge, usb, op);
+  
   FILE* fp = popen(command, "r");
   if (fp == NULL) {
     printf("failed to open stream for usb=%s and op=%s\n", usb, op);
     return -1;
   }
 
-  char output[10000];
-  fread(output, 1, sizeof(output), fp);
+  char error_out[10000];
+  fread(error_out, 1, sizeof(error_out), fp);
   int status = pclose(fp);
   if (status == -1) {
     printf("failed to close the stream in get_playlists\n");
@@ -199,20 +338,35 @@ int run_digger(char* usb, char* op) {
   
   status = WEXITSTATUS(status);
   if (status == 1) {
-    //there is a fatal error, and error message is printed in output
+    //there is a fatal error, and error message is printed in error_out
     printf("fatal error in run_digger. Error:\n");
-    printf("%s\n", output);
+    printf("%s\n", error_out);
     return -1;
   }
-
-  //if finyl-output json really updated from the old? check the badge
   
+  if (read_finyl_output() == -1) {
+    return -1;
+  }
+  
+  //check badge here
+  if (strcmp(fo.badge, badge) != 0) {
+    printf("badge is not latest.  %s should be %s\n", fo.badge, badge);
+    return -1;
+  }
+  
+  //check error messgae in fo
+  if (fo.error != NULL) {
+    printf("crate-digger error: %s\n", fo.error);
+    return -1;
+  }
   
   return 0;
 }
 
 int get_playlists(char* usb) {
-  run_digger(usb, "playlists");
+  if (run_digger(usb, "playlists") == -1) {
+    return -1;
+  }
   
   return 0;
 }
@@ -264,7 +418,7 @@ void run(track* t, snd_pcm_t* handle, snd_pcm_uframes_t period_size) {
       
       t->index = t->index + 1;
       if (t->index >= t->length) {
-        reset_index(t);
+        t->index = 0;
       }
     }
     
