@@ -1,81 +1,72 @@
-#include "finyl.h"
+#include "finyl_dev.h"
 #include <alsa/asoundlib.h>
 #include <math.h>
 #include <stdbool.h>
 #include <sys/wait.h>
-#include "cJSON.h"
 
-/* sysdefault:CARD=XDJRX */
-/* char* device = "sysdefault:CARD=PCH"; */
-char* device = "default";            /* playback device */
-
-track* left_track;
-track* middle_track;
-track* right_track;
-
-void init_track_meta(track_meta* tm) {
+void finyl_init_track_meta(finyl_track_meta* tm) {
   tm->id = -1;
   tm->tempo = 0;
   tm->musickeyid = -1;
   tm->filesize = 0;
 }
 
-void init_track(track* t) {
-  init_track_meta(&t->meta);
+void finyl_init_track(finyl_track* t) {
+  finyl_init_track_meta(&t->meta);
   t->nchunks = 0;
   t->length = 0;
   t->index = 0;
   t->speed = 0;
-  t->stem = no_stem;
+  t->channels_count = 0;
 }
 
-void _print_track(track* t) {
+void finyl_print_track(finyl_track* t) {
   printf("track {\n");
   printf("\tnchunks: %d\n", t->nchunks);
   printf("\tlength: %d\n", t->length);
   printf("\tindex: %lf\n", t->index);
   printf("\tspeed: %lf\n", t->speed);
-  printf("\tstem: %d\n", t->stem);
+  printf("\tchannels_count: %d\n", t->channels_count);
   printf("}\n");
 }
 
-sample get_sample(track* t, chunks* channel) {
+finyl_sample get_sample(finyl_track* t, finyl_channel c) {
   int position = floor(t->index);
   int ichunk = position / chunk_size;
   int isample = position - (chunk_size * ichunk);
-  sample* chunk = channel[ichunk];
-  return chunk[isample];
+  finyl_chunk* chunk = c[ichunk];
+  return *chunk[isample];
 }
 
-sample calc_sample(track* t, stem stem) {
-  sample smpl = 0;
-  if (stem == no_stem) {
-    smpl = get_sample(t, t->std_channel);
-  } else {
-    sample voc = get_sample(t, t->voc_channel);
-    sample inst = get_sample(t, t->inst_channel);
-        
-    smpl = (voc + inst) / 2;
+finyl_sample average_channels(finyl_track* t, int count) {
+  finyl_sample s = 0;
+  
+  for (int i = 0; i<count; i++) {
+    s += get_sample(t, t->channels[i]);
   }
-  return smpl;
+
+  s = s/count;
+  
+  return s;
 }
 
-sample* make_chunk() {
-  sample* chunk = malloc(chunk_size * sizeof(sample));
-  if (chunk == NULL) return NULL;
-  return chunk;
+finyl_chunk* make_chunk() {
+  return (finyl_chunk*)malloc(chunk_size * sizeof(finyl_sample));
 }
 
-int free_chunk() {
-  //TODO
-  return 0;
+int free_chunks(finyl_channel channel) {
+  
 }
 
-int open_pcm_stream(FILE* fp, char* filename) {
+finyl_channel make_channel() {
+  return malloc(32 * sizeof(finyl_channel*));
+}
+
+int open_pcm_stream(FILE** fp, char* filename) {
   char command[1000];
   snprintf(command, sizeof(command), "ffmpeg -i %s -f s16le -ar 44100 -ac 1 -v quiet -", filename);
-  fp = popen(command, "r");
-  if (fp == NULL) {
+  *fp = popen(command, "r");
+  if (*fp == NULL) {
     printf("failed to open stream for %s\n", filename);
     return -1;
   }
@@ -83,157 +74,118 @@ int open_pcm_stream(FILE* fp, char* filename) {
   return 0;
 }
 
-void read_pcm(FILE* fp, int* nchunks, int* length, chunks* channel) {
-  sample* chunk = make_chunk();
+//reads from fp, updates nchunks, length, channel
+int read_pcm(FILE* fp, finyl_channel channel, int* nchunks, int* length) {
+  finyl_chunk* chunk = make_chunk();
   while (1) {
-    size_t count = fread(chunk, sizeof(sample), chunk_size, fp);
+    size_t count = fread(chunk, sizeof(finyl_sample), chunk_size, fp);
     channel[*nchunks] = chunk;
     (*nchunks)++;
     *length += count;
     if (count < chunk_size) {
-      break;
+      return 0;
     }
     if (*nchunks == maximum_chunks) {
       printf("File is too large");
-      break;
-    }
-    chunk = make_chunk();
-    /* fwrite(path, 1, 1, stdout); */
-  }
-}
-
-bool has_stems(char* filename) {
-  if (strstr(filename, "TODO")) {
-    return true;
-  }
-  return false;
-}
-
-int read_audio_file(char* filename, track* t) {
-    t->stem = no_stem;
-    FILE* fp = NULL;
-    open_pcm_stream(fp, filename);
-    if (fp == NULL) {
+      //TODO
+      free_chunks(channel);
       return -1;
     }
-    read_pcm(fp, &t->nchunks, &t->length, t->std_channel);
-    pclose(fp);
-    return 0;
+    chunk = make_chunk();
+  }
 }
 
-int read_stem(char* filename, int* nchunks, int* length, chunks* channel) {
+int read_channel(char* file, finyl_channel channel, int* nchunks, int* length) {
   FILE* fp = NULL;
-  open_pcm_stream(fp, filename); //TODO fix filename
+  open_pcm_stream(&fp, file);
   if (fp == NULL) {
     return -1;
   }
-  read_pcm(fp, nchunks, length, channel);
+  if (read_pcm(fp, channel, nchunks, length) == -1) {
+    return -1;
+  }
   pclose(fp);
   return 0;
 }
 
-int read_two_stems(char* filename, track* t) {
-  t->stem = two_stems;
-  
-  if (read_stem(filename, &t->nchunks, &t->length, t->voc_channel) == -1) {
-    return -1;
+//each file corresponding to each channel
+int finyl_read_channels_from_files(char** files, int channels_length, finyl_track* t) {
+  for (int i = 0; i < channels_length; i++) {
+    int nchunks = 0;
+    int length = 0;
+    finyl_channel channel = make_channel();
+    if (channel == NULL) {
+      printf("failed to allocate memory in finyl_read_channels_from_files\n");
+      return -1;
+    }
+    if (read_channel(files[i], channel, &nchunks, &length) == -1) {
+      free(channel);
+      return -1;
+    }
+    if (i == 0) {
+      t->length = length;
+      t->nchunks = nchunks;
+    } else {
+      if (length != t->length | nchunks != t->nchunks) {
+        printf("all channels have to be the same length\n");
+        free(channel);
+        return -1;
+      }
+    }
+
+    t->channels_count++;
   }
   
-  int inst_nchunks = 0;
-  int inst_length = 0;
-  
-  if (read_stem(filename, &t->nchunks, &t->length, t->voc_channel) == -1) {
+  return 0;
+}
+//one file has amny channels (eg. flac)
+void read_channels_from_file(char* file);
+
+finyl_process_callback* a_callbacks;
+finyl_process_callback* b_callbacks;
+finyl_process_callback* c_callbacks;
+finyl_process_callback* d_callbacks;
+
+int finyl_set_process_callback(finyl_process_callback cb, finyl_deck_enum e, int channel_index) {
+  bool valid = (-1 <= channel_index) && (channel_index < 10);
+  if (!valid) {
+    printf("finyl: channel_index = %d should be -1 to 9\n", channel_index);
     return -1;
   }
+
+  bool all = channel_index == -1;
   
-  if (!(inst_nchunks == t->nchunks && inst_length == t->nchunks)) {
-    printf("inst and voc has to be same length\n");
-    return -1;
-  }
   return 0;
 }
 
-int read_three_stems(char* filename, track* t) {
-  t->stem = three_stems;
-      
-  read_stem(filename, &t->nchunks, &t->length, t->voc_channel);
-  
-  int inst_nchunks = 0;
-  int inst_length = 0;
-  read_stem(filename, &inst_nchunks, &inst_length, t->inst_channel);
-  if (!(inst_nchunks == t->nchunks && inst_length == t->nchunks)) {
-    printf("inst and voc has to be same length\n");
-    return -1;
-  }
-  int drum_nchunks = 0;
-  int drum_length = 0;
-  read_stem(filename, &drum_nchunks, &drum_length, t->drum_channel);
-  if (!(drum_nchunks == t->nchunks && drum_length == t->nchunks)) {
-    printf("drum and voc has to be same length\n");
-    return -1;
-  }
+int finyl_remove_process_callback(finyl_process_callback cb, finyl_deck_enum e, int channel_index) {
+  //
   return 0;
 }
 
-int load_track(char* filename, track* t) {
-  //do matching to tell stem
-  if (read_two_stems(filename, t) == -1) {
-    return -1;
-  }
+void handle_deck(finyl_deck* x, snd_pcm_uframes_t period_size) {
+  //call callbacks for deck x, modify sample
+  //deck.e
 
-  _print_track(t);
-  return 0;
+  x->t->index = x->t->speed;
+  if (x->t->index >= x->t->length) {
+    x->t->index = 0;
+  }
 }
 
-void generateRandomString(char* badge, size_t size) {
-  char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  srand(time(NULL));
-  
-  int i;
-  for (i = 0; i < size - 1; ++i) {
-    int index = rand() % (sizeof(characters) - 1);
-    badge[i] = characters[index];
+void finyl_handle(finyl_deck* a, finyl_deck* b, finyl_deck* c, finyl_deck* d, finyl_sample* buffer, snd_pcm_uframes_t period_size) {
+  for (signed int i = 0; i < period_size*2; i=i+2) {
+    handle_deck(a, period_size);
+    /* handle_deck(b, period_size); */
+    
+    //even sample i is for headphone.
+    //odd sample i+1 is for speaker.
+    buffer[i] = a->t->index;
+    buffer[i+1] = a->t->index;
   }
-  badge[size - 1] = '\0';
 }
 
-//copy only the dest amount of src to dest
-void ncpy(char* dest, char* src, size_t size) {
-  strncpy(dest, src, size);
-  dest[size - 1] = '\0';;
-}
-
-char* read_file_malloc(char* filename) {
-  FILE* fp = fopen(filename, "rb");
-
-  if (fp == NULL) {
-    printf("failed to read from file = %s\n", filename);
-    return NULL;
-  }
-
-  fseek(fp, 0, SEEK_END);
-  long file_size = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-
-  char* buffer = (char*)malloc(file_size + 1);
-  if (buffer == NULL) {
-    printf("failed to allocate memory for buffer in read_file\n");
-    fclose(fp);
-    return NULL;
-  }
-
-  size_t count = fread((void*)buffer, 1, file_size, fp);
-  if (count != file_size) {
-    printf("Error reading a file in read_file_malloc\n");
-    free(buffer);
-    fclose(fp);
-    return NULL;
-  }
-
-  buffer[file_size] = '\0';
-  fclose(fp);
-  return buffer;
-}
+char* device = "default";            /* playback device */
 
 void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
   snd_pcm_hw_params_t* hw_params;
@@ -250,43 +202,16 @@ void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pc
   snd_pcm_get_params(handle, buffer_size, period_size);
 }
 
-void run(track* t, snd_pcm_t* handle, snd_pcm_uframes_t period_size) {
-  t->speed = 1;
-  int err = 0;
-  sample buffer[period_size*2];
-  while (1) {
-    for (signed int i = 0; i < period_size*2; i=i+2) {
-      //even sample i  is for headphone.
-      //odd sample i+1 is for speaker.
-      buffer[i] = calc_sample(t, t->stem);
-      buffer[i+1] = calc_sample(t, t->stem);
-      
-      t->index = t->index + 1;
-      if (t->index >= t->length) {
-        t->index = 0;
-      }
-    }
-    
-    err = snd_pcm_writei(handle, buffer, period_size);
-    if (err == -EPIPE) {
-      printf("Underrun occurred: %s\n", snd_strerror(err));
-      snd_pcm_prepare(handle);
-    } else if (err == -EAGAIN) {
-    } else if (err < 0) {
-      printf("error %s\n", snd_strerror(err));
-      goto cleanup;
-    }
-  }
-  
- cleanup:
-  err = snd_pcm_drain(handle);
-  if (err < 0)
+void cleanup_alsa(snd_pcm_t* handle) {
+  int err = snd_pcm_drain(handle);
+  if (err < 0) {
     printf("snd_pcm_drain failed: %s\n", snd_strerror(err));
+  }
   snd_pcm_close(handle);
   printf("closed\n");
 }
 
-void setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
+void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
   int err;
   if ((err = snd_pcm_open(handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
     printf("Playback open error!: %s\n", snd_strerror(err));
@@ -295,3 +220,29 @@ void setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_ufra
   setup_alsa_params(*handle, buffer_size, period_size);
   printf("buffer_size %ld, period_size %ld\n", *buffer_size, *period_size);
 }
+
+void finyl_run(finyl_deck* a, finyl_deck* b, finyl_deck* c, finyl_deck* d, snd_pcm_t* handle, snd_pcm_uframes_t buffer_size, snd_pcm_uframes_t period_size) {
+  int err = 0;
+  finyl_sample buffer[period_size*2];
+  finyl_sample abuffer[period_size*2];
+  finyl_sample bbuffer[period_size*2];
+  finyl_sample cbuffer[period_size*2];
+  finyl_sample dbuffer[period_size*2];
+  while (1) {
+    finyl_handle(a, b, c, d, buffer, period_size); //handle effects of each tracks
+    
+    err = snd_pcm_writei(handle, buffer, period_size);
+    if (err == -EPIPE) {
+      printf("Underrun occurred: %s\n", snd_strerror(err));
+      snd_pcm_prepare(handle);
+    } else if (err == -EAGAIN) {
+    } else if (err < 0) {
+      printf("error %s\n", snd_strerror(err));
+      cleanup_alsa(handle);
+      return;
+    }
+  }
+  
+  cleanup_alsa(handle);
+}
+

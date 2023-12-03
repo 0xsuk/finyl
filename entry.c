@@ -1,7 +1,17 @@
 #include <alsa/asoundlib.h>
 #include <math.h>
 #include <stdbool.h>
-#include "finyl.h"
+#include "finyl_dev.h"
+
+int load_track(char* filename, track* t) {
+  //do matching to tell stem
+  /* if (read_no_stem(filename, t) == -1) { */
+    /* return -1; */
+  /* } */
+
+  _print_track(t);
+  return 0;
+}
 
 int main(int argc, char** argv) {
   if (argc != 2) {

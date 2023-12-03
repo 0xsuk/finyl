@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <sys/wait.h>
 #include "cJSON.h"
-#include "finyl.h"
+#include "finyl_dev.h"
 
 #define badge_length 6 //include \0
 #define max_playlists_length 1000
@@ -25,6 +25,18 @@ typedef struct {
 } finyl_output;
 
 finyl_output fo;
+
+void generateRandomString(char* badge, size_t size) {
+  char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  srand(time(NULL));
+  
+  int i;
+  for (i = 0; i < size - 1; ++i) {
+    int index = rand() % (sizeof(characters) - 1);
+    badge[i] = characters[index];
+  }
+  badge[size - 1] = '\0';
+}
 
 void _print_playlist(playlist* p) {
   printf("\t\tid=%d\n", p->id);
@@ -193,6 +205,44 @@ int get_playlist_track(char* usb, int id) {
   }
   
   return 0;
+}
+
+char* read_file_malloc(char* filename) {
+  FILE* fp = fopen(filename, "rb");
+
+  if (fp == NULL) {
+    printf("failed to read from file = %s\n", filename);
+    return NULL;
+  }
+
+  fseek(fp, 0, SEEK_END);
+  long file_size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+
+  char* buffer = (char*)malloc(file_size + 1);
+  if (buffer == NULL) {
+    printf("failed to allocate memory for buffer in read_file\n");
+    fclose(fp);
+    return NULL;
+  }
+
+  size_t count = fread((void*)buffer, 1, file_size, fp);
+  if (count != file_size) {
+    printf("Error reading a file in read_file_malloc\n");
+    free(buffer);
+    fclose(fp);
+    return NULL;
+  }
+
+  buffer[file_size] = '\0';
+  fclose(fp);
+  return buffer;
+}
+
+//copy only the dest amount of src to dest
+void ncpy(char* dest, char* src, size_t size) {
+  strncpy(dest, src, size);
+  dest[size - 1] = '\0';;
 }
 
 int main() {
