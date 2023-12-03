@@ -2,11 +2,16 @@
 #define FINYL_H
 #include <alsa/asoundlib.h>
 
+#define chunks_size_max  32
+#define chunk_size 2097152 //(2048 * 1024);
+#define channels_size_max 8
+
 typedef void (*finyl_process_callback)(unsigned long period_size, signed short buffer);
 
 typedef signed short finyl_sample;
 typedef finyl_sample* finyl_chunk; //chunk_size array of sample
-typedef finyl_chunk** finyl_channel; //32 length array of pointer to chunk
+typedef finyl_chunk* finyl_channel; //32 length array of pointer to chunk
+typedef finyl_sample* finyl_multi_buffer;
 
 typedef struct {
   int id;
@@ -19,13 +24,13 @@ typedef struct {
 } finyl_track_meta;
 
 typedef struct {
-  finyl_channel channels[10];
+  finyl_channel channels[8];
   finyl_track_meta meta;
   int nchunks; //the number of chunks in a channel
   int length;
   double index;
   double speed;
-  int channels_count; //number of stems
+  int channels_size; //number of stems
 } finyl_track;
 
 typedef enum {

@@ -4,9 +4,6 @@
 #include <alsa/asoundlib.h>
 #include "finyl.h"
 
-#define maximum_chunks  32
-#define chunk_size 2097152 //(2048 * 1024);
-
 /* void _print_track(track* t); */
 
 /* void generateRandomString(char* badge, size_t size); */

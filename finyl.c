@@ -4,6 +4,33 @@
 #include <stdbool.h>
 #include <sys/wait.h>
 
+finyl_deck* adeck;
+finyl_deck* bdeck;
+finyl_deck* cdeck;
+finyl_deck* ddeck;
+
+finyl_sample* buffer;
+finyl_sample* abuffer;
+finyl_sample* a0buffer;
+finyl_sample* a1buffer;
+finyl_sample* a2buffer;
+finyl_sample* a3buffer;
+finyl_sample* a4buffer;
+finyl_sample* a5buffer;
+finyl_sample* a6buffer;
+finyl_sample* a7buffer;
+finyl_sample* bbuffer;
+finyl_sample* b0buffer;
+finyl_sample* b1buffer;
+finyl_sample* b2buffer;
+finyl_sample* b3buffer;
+finyl_sample* b4buffer;
+finyl_sample* b5buffer;
+finyl_sample* b6buffer;
+finyl_sample* b7buffer;
+
+snd_pcm_uframes_t period_size;
+
 void finyl_init_track_meta(finyl_track_meta* tm) {
   tm->id = -1;
   tm->tempo = 0;
@@ -17,7 +44,7 @@ void finyl_init_track(finyl_track* t) {
   t->length = 0;
   t->index = 0;
   t->speed = 0;
-  t->channels_count = 0;
+  t->channels_size = 0;
 }
 
 void finyl_print_track(finyl_track* t) {
@@ -26,7 +53,7 @@ void finyl_print_track(finyl_track* t) {
   printf("\tlength: %d\n", t->length);
   printf("\tindex: %lf\n", t->index);
   printf("\tspeed: %lf\n", t->speed);
-  printf("\tchannels_count: %d\n", t->channels_count);
+  printf("\tchannels_size: %d\n", t->channels_size);
   printf("}\n");
 }
 
@@ -34,32 +61,44 @@ finyl_sample get_sample(finyl_track* t, finyl_channel c) {
   int position = floor(t->index);
   int ichunk = position / chunk_size;
   int isample = position - (chunk_size * ichunk);
-  finyl_chunk* chunk = c[ichunk];
-  return *chunk[isample];
+
+  finyl_chunk chunk = c[ichunk];
+  finyl_sample sample = chunk[isample];
+  return sample;
 }
 
-finyl_sample average_channels(finyl_track* t, int count) {
+finyl_sample average_channels(finyl_track* t, int size) {
   finyl_sample s = 0;
   
-  for (int i = 0; i<count; i++) {
+  for (int i = 0; i<size; i++) {
     s += get_sample(t, t->channels[i]);
   }
 
-  s = s/count;
+  s = s/size;
   
   return s;
 }
 
-finyl_chunk* make_chunk() {
-  return (finyl_chunk*)malloc(chunk_size * sizeof(finyl_sample));
+finyl_chunk make_chunk() {
+  return malloc(chunk_size * sizeof(finyl_sample));
 }
 
-int free_chunks(finyl_channel channel) {
-  
+void free_chunks(finyl_channel channel, int channel_size) {
+  for (int i = 0; i<channel_size;i++) {
+    finyl_chunk chunk = channel[i];
+    free(chunk);
+  }
 }
 
 finyl_channel make_channel() {
-  return malloc(32 * sizeof(finyl_channel*));
+  return malloc(chunks_size_max * sizeof(finyl_channel*));
+}
+
+void free_channels(finyl_channel* channels, int channels_size) {
+  for (int i = 0; i<channels_size; i++) {
+    finyl_channel channel = channels[i];
+    free(channel);
+  }
 }
 
 int open_pcm_stream(FILE** fp, char* filename) {
@@ -76,7 +115,7 @@ int open_pcm_stream(FILE** fp, char* filename) {
 
 //reads from fp, updates nchunks, length, channel
 int read_pcm(FILE* fp, finyl_channel channel, int* nchunks, int* length) {
-  finyl_chunk* chunk = make_chunk();
+  finyl_chunk chunk = make_chunk();
   while (1) {
     size_t count = fread(chunk, sizeof(finyl_sample), chunk_size, fp);
     channel[*nchunks] = chunk;
@@ -85,10 +124,9 @@ int read_pcm(FILE* fp, finyl_channel channel, int* nchunks, int* length) {
     if (count < chunk_size) {
       return 0;
     }
-    if (*nchunks == maximum_chunks) {
-      printf("File is too large");
-      //TODO
-      free_chunks(channel);
+    if (*nchunks == chunks_size_max) {
+      printf("File is too large\n");
+      free_chunks(channel, *nchunks);
       return -1;
     }
     chunk = make_chunk();
@@ -109,8 +147,8 @@ int read_channel(char* file, finyl_channel channel, int* nchunks, int* length) {
 }
 
 //each file corresponding to each channel
-int finyl_read_channels_from_files(char** files, int channels_length, finyl_track* t) {
-  for (int i = 0; i < channels_length; i++) {
+int finyl_read_channels_from_files(char** files, int channels_size, finyl_track* t) {
+  for (int i = 0; i < channels_size; i++) {
     int nchunks = 0;
     int length = 0;
     finyl_channel channel = make_channel();
@@ -119,7 +157,9 @@ int finyl_read_channels_from_files(char** files, int channels_length, finyl_trac
       return -1;
     }
     if (read_channel(files[i], channel, &nchunks, &length) == -1) {
+      //free all channels
       free(channel);
+      free_channels(t->channels, t->channels_size);
       return -1;
     }
     if (i == 0) {
@@ -129,11 +169,13 @@ int finyl_read_channels_from_files(char** files, int channels_length, finyl_trac
       if (length != t->length | nchunks != t->nchunks) {
         printf("all channels have to be the same length\n");
         free(channel);
+        free_channels(t->channels, t->channels_size);
         return -1;
       }
     }
 
-    t->channels_count++;
+    t->channels[i] = channel;
+    t->channels_size++;
   }
   
   return 0;
@@ -147,7 +189,7 @@ finyl_process_callback* c_callbacks;
 finyl_process_callback* d_callbacks;
 
 int finyl_set_process_callback(finyl_process_callback cb, finyl_deck_enum e, int channel_index) {
-  bool valid = (-1 <= channel_index) && (channel_index < 10);
+  bool valid = (-1 <= channel_index) && (channel_index < channels_size_max);
   if (!valid) {
     printf("finyl: channel_index = %d should be -1 to 9\n", channel_index);
     return -1;
@@ -163,25 +205,24 @@ int finyl_remove_process_callback(finyl_process_callback cb, finyl_deck_enum e, 
   return 0;
 }
 
-void handle_deck(finyl_deck* x, snd_pcm_uframes_t period_size) {
+void handle_deck(finyl_deck* x) {
   //call callbacks for deck x, modify sample
   //deck.e
-
-  x->t->index = x->t->speed;
+  x->t->index += x->t->speed;
   if (x->t->index >= x->t->length) {
     x->t->index = 0;
   }
 }
 
-void finyl_handle(finyl_deck* a, finyl_deck* b, finyl_deck* c, finyl_deck* d, finyl_sample* buffer, snd_pcm_uframes_t period_size) {
+void finyl_handle() {
   for (signed int i = 0; i < period_size*2; i=i+2) {
-    handle_deck(a, period_size);
+    handle_deck(adeck);
     /* handle_deck(b, period_size); */
     
     //even sample i is for headphone.
     //odd sample i+1 is for speaker.
-    buffer[i] = a->t->index;
-    buffer[i+1] = a->t->index;
+    buffer[i] = get_sample(adeck->t, adeck->t->channels[0]);
+    buffer[i+1] = 0;
   }
 }
 
@@ -221,15 +262,50 @@ void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pc
   printf("buffer_size %ld, period_size %ld\n", *buffer_size, *period_size);
 }
 
-void finyl_run(finyl_deck* a, finyl_deck* b, finyl_deck* c, finyl_deck* d, snd_pcm_t* handle, snd_pcm_uframes_t buffer_size, snd_pcm_uframes_t period_size) {
+void init_buffers() {
+  int s = sizeof(finyl_sample) * period_size * 2;
+  
+  buffer = (finyl_sample*)malloc(s);
+  
+  abuffer = (finyl_sample*)malloc(s);
+  a0buffer = (finyl_sample*)malloc(s);
+  a1buffer = (finyl_sample*)malloc(s);
+  a2buffer = (finyl_sample*)malloc(s);
+  a3buffer = (finyl_sample*)malloc(s);
+  a4buffer = (finyl_sample*)malloc(s);
+  a5buffer = (finyl_sample*)malloc(s);
+  a6buffer = (finyl_sample*)malloc(s);
+  a7buffer = (finyl_sample*)malloc(s);
+  bbuffer = (finyl_sample*)malloc(s);
+  b0buffer = (finyl_sample*)malloc(s);
+  b1buffer = (finyl_sample*)malloc(s);
+  b2buffer = (finyl_sample*)malloc(s);
+  b3buffer = (finyl_sample*)malloc(s);
+  b4buffer = (finyl_sample*)malloc(s);
+  b5buffer = (finyl_sample*)malloc(s);
+  b6buffer = (finyl_sample*)malloc(s);
+  b7buffer = (finyl_sample*)malloc(s);
+}
+
+void init_decks(finyl_deck* a, finyl_deck* b, finyl_deck* c, finyl_deck* d) {
+  adeck = a;
+  bdeck = b;
+  cdeck = c;
+  ddeck = d;
+}
+
+void finyl_run(finyl_deck* a, finyl_deck* b, finyl_deck* c, finyl_deck* d, snd_pcm_t* handle, snd_pcm_uframes_t buffer_size, snd_pcm_uframes_t _period_size) {
   int err = 0;
-  finyl_sample buffer[period_size*2];
-  finyl_sample abuffer[period_size*2];
-  finyl_sample bbuffer[period_size*2];
-  finyl_sample cbuffer[period_size*2];
-  finyl_sample dbuffer[period_size*2];
+  period_size = _period_size;
+  init_decks(a, b, c, d);
+  init_buffers();
+  
   while (1) {
-    finyl_handle(a, b, c, d, buffer, period_size); //handle effects of each tracks
+    finyl_handle(); //handle effects of each tracks
+    
+    //handle channels
+    //handle tracks
+    //handle master
     
     err = snd_pcm_writei(handle, buffer, period_size);
     if (err == -EPIPE) {
