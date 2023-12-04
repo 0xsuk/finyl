@@ -4,10 +4,10 @@
 #include <stdbool.h>
 #include <sys/wait.h>
 
-finyl_deck* adeck;
-finyl_deck* bdeck;
-finyl_deck* cdeck;
-finyl_deck* ddeck;
+finyl_track* adeck; //pointer to track, is a d
+finyl_track* bdeck;
+finyl_track* cdeck;
+finyl_track* ddeck;
 
 finyl_sample* buffer;
 finyl_sample* abuffer;
@@ -43,8 +43,9 @@ void finyl_init_track(finyl_track* t) {
   t->nchunks = 0;
   t->length = 0;
   t->index = 0;
-  t->speed = 0;
+  t->speed = 1.0;
   t->channels_size = 0;
+  t->playing = false;
 }
 
 void finyl_print_track(finyl_track* t) {
@@ -57,7 +58,7 @@ void finyl_print_track(finyl_track* t) {
   printf("}\n");
 }
 
-finyl_sample get_sample(finyl_track* t, finyl_channel c) {
+finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c) {
   int position = floor(t->index);
   int ichunk = position / chunk_size;
   int isample = position - (chunk_size * ichunk);
@@ -71,7 +72,7 @@ finyl_sample average_channels(finyl_track* t, int size) {
   finyl_sample s = 0;
   
   for (int i = 0; i<size; i++) {
-    s += get_sample(t, t->channels[i]);
+    s += finyl_get_sample(t, t->channels[i]);
   }
 
   s = s/size;
@@ -166,7 +167,7 @@ int finyl_read_channels_from_files(char** files, int channels_size, finyl_track*
       t->length = length;
       t->nchunks = nchunks;
     } else {
-      if (length != t->length | nchunks != t->nchunks) {
+      if (length != t->length || nchunks != t->nchunks) {
         printf("all channels have to be the same length\n");
         free(channel);
         free_channels(t->channels, t->channels_size);
@@ -183,47 +184,61 @@ int finyl_read_channels_from_files(char** files, int channels_size, finyl_track*
 //one file has amny channels (eg. flac)
 void read_channels_from_file(char* file);
 
-finyl_process_callback* a_callbacks;
+finyl_process_callback a_callbacks[10];
 finyl_process_callback* b_callbacks;
 finyl_process_callback* c_callbacks;
 finyl_process_callback* d_callbacks;
 
-int finyl_set_process_callback(finyl_process_callback cb, finyl_deck_enum e, int channel_index) {
-  bool valid = (-1 <= channel_index) && (channel_index < channels_size_max);
-  if (!valid) {
-    printf("finyl: channel_index = %d should be -1 to 9\n", channel_index);
-    return -1;
+int finyl_set_process_callback(finyl_process_callback cb, finyl_callback_target ct) {
+  if (ct == finyl_a) {
+    a_callbacks[0] = cb;
   }
-
-  bool all = channel_index == -1;
-  
   return 0;
 }
 
-int finyl_remove_process_callback(finyl_process_callback cb, finyl_deck_enum e, int channel_index) {
+int finyl_remove_process_callback(finyl_process_callback cb, finyl_callback_target ct) {
   //
   return 0;
 }
 
-void handle_deck(finyl_deck* x) {
-  //call callbacks for deck x, modify sample
-  //deck.e
-  x->t->index += x->t->speed;
-  if (x->t->index >= x->t->length) {
-    x->t->index = 0;
+void finyl_handle_play(unsigned long period_size, finyl_sample* buf, finyl_track* t) {
+  if (!t->playing) {
+    memset(buf, 0, period_size*2*sizeof(finyl_sample));
+    return;
   }
-}
+  for (int i = 0; i < period_size*2; i=i+2) {
+    t->index += t->speed;
 
-void finyl_handle() {
-  for (signed int i = 0; i < period_size*2; i=i+2) {
-    handle_deck(adeck);
-    /* handle_deck(b, period_size); */
+    if (t->index >= t->length) {
+      t->playing = false;
+      buf[i] = 0;
+      buf[i+1] = 0;
+    }
     
     //even sample i is for headphone.
     //odd sample i+1 is for speaker.
-    buffer[i] = get_sample(adeck->t, adeck->t->channels[0]);
-    buffer[i+1] = 0;
+    buf[i] = finyl_get_sample(t, t->channels[0]);
+    buf[i+1] = 0;
   }
+}
+
+void finyl_handle_master(unsigned long period_size, finyl_sample* buf, finyl_track* t) {
+  for (int i = 0; i < period_size*2; i=i+2) { 
+    buffer[i] = 1 * abuffer[i];
+    buffer[i+1] = 1 * abuffer[i+1];
+  }
+}
+
+void handle_deck() {
+  //call callbacks for deck x, modify sample
+  //deck.e
+  finyl_process_callback testing = a_callbacks[0];
+  testing(period_size, abuffer, adeck);
+}
+
+void finyl_handle() {
+  handle_deck();
+  finyl_handle_master(period_size, buffer, NULL);
 }
 
 char* device = "default";            /* playback device */
@@ -287,14 +302,14 @@ void init_buffers() {
   b7buffer = (finyl_sample*)malloc(s);
 }
 
-void init_decks(finyl_deck* a, finyl_deck* b, finyl_deck* c, finyl_deck* d) {
+void init_decks(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d) {
   adeck = a;
   bdeck = b;
   cdeck = c;
   ddeck = d;
 }
 
-void finyl_run(finyl_deck* a, finyl_deck* b, finyl_deck* c, finyl_deck* d, snd_pcm_t* handle, snd_pcm_uframes_t buffer_size, snd_pcm_uframes_t _period_size) {
+void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, snd_pcm_t* handle, snd_pcm_uframes_t buffer_size, snd_pcm_uframes_t _period_size) {
   int err = 0;
   period_size = _period_size;
   init_decks(a, b, c, d);

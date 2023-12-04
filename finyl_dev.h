@@ -18,6 +18,6 @@
 
 /* int load_track(char* filename, track* t); */
 
-void run(finyl_deck* a, finyl_deck* b, finyl_deck* c, finyl_deck* d, snd_pcm_t* handle, snd_pcm_uframes_t period_size);
+/* void run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, snd_pcm_t* handle, snd_pcm_uframes_t period_size); */
 
 #endif
