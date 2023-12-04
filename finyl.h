@@ -35,25 +35,21 @@ typedef struct {
 
 typedef enum {
   finyl_a,
-  finyl_a0,
-  finyl_a1,
-  finyl_a2,
-  finyl_a3,
-  finyl_a4,
-  finyl_a5,
-  finyl_a6,
-  finyl_a7,
   finyl_b,
-  finyl_b0,
-  finyl_b1,
-  finyl_b2,
-  finyl_b3,
-  finyl_b4,
-  finyl_b5,
-  finyl_b6,
-  finyl_b7,
-  finyl_all
-} finyl_callback_target;
+  finyl_c,
+  finyl_d,
+} finyl_track_target;
+
+typedef enum {
+  finyl_0,
+  finyl_1,
+  finyl_2,
+  finyl_3,
+  finyl_4,
+  finyl_5,
+  finyl_6,
+  finyl_7,
+} finyl_channel_target;
 
 /* typedef struct { */
   /* snd_pcm_t* handle; */

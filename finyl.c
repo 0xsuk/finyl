@@ -189,21 +189,21 @@ finyl_process_callback* b_callbacks;
 finyl_process_callback* c_callbacks;
 finyl_process_callback* d_callbacks;
 
-int finyl_set_process_callback(finyl_process_callback cb, finyl_callback_target ct) {
-  if (ct == finyl_a) {
+int finyl_set_track_callback(finyl_process_callback cb, finyl_track_target tt) {
+  if (tt == finyl_a) {
     a_callbacks[0] = cb;
   }
   return 0;
 }
 
-int finyl_remove_process_callback(finyl_process_callback cb, finyl_callback_target ct) {
+int finyl_remove_process_callback(finyl_process_callback cb, finyl_track_target tt) {
   //
   return 0;
 }
 
-void finyl_handle_play(unsigned long period_size, finyl_sample* buf, finyl_track* t) {
+void finyl_track_callback_play(unsigned long period_size, finyl_sample* out, finyl_sample** channels, finyl_track* t) {
   if (!t->playing) {
-    memset(buf, 0, period_size*2*sizeof(finyl_sample));
+    memset(out, 0, period_size*2*sizeof(finyl_sample));
     return;
   }
   for (int i = 0; i < period_size*2; i=i+2) {
@@ -211,14 +211,14 @@ void finyl_handle_play(unsigned long period_size, finyl_sample* buf, finyl_track
 
     if (t->index >= t->length) {
       t->playing = false;
-      buf[i] = 0;
-      buf[i+1] = 0;
+      out[i] = 0;
+      out[i+1] = 0;
     }
     
     //even sample i is for headphone.
     //odd sample i+1 is for speaker.
-    buf[i] = finyl_get_sample(t, t->channels[0]);
-    buf[i+1] = 0;
+    out[i] = average_channels(t, t->channels_size) * 2;
+    out[i+1] = 0;
   }
 }
 
