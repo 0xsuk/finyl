@@ -1,34 +1,49 @@
+#include <stdio.h>
+#include "finyl.h"
 #include <alsa/asoundlib.h>
-#include <math.h>
 #include <stdbool.h>
-#include "finyl_dev.h"
+#include <unistd.h>
+#include <pthread.h>
 
-int load_track(char* filename, track* t) {
-  //do matching to tell stem
-  /* if (read_no_stem(filename, t) == -1) { */
-    /* return -1; */
-  /* } */
 
-  _print_track(t);
-  return 0;
+char* usb = "/media/null/22BC-F655/";
+/* sysdefault:CARD=XDJRX */
+/* char* device = "sysdefault:CARD=PCH"; */
+
+void* thread(finyl_track* t) {
+  /* sleep(5); */
+  printf("testing thread\n");
+  /* t->playing = false; */
+  pthread_exit("ret");
 }
 
-int main(int argc, char** argv) {
-  if (argc != 2) {
-    printf("Usage: ./finyl filename\n");
-    exit(0);
-  }
-  track t;
-  init_track(&t);
-  
+int main() {
   snd_pcm_t* handle;
   snd_pcm_uframes_t buffer_size = 1024 * 2;
   snd_pcm_uframes_t period_size = 1024;
-  setup_alsa(&handle, &buffer_size, &period_size);
+  finyl_setup_alsa(&handle, &buffer_size, &period_size);
   printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
-  if (load_track(argv[1], &t) == -1) {
+  
+  finyl_track t;
+  finyl_init_track(&t);
+  finyl_set_process_callback(finyl_handle_play, finyl_a);
+  finyl_set_process_callback(finyl_handle_master, finyl_all);
+
+  char* files[2];
+  files[0] = "birth.mp3";
+  /* files[1] = "no_vocals.wav"; */
+  if (finyl_read_channels_from_files(files, 1, &t) == -1) {
+    printf("you failed\n");
     return -1;
   }
-  run(&t, handle, period_size);
-  return 0;
+  
+  finyl_print_track(&t);
+  
+  t.playing = true;
+  
+  pthread_t th;
+  pthread_create(&th, NULL, thread, &t);
+  
+  finyl_run(&t, NULL, NULL, NULL, handle, buffer_size, period_size);
+
 }
