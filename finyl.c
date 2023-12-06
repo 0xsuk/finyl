@@ -18,11 +18,20 @@ finyl_sample** b_channel_buffers;
 snd_pcm_uframes_t period_size;
 
 finyl_sample* init_channel_buffer() {
-   return malloc(sizeof(finyl_sample) * period_size * 2);
+  finyl_sample* buf =  (finyl_sample*)malloc(sizeof(finyl_sample) * period_size * 2);
+   if (buf == NULL) {
+     printf("init_channel_buffer is NULL\n");
+     return NULL;
+   }
+   return buf;
 }
 
 finyl_sample**  init_channel_buffers() {
-  finyl_sample** bufs = malloc(MAX_CHANNELS_SIZE * sizeof(finyl_sample*));
+  finyl_sample** bufs = (finyl_sample**)malloc(MAX_CHANNELS_SIZE * sizeof(finyl_sample*));
+  if (bufs == NULL) {
+    printf("failed to init_channel_buffers\n");
+    return NULL;
+  }
   for (int i = 0; i<MAX_CHANNELS_SIZE;i++) {
     bufs[i] = init_channel_buffer();
   }
@@ -198,26 +207,34 @@ void gain_filter(finyl_sample* buf, double gain) {
   }
 }
 
-void make_channel_buffer(finyl_sample* buf, finyl_track* t, finyl_channel channel) {
+void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t) {
   for (int i = 0; i < period_size*2; i=i+2) {
     t->index += t->speed;
 
     if (t->index >= t->length) {
       t->playing = false;
-      buf[i] = 0;
-      buf[i+1] = 0;
+      
+      for (int c = 0; c<t->channels_size; c++) {
+        finyl_sample* buf = channel_buffers[c];
+        buf[i] = 0;
+        buf[i+1] = 0;
+      }
+      
       continue;
     }
 
-    buf[i] = finyl_get_sample(t, channel);
-    buf[i+1] = buf[i];
+    for (int c = 0; c<t->channels_size; c++) {
+      finyl_sample* buf = channel_buffers[c];
+      buf[i] = finyl_get_sample(t, t->channels[c]);
+      buf[i+1] = 0;
+    }
   }
 }
 
 void sum_channel_buffers(finyl_sample* track_buffer, finyl_sample** channel_buffers, int channels_size) {
   for (int c = 0; c<channels_size;c++) {
     finyl_sample* channel_buffer = channel_buffers[c];
-    for (int i = 0; i<period_size*2;i=i+2) {
+    for (int i = 0; i<period_size*2; i=i+2) {
       track_buffer[i] += channel_buffer[i];
       track_buffer[i+1] += channel_buffer[i+1];
     }
@@ -228,35 +245,24 @@ double a0_gain = 1.0;
 double a1_gain = 1.0;
 
 void finyl_handle() {
-  if (!adeck->playing) {
-    memset(buffer, 0, period_size*2*sizeof(finyl_sample));
-    return;
+  memset(abuffer, 0, period_size*2*sizeof(finyl_sample));
+  memset(bbuffer, 0, period_size*2*sizeof(finyl_sample));
+  
+  if (adeck->playing) {
+    make_channel_buffers(a_channel_buffers, adeck);
+    gain_filter(a_channel_buffers[0], a0_gain);
+    gain_filter(a_channel_buffers[1], a1_gain);
+    sum_channel_buffers(abuffer, a_channel_buffers, adeck->channels_size);
   }
-  make_channel_buffer(a_channel_buffers[0], adeck, adeck->channels[0]);
-  make_channel_buffer(a_channel_buffers[1], adeck, adeck->channels[1]);
   
-  /* gain_filter(a_channel_buffers[0], a0_gain); */
-  /* gain_filter(a_channel_buffers[1], a1_gain); */
-  sum_channel_buffers(abuffer, a_channel_buffers, adeck->channels_size);
-  /* for (int i = 0; i<a_callbacks_size; i++) { */
-    /* finyl_track_callback cb = a_callbacks[i]; */
-    /* cb(period_size, abuffer, adeck); */
-  /* } */
-  
-  /* for (int i = 0; i<period_size*2; i=i+2) { */
-    /* buffer[i] = abuffer[i]; */
-    /* buffer[i+1] = abuffer[i+1]; */
-  /* } */
-  
-  /* for (int i = 0; i<master_callbacks_size; i++) { */
-    /* finyl_master_callback cb = master_callbacks[i]; */
-    
-    /* cb(period_size, buffer, adeck, bdeck, cdeck, ddeck); */
-  /* } */
+  for (int i = 0; i<period_size*2; i=i+2) {
+    buffer[i] = abuffer[i] + bbuffer[i];
+    buffer[i+1] = abuffer[i+1] + bbuffer[i+1];
+  }
 }
 
-/* char* device = "hw:CARD=PCH,DEV=0";            /\* playback device *\/ */
-char* device = "default";
+char* device = "hw:CARD=PCH,DEV=0";            /* playback device */
+/* char* device = "default"; */
 
 void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
   snd_pcm_hw_params_t* hw_params;
@@ -301,6 +307,12 @@ void init_buffers() {
   a_channel_buffers = init_channel_buffers();
   bbuffer = (finyl_sample*)malloc(s);
   b_channel_buffers = init_channel_buffers();
+
+
+  finyl_sample* buf0 = a_channel_buffers[0];
+  memset(buf0, 0, period_size*2*sizeof(finyl_sample));
+  finyl_sample* buf1 = a_channel_buffers[0];
+  memset(buf1, 0, period_size*2*sizeof(finyl_sample));
 }
 
 void init_decks(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d) {
