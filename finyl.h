@@ -3,8 +3,10 @@
 #include <alsa/asoundlib.h>
 #include "stdbool.h"
 
-#define chunks_size_max  32
-#define chunk_size 2097152 //(2048 * 1024);
+#ifndef MAX_CHUNKS_SIZE
+#define MAX_CHUNKS_SIZE 32
+#endif
+#define CHUNK_SIZE 2097152 //(2048 * 1024);
 
 #ifndef MAX_CHANNELS_SIZE //number of stems
 #define MAX_CHANNELS_SIZE 2

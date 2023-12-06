@@ -67,8 +67,8 @@ void finyl_print_track(finyl_track* t) {
 
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c) {
   int position = floor(t->index);
-  int ichunk = position / chunk_size;
-  int isample = position - (chunk_size * ichunk);
+  int ichunk = position / CHUNK_SIZE;
+  int isample = position - (CHUNK_SIZE * ichunk);
 
   finyl_chunk chunk = c[ichunk];
   finyl_sample sample = chunk[isample];
@@ -76,7 +76,7 @@ finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c) {
 }
 
 static finyl_chunk make_chunk() {
-  return malloc(chunk_size * sizeof(finyl_sample));
+  return malloc(CHUNK_SIZE * sizeof(finyl_sample));
 }
 
 static void free_chunks(finyl_channel channel, int channel_size) {
@@ -87,7 +87,7 @@ static void free_chunks(finyl_channel channel, int channel_size) {
 }
 
 static finyl_channel make_channel() {
-  return malloc(chunks_size_max * sizeof(finyl_channel*));
+  return malloc(MAX_CHUNKS_SIZE * sizeof(finyl_channel*));
 }
 
 static void free_channels(finyl_channel* channels, int channels_size) {
@@ -113,14 +113,14 @@ int open_pcm_stream(FILE** fp, char* filename) {
 int read_pcm(FILE* fp, finyl_channel channel, int* nchunks, int* length) {
   finyl_chunk chunk = make_chunk();
   while (1) {
-    size_t count = fread(chunk, sizeof(finyl_sample), chunk_size, fp);
+    size_t count = fread(chunk, sizeof(finyl_sample), CHUNK_SIZE, fp);
     channel[*nchunks] = chunk;
     (*nchunks)++;
     *length += count;
-    if (count < chunk_size) {
+    if (count < CHUNK_SIZE) {
       return 0;
     }
-    if (*nchunks == chunks_size_max) {
+    if (*nchunks == MAX_CHUNKS_SIZE) {
       printf("File is too large\n");
       free_chunks(channel, *nchunks);
       return -1;
