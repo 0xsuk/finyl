@@ -5,13 +5,6 @@
 
 
 
-void print_track(finyl_track* t) {
-  printf("\n:\n");
-  printf("\tplaying: %d\n", t->playing);
-  printf("\tspeed:%lf\n", t->speed);
-  /* printf("\tgain:%lf\n", a0_gain); */
-}
-
 double max(double a, double b) {
   return a>b ? a : b;
 }
@@ -66,8 +59,8 @@ void handleKey(char x) {
   case 't':
     slide_right(adeck);
   }
-  print_track(adeck);
-  print_track(bdeck);
+  finyl_print_track(adeck);
+  finyl_print_track(bdeck);
 }
 
 void* key_input(void* arg) {
