@@ -10,9 +10,35 @@ finyl_track t;
 
 #include <termios.h>
 
+double max(double a, double b) {
+  return a>b ? a : b;
+}
+
+double min(double a, double b) {
+  return a<b ? a : b;
+}
+
 void handleKey(char x) {
+  switch (x) {
+  case ' ':
+    t.playing = !t.playing;
+    break;
+  case 'j':
+    a0_gain = max(a0_gain-0.1, 0);
+    break;
+  case 'k':
+    a0_gain = min(a0_gain+0.1, 1);
+    break;
+  case 'n':
+    a1_gain = max(a1_gain-0.1, 0);
+    break;
+  case 'm':
+    a1_gain = min(a1_gain+0.1, 1);
+    break;
+  }
   printf("got char = %c\n", x);
-  t.playing = !t.playing;
+  printf("a0_gain is %lf\n", a0_gain);
+  printf("a1_gain is %lf\n", a1_gain);
 }
 
 int key_input() {

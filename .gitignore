@@ -9,4 +9,5 @@
 !/test.c
 /listdevice
 /test-digger
+/test-controller
 *.wav
