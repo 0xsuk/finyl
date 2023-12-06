@@ -22,7 +22,7 @@ finyl_sample* init_channel_buffer() {
 }
 
 finyl_sample**  init_channel_buffers() {
-  finyl_sample** bufs = malloc(MAX_CHANNELS_SIZE * sizeof(finyl_sample**));
+  finyl_sample** bufs = malloc(MAX_CHANNELS_SIZE * sizeof(finyl_sample*));
   for (int i = 0; i<MAX_CHANNELS_SIZE;i++) {
     bufs[i] = init_channel_buffer();
   }
