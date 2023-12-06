@@ -1,6 +1,6 @@
-#ifndef DIGGER_H
-#define DIGGER_H
+#ifndef controller_H
+#define controller_H
 
-void key_input();
+void* key_input(void* arg);
 
 #endif
