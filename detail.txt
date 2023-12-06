@@ -1,4 +1,5 @@
 - plays 2 stems at the same time(same for play, cue, loop)
+  - channels cannbot be played separately. all channels are synced in position, because async channel playback is almost same as playing each channel in a different deck
 - different effect sets for 2 stems (different for eq, filter)
 
 - support realtime stem separation using demucs
@@ -49,7 +50,38 @@ finyl_jump_callback(handle_loop_or_, )
 - same for start stop
 
 
-- so what effect and position_changer are doing can be abstracted.
+- configuration example 1
+//bfA1 is a buffer for channel 1 of track A
+bfA1 = filter(bfA1) //the filter function is channel callback
+bfA1 = echo(bfA1)   //is channel callback
+////do same for bfA2, bfA3...
+// do same for bfB1, bfB2, bfB3
+//after all channel callbacks are finished, track buffer bfA = bfA1 + bfA2 + ... is created by finyl
+//same for bfB = bfB1 + ...
+bfA = volume(bfA)   //apply track callback for A
+bfB = volume(bfB)   //                     for B
+bfA = xfader(bfA)   //xfader is track callback.
+bfB = xfader(bfB)
+
+//bf = bfA + bfB is created by finyl
+bf = master_volume(bf) //master callback, takes a summed buffer of many track buffers, do stuff
 
 
+-- rough implementation example of xfader, track callback
+finyl_set_track_callback(my_xfader_callbackA, A);
+finyl_set_track_callback(my_xfader_callbackB, B);
 
+my_variable line_potentiometer = -1; //ranges from -1 to 1, indicating 100% left_track and 100% right track
+void my_xfader_callbackA(buffer) {
+     A_volume = my_calc_left_volume(line_potentiometer_value)
+     buffer[i] = buffer[i] * A_volume;
+}
+void my_xfader_callbackB(buffer) {
+     B_volume = my_calc_right_volume(line_potentiometer_value)
+     buffer[i] = buffer[i] * B_volume;
+}
+
+
+- problem. NEED for compile time execution
+- make -DCHANNELS=3
+- make -DDECKS=2

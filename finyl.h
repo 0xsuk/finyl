@@ -5,7 +5,10 @@
 
 #define chunks_size_max  32
 #define chunk_size 2097152 //(2048 * 1024);
-#define channels_size_max 8
+
+#ifndef MAX_CHANNELS_SIZE //number of stems
+#define MAX_CHANNELS_SIZE 2
+#endif
 
 typedef signed short finyl_sample;
 typedef finyl_sample* finyl_chunk; //chunk_size array of sample
@@ -23,7 +26,7 @@ typedef struct {
 } finyl_track_meta;
 
 typedef struct {
-  finyl_channel channels[8];
+  finyl_channel channels[MAX_CHANNELS_SIZE];
   finyl_track_meta meta;
   int nchunks; //the number of chunks in a channel
   int length;
@@ -57,8 +60,6 @@ typedef enum {
   /* snd_pcm_uframes_t period_size; */
 /* } finyl_alsa; */
 
-typedef void (*finyl_process_callback)(unsigned long period_size, finyl_sample* buffer, finyl_track* t);
-
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c);
 
 void finyl_print_track(finyl_track* t);
@@ -69,11 +70,7 @@ void finyl_init_track(finyl_track* t);
 
 int finyl_read_channels_from_files(char** files, int channels_length, finyl_track* t);
 
-int finyl_set_process_callback(finyl_process_callback cb, finyl_callback_target ct);
-
-void finyl_handle_play(unsigned long period_size, finyl_sample* buffer, finyl_track* t);
-
-void finyl_handle_master(unsigned long period_size, finyl_sample* buf, finyl_track* t);
+void finyl_track_callback_play(unsigned long period_size, finyl_sample* buf, finyl_track* t);
 
 void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size);
 

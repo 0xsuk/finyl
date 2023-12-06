@@ -11,25 +11,23 @@ finyl_track* ddeck;
 
 finyl_sample* buffer;
 finyl_sample* abuffer;
-finyl_sample* a0buffer;
-finyl_sample* a1buffer;
-finyl_sample* a2buffer;
-finyl_sample* a3buffer;
-finyl_sample* a4buffer;
-finyl_sample* a5buffer;
-finyl_sample* a6buffer;
-finyl_sample* a7buffer;
+finyl_sample** a_channel_buffers;
 finyl_sample* bbuffer;
-finyl_sample* b0buffer;
-finyl_sample* b1buffer;
-finyl_sample* b2buffer;
-finyl_sample* b3buffer;
-finyl_sample* b4buffer;
-finyl_sample* b5buffer;
-finyl_sample* b6buffer;
-finyl_sample* b7buffer;
+finyl_sample** b_channel_buffers;
 
 snd_pcm_uframes_t period_size;
+
+finyl_sample* init_channel_buffer() {
+   return malloc(sizeof(finyl_sample) * period_size * 2);
+}
+
+finyl_sample**  init_channel_buffers() {
+  finyl_sample** bufs = malloc(MAX_CHANNELS_SIZE * sizeof(finyl_sample**));
+  for (int i = 0; i<MAX_CHANNELS_SIZE;i++) {
+    bufs[i] = init_channel_buffer();
+  }
+  return bufs;
+}
 
 void finyl_init_track_meta(finyl_track_meta* tm) {
   tm->id = -1;
@@ -77,6 +75,15 @@ finyl_sample average_channels(finyl_track* t, int size) {
 
   s = s/size;
   
+  return s;
+}
+
+finyl_sample add_channels(finyl_track* t, int size) {
+  finyl_sample s = 0;
+  
+  for (int i = 0; i<size; i++) {
+    s += finyl_get_sample(t, t->channels[i]);
+  }
   return s;
 }
 
@@ -184,64 +191,72 @@ int finyl_read_channels_from_files(char** files, int channels_size, finyl_track*
 //one file has amny channels (eg. flac)
 void read_channels_from_file(char* file);
 
-finyl_process_callback a_callbacks[10];
-finyl_process_callback* b_callbacks;
-finyl_process_callback* c_callbacks;
-finyl_process_callback* d_callbacks;
-
-int finyl_set_track_callback(finyl_process_callback cb, finyl_track_target tt) {
-  if (tt == finyl_a) {
-    a_callbacks[0] = cb;
+void gain_filter(finyl_sample* buf, double gain) {
+  for (int i = 0; i<period_size*2;i=i+2) {
+    buf[i] = gain * buf[i];
+    buf[i+1] = gain * buf[i+1];
   }
-  return 0;
 }
 
-int finyl_remove_process_callback(finyl_process_callback cb, finyl_track_target tt) {
-  //
-  return 0;
-}
-
-void finyl_track_callback_play(unsigned long period_size, finyl_sample* out, finyl_sample** channels, finyl_track* t) {
-  if (!t->playing) {
-    memset(out, 0, period_size*2*sizeof(finyl_sample));
-    return;
-  }
+void make_channel_buffer(finyl_sample* buf, finyl_track* t, finyl_channel channel) {
   for (int i = 0; i < period_size*2; i=i+2) {
     t->index += t->speed;
 
     if (t->index >= t->length) {
       t->playing = false;
-      out[i] = 0;
-      out[i+1] = 0;
+      buf[i] = 0;
+      buf[i+1] = 0;
+      continue;
     }
-    
-    //even sample i is for headphone.
-    //odd sample i+1 is for speaker.
-    out[i] = average_channels(t, t->channels_size) * 2;
-    out[i+1] = 0;
+
+    buf[i] = finyl_get_sample(t, channel);
+    buf[i+1] = buf[i];
   }
 }
 
-void finyl_handle_master(unsigned long period_size, finyl_sample* buf, finyl_track* t) {
-  for (int i = 0; i < period_size*2; i=i+2) { 
-    buffer[i] = 1 * abuffer[i];
-    buffer[i+1] = 1 * abuffer[i+1];
+void sum_channel_buffers(finyl_sample* track_buffer, finyl_sample** channel_buffers, int channels_size) {
+  for (int c = 0; c<channels_size;c++) {
+    finyl_sample* channel_buffer = channel_buffers[c];
+    for (int i = 0; i<period_size*2;i=i+2) {
+      track_buffer[i] += channel_buffer[i];
+      track_buffer[i+1] += channel_buffer[i+1];
+    }
   }
 }
 
-void handle_deck() {
-  //call callbacks for deck x, modify sample
-  //deck.e
-  finyl_process_callback testing = a_callbacks[0];
-  testing(period_size, abuffer, adeck);
-}
+double a0_gain = 1.0;
+double a1_gain = 1.0;
 
 void finyl_handle() {
-  handle_deck();
-  finyl_handle_master(period_size, buffer, NULL);
+  if (!adeck->playing) {
+    memset(buffer, 0, period_size*2*sizeof(finyl_sample));
+    return;
+  }
+  make_channel_buffer(a_channel_buffers[0], adeck, adeck->channels[0]);
+  make_channel_buffer(a_channel_buffers[1], adeck, adeck->channels[1]);
+  
+  /* gain_filter(a_channel_buffers[0], a0_gain); */
+  /* gain_filter(a_channel_buffers[1], a1_gain); */
+  sum_channel_buffers(abuffer, a_channel_buffers, adeck->channels_size);
+  /* for (int i = 0; i<a_callbacks_size; i++) { */
+    /* finyl_track_callback cb = a_callbacks[i]; */
+    /* cb(period_size, abuffer, adeck); */
+  /* } */
+  
+  /* for (int i = 0; i<period_size*2; i=i+2) { */
+    /* buffer[i] = abuffer[i]; */
+    /* buffer[i+1] = abuffer[i+1]; */
+  /* } */
+  
+  /* for (int i = 0; i<master_callbacks_size; i++) { */
+    /* finyl_master_callback cb = master_callbacks[i]; */
+    
+    /* cb(period_size, buffer, adeck, bdeck, cdeck, ddeck); */
+  /* } */
 }
 
-char* device = "default";            /* playback device */
+/* char* device = "hw:CARD=PCH,DEV=0";            /\* playback device *\/ */
+char* device = "default";
 
 void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
   snd_pcm_hw_params_t* hw_params;
@@ -283,23 +298,9 @@ void init_buffers() {
   buffer = (finyl_sample*)malloc(s);
   
   abuffer = (finyl_sample*)malloc(s);
-  a0buffer = (finyl_sample*)malloc(s);
-  a1buffer = (finyl_sample*)malloc(s);
-  a2buffer = (finyl_sample*)malloc(s);
-  a3buffer = (finyl_sample*)malloc(s);
-  a4buffer = (finyl_sample*)malloc(s);
-  a5buffer = (finyl_sample*)malloc(s);
-  a6buffer = (finyl_sample*)malloc(s);
-  a7buffer = (finyl_sample*)malloc(s);
+  a_channel_buffers = init_channel_buffers();
   bbuffer = (finyl_sample*)malloc(s);
-  b0buffer = (finyl_sample*)malloc(s);
-  b1buffer = (finyl_sample*)malloc(s);
-  b2buffer = (finyl_sample*)malloc(s);
-  b3buffer = (finyl_sample*)malloc(s);
-  b4buffer = (finyl_sample*)malloc(s);
-  b5buffer = (finyl_sample*)malloc(s);
-  b6buffer = (finyl_sample*)malloc(s);
-  b7buffer = (finyl_sample*)malloc(s);
+  b_channel_buffers = init_channel_buffers();
 }
 
 void init_decks(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d) {
@@ -327,6 +328,7 @@ void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, s
       printf("Underrun occurred: %s\n", snd_strerror(err));
       snd_pcm_prepare(handle);
     } else if (err == -EAGAIN) {
+      printf("eagain\n");
     } else if (err < 0) {
       printf("error %s\n", snd_strerror(err));
       cleanup_alsa(handle);

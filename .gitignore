@@ -6,7 +6,7 @@
 !/crate-digger/target/fynal-1.0-SNAPSHOT.jar
 *.o
 /test
-/test.c
+!/test.c
 /listdevice
 /test-digger
 *.wav
