@@ -1,4 +1,4 @@
-#include "finyl_dev.h"
+#include "finyl.h"
 #include <alsa/asoundlib.h>
 #include <math.h>
 #include <stdbool.h>
@@ -17,7 +17,7 @@ finyl_sample** b_channel_buffers;
 
 snd_pcm_uframes_t period_size;
 
-finyl_sample* init_channel_buffer() {
+static finyl_sample* init_channel_buffer() {
   finyl_sample* buf =  (finyl_sample*)malloc(sizeof(finyl_sample) * period_size * 2);
    if (buf == NULL) {
      printf("init_channel_buffer is NULL\n");
@@ -26,7 +26,7 @@ finyl_sample* init_channel_buffer() {
    return buf;
 }
 
-finyl_sample**  init_channel_buffers() {
+static finyl_sample**  init_channel_buffers() {
   finyl_sample** bufs = (finyl_sample**)malloc(MAX_CHANNELS_SIZE * sizeof(finyl_sample*));
   if (bufs == NULL) {
     printf("failed to init_channel_buffers\n");
@@ -75,43 +75,22 @@ finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c) {
   return sample;
 }
 
-finyl_sample average_channels(finyl_track* t, int size) {
-  finyl_sample s = 0;
-  
-  for (int i = 0; i<size; i++) {
-    s += finyl_get_sample(t, t->channels[i]);
-  }
-
-  s = s/size;
-  
-  return s;
-}
-
-finyl_sample add_channels(finyl_track* t, int size) {
-  finyl_sample s = 0;
-  
-  for (int i = 0; i<size; i++) {
-    s += finyl_get_sample(t, t->channels[i]);
-  }
-  return s;
-}
-
-finyl_chunk make_chunk() {
+static finyl_chunk make_chunk() {
   return malloc(chunk_size * sizeof(finyl_sample));
 }
 
-void free_chunks(finyl_channel channel, int channel_size) {
+static void free_chunks(finyl_channel channel, int channel_size) {
   for (int i = 0; i<channel_size;i++) {
     finyl_chunk chunk = channel[i];
     free(chunk);
   }
 }
 
-finyl_channel make_channel() {
+static finyl_channel make_channel() {
   return malloc(chunks_size_max * sizeof(finyl_channel*));
 }
 
-void free_channels(finyl_channel* channels, int channels_size) {
+static void free_channels(finyl_channel* channels, int channels_size) {
   for (int i = 0; i<channels_size; i++) {
     finyl_channel channel = channels[i];
     free(channel);
@@ -231,18 +210,23 @@ void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t) {
   }
 }
 
-void sum_channel_buffers(finyl_sample* track_buffer, finyl_sample** channel_buffers, int channels_size) {
-  for (int c = 0; c<channels_size;c++) {
-    finyl_sample* channel_buffer = channel_buffers[c];
-    for (int i = 0; i<period_size*2; i=i+2) {
-      track_buffer[i] += channel_buffer[i];
-      track_buffer[i+1] += channel_buffer[i+1];
+//adds 2, and clip
+static void sum_channel_buffers(finyl_sample* track_buffer, finyl_sample** channel_buffers) {
+  for (int i = 0; i<period_size*2; i++) {
+    int32_t sample  = channel_buffers[0][i] + channel_buffers[1][i];
+    if (sample > 32767) {
+      sample = 32767;
+    } else if (sample < -32768) {
+      sample = -32768;
     }
+    track_buffer[i] = sample;
   }
 }
 
 double a0_gain = 1.0;
 double a1_gain = 1.0;
+double b0_gain = 1.0;
+double b1_gain = 1.0;
 
 void finyl_handle() {
   memset(abuffer, 0, period_size*2*sizeof(finyl_sample));
@@ -252,19 +236,31 @@ void finyl_handle() {
     make_channel_buffers(a_channel_buffers, adeck);
     gain_filter(a_channel_buffers[0], a0_gain);
     gain_filter(a_channel_buffers[1], a1_gain);
-    sum_channel_buffers(abuffer, a_channel_buffers, adeck->channels_size);
+    sum_channel_buffers(abuffer, a_channel_buffers);
   }
   
-  for (int i = 0; i<period_size*2; i=i+2) {
-    buffer[i] = abuffer[i] + bbuffer[i];
-    buffer[i+1] = abuffer[i+1] + bbuffer[i+1];
+  if (bdeck->playing) {
+    make_channel_buffers(b_channel_buffers, bdeck);
+    gain_filter(b_channel_buffers[0], b0_gain);
+    gain_filter(b_channel_buffers[1], b1_gain);
+    sum_channel_buffers(bbuffer, b_channel_buffers);
+  }
+  
+  for (int i = 0; i<period_size*2; i++) {
+    int32_t sample = abuffer[i] + bbuffer[i];
+    if (sample > 32767) {
+      sample = 32767;
+    } else if (sample < -32768) {
+      sample = -32768;
+    }
+    buffer[i] = sample;
   }
 }
 
-char* device = "hw:CARD=PCH,DEV=0";            /* playback device */
-/* char* device = "default"; */
+/* char* device = "hw:CARD=PCH,DEV=0";            /\* playback device *\/ */
+char* device = "default";
 
-void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
+static void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
   snd_pcm_hw_params_t* hw_params;
   snd_pcm_hw_params_malloc(&hw_params);
   snd_pcm_hw_params_any(handle, hw_params);
@@ -279,7 +275,7 @@ void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pc
   snd_pcm_get_params(handle, buffer_size, period_size);
 }
 
-void cleanup_alsa(snd_pcm_t* handle) {
+static void cleanup_alsa(snd_pcm_t* handle) {
   int err = snd_pcm_drain(handle);
   if (err < 0) {
     printf("snd_pcm_drain failed: %s\n", snd_strerror(err));
@@ -298,7 +294,7 @@ void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pc
   printf("buffer_size %ld, period_size %ld\n", *buffer_size, *period_size);
 }
 
-void init_buffers() {
+static void init_buffers() {
   int s = sizeof(finyl_sample) * period_size * 2;
   
   buffer = (finyl_sample*)malloc(s);
@@ -315,7 +311,7 @@ void init_buffers() {
   memset(buf1, 0, period_size*2*sizeof(finyl_sample));
 }
 
-void init_decks(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d) {
+static void init_decks(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d) {
   adeck = a;
   bdeck = b;
   cdeck = c;

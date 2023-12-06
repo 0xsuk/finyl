@@ -5,10 +5,15 @@
 #include "finyl.h"
 
 char* finyl_output_path = "/home/null/.finyl-output"; //TODO
-finyl_track t;
-
 
 #include <termios.h>
+
+void print_track(finyl_track* t) {
+  printf("\n:\n");
+  printf("\tplaying: %d\n", t->playing);
+  printf("\tspeed:%lf\n", t->speed);
+  /* printf("\tgain:%lf\n", a0_gain); */
+}
 
 double max(double a, double b) {
   return a>b ? a : b;
@@ -18,10 +23,27 @@ double min(double a, double b) {
   return a<b ? a : b;
 }
 
+void slide_right(finyl_track* t) {
+  double backup = t->speed;
+  double y = 0;
+  double x = 0;
+  while (y>=0) {
+    y  = -x*(x-2);
+    t->speed = y;
+    x = 0.01 + x;
+    usleep(1000);
+    printf("t is %lf\n", t->speed);
+  }
+  t->speed = backup;
+}
+
 void handleKey(char x) {
   switch (x) {
-  case ' ':
-    t.playing = !t.playing;
+  case 'h':
+    bdeck->playing = !bdeck->playing;
+    break;
+  case 'g':
+    adeck->playing = !adeck->playing;
     break;
   case 'j':
     a0_gain = max(a0_gain-0.1, 0);
@@ -35,10 +57,20 @@ void handleKey(char x) {
   case 'm':
     a1_gain = min(a1_gain+0.1, 1);
     break;
+  case 'c':
+    adeck->index = 0;
+    break;
+  case 'a':
+    adeck->speed = adeck->speed + 0.01;
+    break;
+  case 's':
+    adeck->speed = adeck->speed - 0.01;
+    break;
+  case 't':
+    slide_right(adeck);
   }
-  printf("got char = %c\n", x);
-  printf("a0_gain is %lf\n", a0_gain);
-  printf("a1_gain is %lf\n", a1_gain);
+  print_track(adeck);
+  print_track(bdeck);
 }
 
 int key_input() {
@@ -88,19 +120,35 @@ int main(int argc, char **argv) {
   finyl_setup_alsa(&handle, &buffer_size, &period_size);
   printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
   
-  finyl_init_track(&t);
+  finyl_track ta;
+  finyl_init_track(&ta);
+  adeck = &ta;
+  ta.index = 44100 * 20;
 
-  char* files[2];
-  files[0] = "vocals.wav";
-  files[1] = "no_vocals.wav";
-  if (finyl_read_channels_from_files(files, 2, &t) == -1) {
+  char* files_a[2];
+  files_a[0] = "birth_voc.wav";
+  files_a[1] = "birth_novoc.wav";
+  if (finyl_read_channels_from_files(files_a, 2, &ta) == -1) {
     printf("you failed\n");
     return -1;
   }
-  
-  finyl_print_track(&t);
+  finyl_print_track(&ta);
 
-  finyl_run(&t, NULL, NULL, NULL, handle, buffer_size, period_size);
+  finyl_track tb;
+  finyl_init_track(&tb);
+  bdeck = &tb;
+  tb.index = 44100 * 30;
+  
+  char* files_b[2];
+  files_b[0] = "vocals.wav";
+  files_b[1] = "no_vocals.wav";
+  if (finyl_read_channels_from_files(files_b, 2, &tb) == -1) {
+    printf("you failed\n");
+    return -1;
+  }
+  finyl_print_track(&tb);
+  
+  finyl_run(adeck, bdeck, NULL, NULL, handle, buffer_size, period_size);
 
   pthread_join(key_thread, NULL);
 }

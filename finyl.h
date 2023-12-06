@@ -14,6 +14,7 @@ typedef signed short finyl_sample;
 typedef finyl_sample* finyl_chunk; //chunk_size array of sample
 typedef finyl_chunk* finyl_channel; //32 length array of pointer to chunk
 
+
 extern double a0_gain;
 extern double a1_gain;
 
@@ -56,11 +57,10 @@ typedef enum {
   finyl_7,
 } finyl_channel_target;
 
-/* typedef struct { */
-  /* snd_pcm_t* handle; */
-  /* snd_pcm_uframes_t buffer_size; */
-  /* snd_pcm_uframes_t period_size; */
-/* } finyl_alsa; */
+extern finyl_track* adeck; //pointer to track, is a d
+extern finyl_track* bdeck;
+extern finyl_track* cdeck;
+extern finyl_track* ddeck;
 
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c);
 

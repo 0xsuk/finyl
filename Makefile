@@ -1,5 +1,5 @@
 LDFLAGS = -lasound -lm
-CFLAGS = -Wall -std=gnu99 # gnu99 so that popen is defined
+CFLAGS = -Wall -std=gnu99 -O3 # gnu99 so that popen is defined
 
 ENTRY = entry.o
 BUT_ENTRY = finyl.o cJSON.o controller.o
