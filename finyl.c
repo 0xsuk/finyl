@@ -62,6 +62,7 @@ void finyl_print_track(finyl_track* t) {
   printf("\tindex: %lf\n", t->index);
   printf("\tspeed: %lf\n", t->speed);
   printf("\tchannels_size: %d\n", t->channels_size);
+  printf("\tplaying: %d\n", t->playing);
   printf("}\n");
 }
 
@@ -210,16 +211,19 @@ void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t) {
   }
 }
 
-//adds 2, and clip
-static void sum_channel_buffers(finyl_sample* track_buffer, finyl_sample** channel_buffers) {
+int32_t clip_sample(int32_t s) {
+  if (s > 32767) {
+    s = 32767;
+  } else if (s < -32768) {
+    s = -32768;
+  }
+  return s;
+}
+
+static void mix_two_buffers(finyl_sample* dest, finyl_sample* src1, finyl_sample* src2) {
   for (int i = 0; i<period_size*2; i++) {
-    int32_t sample  = channel_buffers[0][i] + channel_buffers[1][i];
-    if (sample > 32767) {
-      sample = 32767;
-    } else if (sample < -32768) {
-      sample = -32768;
-    }
-    track_buffer[i] = sample;
+    int32_t sample = src1[i] + src2[i];
+    dest[i] = clip_sample(sample);
   }
 }
 
@@ -236,25 +240,17 @@ void finyl_handle() {
     make_channel_buffers(a_channel_buffers, adeck);
     gain_filter(a_channel_buffers[0], a0_gain);
     gain_filter(a_channel_buffers[1], a1_gain);
-    sum_channel_buffers(abuffer, a_channel_buffers);
+    mix_two_buffers(abuffer, a_channel_buffers[0], a_channel_buffers[1]);
   }
   
   if (bdeck->playing) {
     make_channel_buffers(b_channel_buffers, bdeck);
     gain_filter(b_channel_buffers[0], b0_gain);
     gain_filter(b_channel_buffers[1], b1_gain);
-    sum_channel_buffers(bbuffer, b_channel_buffers);
+    mix_two_buffers(bbuffer, b_channel_buffers[0], b_channel_buffers[1]);
   }
   
-  for (int i = 0; i<period_size*2; i++) {
-    int32_t sample = abuffer[i] + bbuffer[i];
-    if (sample > 32767) {
-      sample = 32767;
-    } else if (sample < -32768) {
-      sample = -32768;
-    }
-    buffer[i] = sample;
-  }
+  mix_two_buffers(buffer, abuffer, bbuffer);
 }
 
 /* char* device = "hw:CARD=PCH,DEV=0";            /\* playback device *\/ */

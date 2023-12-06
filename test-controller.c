@@ -108,12 +108,6 @@ int key_input() {
 
 int main(int argc, char **argv) {
   
-  pthread_t key_thread;
-  if (pthread_create(&key_thread, NULL, key_input, NULL) != 0) {
-    perror("pthread_create");
-    return 1;
-  }
-
   snd_pcm_t* handle;
   snd_pcm_uframes_t buffer_size = 1024 * 2;
   snd_pcm_uframes_t period_size = 1024;
@@ -147,6 +141,14 @@ int main(int argc, char **argv) {
     return -1;
   }
   finyl_print_track(&tb);
+  
+  pthread_t key_thread;
+  if (pthread_create(&key_thread, NULL, key_input, NULL) != 0) {
+    perror("pthread_create");
+    return 1;
+  }
+
+
   
   finyl_run(adeck, bdeck, NULL, NULL, handle, buffer_size, period_size);
 
