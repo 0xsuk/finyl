@@ -206,7 +206,7 @@ void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t) {
     for (int c = 0; c<t->channels_size; c++) {
       finyl_sample* buf = channel_buffers[c];
       buf[i] = finyl_get_sample(t, t->channels[c]);
-      buf[i+1] = 0;
+      buf[i+1] = buf[i];
     }
   }
 }
@@ -220,17 +220,29 @@ int32_t clip_sample(int32_t s) {
   return s;
 }
 
-static void mix_two_buffers(finyl_sample* dest, finyl_sample* src1, finyl_sample* src2) {
+static void add_two_buffers(finyl_sample* dest, finyl_sample* src1, finyl_sample* src2) {
+  for (int i = 0; i<period_size*2; i++) {
+    dest[i] = src1[i] + src2[i];
+  }
+}
+
+static void add_and_clip_two_buffers(finyl_sample* dest, finyl_sample* src1, finyl_sample* src2) {
   for (int i = 0; i<period_size*2; i++) {
     int32_t sample = src1[i] + src2[i];
     dest[i] = clip_sample(sample);
   }
 }
 
+double a_gain = 1.0;
 double a0_gain = 1.0;
 double a1_gain = 1.0;
+double b_gain = 1.0;
 double b0_gain = 1.0;
 double b1_gain = 1.0;
+double a0_filter = 0.2;
+double a1_filter = 1.0;
+double b0_filter = 0.2;
+double b1_filter = 1.0;
 
 void finyl_handle() {
   memset(abuffer, 0, period_size*2*sizeof(finyl_sample));
@@ -240,17 +252,17 @@ void finyl_handle() {
     make_channel_buffers(a_channel_buffers, adeck);
     gain_filter(a_channel_buffers[0], a0_gain);
     gain_filter(a_channel_buffers[1], a1_gain);
-    mix_two_buffers(abuffer, a_channel_buffers[0], a_channel_buffers[1]);
+    add_two_buffers(abuffer, a_channel_buffers[0], a_channel_buffers[1]);
   }
   
   if (bdeck->playing) {
     make_channel_buffers(b_channel_buffers, bdeck);
     gain_filter(b_channel_buffers[0], b0_gain);
     gain_filter(b_channel_buffers[1], b1_gain);
-    mix_two_buffers(bbuffer, b_channel_buffers[0], b_channel_buffers[1]);
+    add_two_buffers(bbuffer, b_channel_buffers[0], b_channel_buffers[1]);
   }
   
-  mix_two_buffers(buffer, abuffer, bbuffer);
+  add_and_clip_two_buffers(buffer, abuffer, bbuffer);
 }
 
 /* char* device = "hw:CARD=PCH,DEV=0";            /\* playback device *\/ */
