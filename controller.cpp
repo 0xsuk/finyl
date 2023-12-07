@@ -58,9 +58,8 @@ void handleKey(char x) {
     break;
   case 't':
     slide_right(adeck);
+    break;
   }
-  finyl_print_track(adeck);
-  finyl_print_track(bdeck);
 }
 
 void* key_input(void* arg) {
@@ -76,4 +75,3 @@ void* key_input(void* arg) {
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
   return NULL;
 }
-

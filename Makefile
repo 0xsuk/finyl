@@ -1,5 +1,5 @@
-LDFLAGS = -lasound -lm
-CFLAGS = -Wall -std=gnu99 -O3 # gnu99 so that popen is defined
+LDFLAGS = -lasound -lm -lrubberband
+CFLAGS = -Wall -std=c++20 -O3 # gnu99 so that popen is defined
 
 ENTRY = entry.o
 BUT_ENTRY = finyl.o cJSON.o controller.o
@@ -7,7 +7,7 @@ OBJS = $(ENTRY) $(BUT_ENTRY)
 TESTS = test test-digger test-controller
 TEST_OBJS = $(addsuffix .o,$(TESTS))
 
-%.o: %.c
+%.o: %.cpp
 	$(CC) $(CFLAGS) -c $< -o $@ $(LDFLAGS)
 
 %: %.o #%.o can be plural

@@ -1,5 +1,6 @@
 #include "finyl.h"
 #include <alsa/asoundlib.h>
+#include <rubberband/RubberBandStretcher.h>
 #include <math.h>
 #include <stdbool.h>
 #include <sys/wait.h>
@@ -77,7 +78,7 @@ finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c) {
 }
 
 static finyl_chunk make_chunk() {
-  return malloc(CHUNK_SIZE * sizeof(finyl_sample));
+  return (finyl_chunk)malloc(CHUNK_SIZE * sizeof(finyl_sample));
 }
 
 static void free_chunks(finyl_channel channel, int channel_size) {
@@ -88,7 +89,7 @@ static void free_chunks(finyl_channel channel, int channel_size) {
 }
 
 static finyl_channel make_channel() {
-  return malloc(MAX_CHUNKS_SIZE * sizeof(finyl_channel*));
+  return (finyl_channel)malloc(MAX_CHUNKS_SIZE * sizeof(finyl_channel*));
 }
 
 static void free_channels(finyl_channel* channels, int channels_size) {

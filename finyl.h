@@ -14,7 +14,7 @@
 
 typedef signed short finyl_sample;
 typedef finyl_sample* finyl_chunk; //chunk_size array of sample
-typedef finyl_chunk* finyl_channel; //32 length array of pointer to chunk
+typedef finyl_chunk* finyl_channel; //32 length array of chunk
 
 
 extern double a0_gain;
