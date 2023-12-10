@@ -290,6 +290,10 @@ class Out {
         //basically pfindex is map of single set
         for (Map.Entry<Long, List<Database.PlaylistFolderEntry>> entry : pfindex.entrySet()) {
             for (Database.PlaylistFolderEntry e : entry.getValue()) {
+                if (e == null) {
+                    System.out.println("null entry");
+                    continue;
+                }
                 Playlist p = new Playlist(e.id, e.name);
                 App.out.playlists.add(p);
             }
@@ -325,7 +329,7 @@ class Out {
     }
 }
 
-public class App {
+public App {
     //section.body() is either
     // org.deepsymmetry.cratedigger.pdb.RekordboxAnlz$PathTag
     // org.deepsymmetry.cratedigger.pdb.RekordboxAnlz$VbrTag

@@ -21,24 +21,27 @@ extern double a0_gain;
 extern double a1_gain;
 
 typedef struct {
-  int id;
-  int tempo;
-  int musickeyid;
-  int filesize;
-  char title[300];
-  char filepath[1000];
-  char filename[300];
-} finyl_track_meta;
+  /* double time; //milli sec */
+  int index; //index of pcm
+  int number; //1 to 4
+} beat;
 
 typedef struct {
   finyl_channel channels[MAX_CHANNELS_SIZE];
-  finyl_track_meta meta;
+  int channels_size; //number of stems
+  int id;
+  int bpm;
+  int musickeyid;
+  int filesize;
   int nchunks; //the number of chunks in a channel
   int length;
   double index;
   double speed;
-  int channels_size; //number of stems
   bool playing;
+  beat beats[6000]; //170beat/min * 30 min = 5100; 6000 is enough
+  char title[300];
+  char filepath[1000];
+  char filename[300];
 } finyl_track;
 
 typedef enum {
@@ -67,8 +70,6 @@ extern finyl_track* ddeck;
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c);
 
 void finyl_print_track(finyl_track* t);
-
-void finyl_init_track_meta(finyl_track_meta* tm);
 
 void finyl_init_track(finyl_track* t);
 

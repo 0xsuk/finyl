@@ -1,8 +1,13 @@
 - open source dj system
 - for realtime/ahead-of-time stem separeted (vocal and instrument for each track, for now. drums coming?) audio mixing.
+- independent to a choice of stem separation tool
 - portable. works on rasberry pi.
-- client/server architecture. Works independenty to GUI client
 - works with Rekordbox-exported USB
+- NO time-stretching (change bpm without changing pitch)
+- NO bpm hard sync (one deck follow the bpm change of the other), just a one-time bpm alignment
+- `quantize` operation timing
+- 
+-idea: client/server architecture. Works independenty to GUI client. but provides default GUI
 
 - use 2 mono to stereo cables
   - mixed audio for headphone cue from one channel -> use stereo cable

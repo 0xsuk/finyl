@@ -1,6 +1,5 @@
 #include "finyl.h"
 #include <alsa/asoundlib.h>
-#include <rubberband/RubberBandStretcher.h>
 #include <math.h>
 #include <stdbool.h>
 #include <sys/wait.h>
@@ -39,15 +38,8 @@ static finyl_sample**  init_channel_buffers() {
   return bufs;
 }
 
-void finyl_init_track_meta(finyl_track_meta* tm) {
-  tm->id = -1;
-  tm->tempo = 0;
-  tm->musickeyid = -1;
-  tm->filesize = 0;
-}
-
 void finyl_init_track(finyl_track* t) {
-  finyl_init_track_meta(&t->meta);
+  /* finyl_init_track_meta(&t->meta); */
   t->nchunks = 0;
   t->length = 0;
   t->index = 0;
@@ -101,7 +93,7 @@ static void free_channels(finyl_channel* channels, int channels_size) {
 
 int open_pcm_stream(FILE** fp, char* filename) {
   char command[1000];
-  snprintf(command, sizeof(command), "ffmpeg -i %s -f s16le -ar 44100 -ac 1 -v quiet -", filename);
+  snprintf(command, sizeof(command), "ffmpeg -i \"%s\" -f s16le -ar 44100 -ac 1 -v quiet -", filename);
   *fp = popen(command, "r");
   if (*fp == NULL) {
     printf("failed to open stream for %s\n", filename);
@@ -188,6 +180,10 @@ void gain_filter(finyl_sample* buf, double gain) {
   }
 }
 
+void jmp_cue(finyl_track* t) {
+  
+}
+
 void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t) {
   for (int i = 0; i < period_size*2; i=i+2) {
     t->index += t->speed;
@@ -256,12 +252,12 @@ void finyl_handle() {
     add_two_buffers(abuffer, a_channel_buffers[0], a_channel_buffers[1]);
   }
   
-  if (bdeck->playing) {
-    make_channel_buffers(b_channel_buffers, bdeck);
-    gain_filter(b_channel_buffers[0], b0_gain);
-    gain_filter(b_channel_buffers[1], b1_gain);
-    add_two_buffers(bbuffer, b_channel_buffers[0], b_channel_buffers[1]);
-  }
+  // if (bdeck->playing) {
+    // make_channel_buffers(b_channel_buffers, bdeck);
+    // gain_filter(b_channel_buffers[0], b0_gain);
+    // gain_filter(b_channel_buffers[1], b1_gain);
+    // add_two_buffers(bbuffer, b_channel_buffers[0], b_channel_buffers[1]);
+  // }
   
   add_and_clip_two_buffers(buffer, abuffer, bbuffer);
 }

@@ -1,5 +1,5 @@
-LDFLAGS = -lasound -lm -lrubberband
-CFLAGS = -Wall -std=c++20 -O3 # gnu99 so that popen is defined
+LDFLAGS = -lasound -lm
+CFLAGS = -Wall -std=gnu99 -O3 # gnu99 so that popen is defined
 
 ENTRY = entry.o
 BUT_ENTRY = finyl.o cJSON.o controller.o
@@ -7,13 +7,17 @@ OBJS = $(ENTRY) $(BUT_ENTRY)
 TESTS = test test-digger test-controller
 TEST_OBJS = $(addsuffix .o,$(TESTS))
 
-%.o: %.cpp
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(LDFLAGS)
 
 %: %.o #%.o can be plural
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 all: finyl listdevice
+
+shared:
+	$(CC) $(CFLAGS) -c finyl.c -fPIC -o finyl.o $(LDFLAGS)
+	$(CC) $(CFLAGS) -shared $^ -o finyl.so $(LDFLAGS)
 
 finyl: $(OBJS)
 

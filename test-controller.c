@@ -34,14 +34,14 @@ int main(int argc, char **argv) {
   bdeck = &tb;
   tb.index = 44100 * 30;
   
-  char* files_b[2];
-  files_b[0] = "vocals.wav";
-  files_b[1] = "no_vocals.wav";
-  if (finyl_read_channels_from_files(files_b, 2, &tb) == -1) {
-    printf("you failed\n");
-    return -1;
-  }
-  finyl_print_track(&tb);
+  // char* files_b[2];
+  // files_b[0] = "vocals.wav";
+  // files_b[1] = "no_vocals.wav";
+  // if (finyl_read_channels_from_files(files_b, 2, &tb) == -1) {
+    // printf("you failed\n");
+    // return -1;
+  // }
+  // finyl_print_track(&tb);
   
   pthread_t key_thread;
   if (pthread_create(&key_thread, NULL, key_input, NULL) != 0) {
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
 
 
   
-  finyl_run(adeck, bdeck, NULL, NULL, handle, buffer_size, period_size);
+  finyl_run(adeck, NULL, NULL, NULL, handle, buffer_size, period_size);
 
   pthread_join(key_thread, NULL);
 }
