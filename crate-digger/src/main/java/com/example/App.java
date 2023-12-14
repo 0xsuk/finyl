@@ -248,7 +248,7 @@ class Out {
     }
     
     //trakcs in playlist
-    public static void writePlaylistTrack() {
+    public static void writePlaylistTracks() {
         App.must(App.params.size() > 0);
         String pid = App.params.get(0);
         
@@ -329,7 +329,7 @@ class Out {
     }
 }
 
-public App {
+public class App {
     //section.body() is either
     // org.deepsymmetry.cratedigger.pdb.RekordboxAnlz$PathTag
     // org.deepsymmetry.cratedigger.pdb.RekordboxAnlz$VbrTag
@@ -393,8 +393,8 @@ public App {
             Out.writeAllTracks();
         case "track":
             Out.writeTrack();
-        case "playlist-track":
-            Out.writePlaylistTrack();
+        case "playlist-tracks":
+            Out.writePlaylistTracks();
         default:
             Out.writeError("invalid operation op = " + op);
         }
