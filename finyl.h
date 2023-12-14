@@ -50,13 +50,14 @@ typedef struct {
   int filesize;
   int nchunks; //the number of chunks in a channel
   int length;
+  int beats_size;
   double index;
   double speed;
   bool playing;
-  beat beats[6000]; //170beat/min * 30 min = 5100; 6000 is enough
-  char title[300];
-  char filepath[1000];
-  char filename[300];
+  beat beats;
+  char* title[300];
+  char* filepath;
+  char* filename;
 } finyl_track;
 
 typedef enum {

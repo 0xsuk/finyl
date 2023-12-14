@@ -13,7 +13,9 @@
 /*   track_meta* tracks; */
 /* } finyl_output; */
 
-int get_playlists(finyl_playlist* pls, char* usb);
+int get_playlists(finyl_playlist** pls, char* usb);
+
+int get_playlist_tracks(finyl_track_meta** tracks, char* usb, int pid);
 
 cJSON* read_file_malloc_json(char* file);
 

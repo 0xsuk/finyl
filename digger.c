@@ -75,26 +75,50 @@ void cJSON_cpy(cJSON* json, char* key, char* dest) {
   strcpy(dest, item);
 }
 
-void cJSON_malloc_cpy(cJSON* json, char* key, char* dest) {
+void cJSON_malloc_cpy(cJSON* json, char* key, char** dest) {
   cJSON* itemj = cJSON_GetObjectItem(json, key);
   char* item = itemj->valuestring;
-  dest = (char*)malloc(strlen(item) + 1);
-  strcpy(dest, item);
+  *dest = (char*)malloc(strlen(item) + 1);
+  strcpy(*dest, item);
 }
 
 //returns size, -1 for error;
-int unmarshal_playlists(cJSON* json, finyl_playlist* pls) {
+int unmarshal_playlists(cJSON* json, finyl_playlist** pls) {
   cJSON* playlistsj = cJSON_GetObjectItem(json, "playlists");
   int playlists_size = cJSON_GetArraySize(playlistsj);
-  pls = (finyl_playlist*)malloc(sizeof(finyl_playlist) * playlists_size);
+  *pls = (finyl_playlist*)malloc(sizeof(finyl_playlist) * playlists_size);
 
+  finyl_playlist* _pls = *pls;
+  
   for (int i = 0; i<playlists_size; i++) {
     cJSON* pj = cJSON_GetArrayItem(playlistsj, i);
-    cJSON_malloc_cpy(pj, "name", pls[i].name);
-    pls[i].id = cJSON_GetObjectItem(pj, "id")->valueint;
+    cJSON_malloc_cpy(pj, "name", &_pls[i].name);
+    _pls[i].id = cJSON_GetObjectItem(pj, "id")->valueint;
   }
 
   return playlists_size;
+}
+
+int unmarshal_playlist_tracks(cJSON* json, finyl_track_meta** tracks) {
+  cJSON* tracksj = cJSON_GetObjectItem(json, "tracks");
+  int tracks_size = cJSON_GetArraySize(tracksj);
+  *tracks = (finyl_track*)malloc(sizeof(finyl_track) * tracks_size);
+
+  finyl_track_meta* _tracks = *tracks;
+
+  for (int i = 0; i<tracks_size; i++) {
+    cJSON* tj = cJSON_GetArrayItem(tracksj, i);
+    _tracks[i].id = cJSON_GetObjectItem(tj, "id")->valueint;
+    _tracks[i].musickeyid = cJSON_GetObjectItem(tj, "musickeyid")->valueint;
+    _tracks[i].bpm = cJSON_GetObjectItem(tj, "tempo")->valueint;
+    _tracks[i].filesize = cJSON_GetObjectItem(tj, "filesize")->valueint;
+    
+    cJSON_malloc_cpy(tj, "title", &_tracks[i].title);
+    cJSON_malloc_cpy(tj, "filepath", &_tracks[i].filepath);
+    cJSON_malloc_cpy(tj, "filename", &_tracks[i].filename);
+  }
+
+  return tracks_size;
 }
 
 int unmarshal_error(cJSON* json, char* error) {
@@ -174,15 +198,16 @@ int run_digger(cJSON** json, char* usb, char* op) {
 }
 
 
-int get_playlists(finyl_playlist* pls, char* usb) {
-  
+//return size of playlists, or -1 for error
+int get_playlists(finyl_playlist** pls, char* usb) {
   cJSON* json;
   if (run_digger(&json, usb, "playlists") == -1) {
     return -1;
   }
   
-  unmarshal_playlists(json, pls);
-  return 0;
+  int playlists_size = unmarshal_playlists(json, pls);
+  cJSON_Delete(json);
+  return playlists_size;
 }
 
 /* int get_track(finyl_track* t, char* usb, int id) { */
@@ -209,15 +234,18 @@ int get_playlists(finyl_playlist* pls, char* usb) {
 /*   return 0; */
 /* } */
 
-/* int get_playlist_track(char* usb, int id) { */
-/*   char params[100]; */
-/*   snprintf(params, sizeof(params), "playlist-track %d", id); */
-/*   if (run_digger(usb, params)) { */
-/*     return -1; */
-/*   } */
+int get_playlist_tracks(finyl_track_meta** tracks, char* usb, int pid) {
+  cJSON* json;
+  char op[30];
+  snprintf(op, sizeof(op), "playlist-tracks %d", pid);
+  if (run_digger(&json, usb, op) == -1) {
+    return -1;
+  }
   
-/*   return 0; */
-/* } */
+  int tracks_size = unmarshal_playlist_tracks(json, tracks);
+  cJSON_Delete(json);
+  return tracks_size;
+}
 
 char* read_file_malloc(char* filename) {
   FILE* fp = fopen(filename, "rb");
