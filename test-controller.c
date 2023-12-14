@@ -5,8 +5,6 @@
 #include "finyl.h"
 #include "controller.h"
 
-char* finyl_output_path = "/home/null/.finyl-output"; //TODO
-
 int main(int argc, char **argv) {
   
   snd_pcm_t* handle;

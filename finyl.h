@@ -27,6 +27,21 @@ typedef struct {
 } beat;
 
 typedef struct {
+  int id;
+  char* name;
+} finyl_playlist;
+
+typedef struct {
+  int id;
+  int bpm;
+  int musickeyid;
+  int filesize;
+  char* title;
+  char* filepath;
+  char* filename;
+} finyl_track_meta; //used in track listing in playlist
+
+typedef struct {
   finyl_channel channels[MAX_CHANNELS_SIZE];
   int channels_size; //number of stems
   int id;

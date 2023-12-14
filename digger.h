@@ -2,7 +2,7 @@
 
 typedef struct {
   int id;
-  char name[300];
+  char* name;
 } playlist;
 
 typedef struct {
@@ -10,16 +10,19 @@ typedef struct {
   int bpm;
   int musickeyid;
   int filesize;
-  char title[300];
-  char filepath[1000];
-  char filename[300];
-} digger_track;
+  char* title;
+  char* filepath;
+  char* filename;
+} track_meta; //used in track listing in playlist
 
 typedef struct {
-  char usb[300];
+  char* usb;
   char badge[BADGE_LENGTH];
   char* error;
-  int playlists_length;
-  playlist playlists[100];
-  digger_track* tracks;
+  int playlists_size;
+  int tracks_size;
+  playlist* playlists;
+  track_meta* tracks;
 } finyl_output;
+
+void free_finyl_output(finyl_output* fo);

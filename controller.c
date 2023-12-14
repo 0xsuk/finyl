@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include "finyl.h"
+#include "digger.h"
 
 
 
@@ -26,6 +27,16 @@ void slide_right(finyl_track* t) {
   }
   t->speed = backup;
 }
+
+//loads from usb
+void temp() {
+  finyl_output fo;
+  char* usb = "/run/media/null/22BC-F655/";
+  get_track(&fo, usb, 1);
+  
+  free_finyl_output(&fo);
+}
+
 
 void handleKey(char x) {
   switch (x) {
@@ -59,6 +70,8 @@ void handleKey(char x) {
   case 't':
     slide_right(adeck);
     break;
+  case 'l':
+    load_track();
   }
 }
 
