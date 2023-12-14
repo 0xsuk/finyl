@@ -91,7 +91,19 @@ static void free_channels(finyl_channel* channels, int channels_size) {
   }
 }
 
+bool file_exist(char* file) {
+  if (access(file, F_OK) == -1) {
+    return false;
+  }
+
+  return true;
+}
+
 int open_pcm_stream(FILE** fp, char* filename) {
+  if (!file_exist(filename)) {
+    printf("File does not exist: %s\n", filename);
+    return -1;
+  }
   char command[1000];
   snprintf(command, sizeof(command), "ffmpeg -i \"%s\" -f s16le -ar 44100 -ac 1 -v quiet -", filename);
   *fp = popen(command, "r");

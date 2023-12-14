@@ -75,3 +75,7 @@ void* key_input(void* arg) {
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
   return NULL;
 }
+
+
+///TODO list playlists, tracks
+///TODO get detailed information of track, and get it as finyl output
