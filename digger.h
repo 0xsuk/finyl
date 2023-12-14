@@ -1,28 +1,19 @@
+#include "cJSON.h"
+#include "finyl.h"
+
 #define BADGE_LENGTH 6
 
-typedef struct {
-  int id;
-  char* name;
-} playlist;
+/* typedef struct { */
+/*   char* usb; */
+/*   char badge[BADGE_LENGTH]; */
+/*   char* error; */
+/*   int playlists_size; */
+/*   int tracks_size; */
+/*   playlist* playlists; */
+/*   track_meta* tracks; */
+/* } finyl_output; */
 
-typedef struct {
-  int id;
-  int bpm;
-  int musickeyid;
-  int filesize;
-  char* title;
-  char* filepath;
-  char* filename;
-} track_meta; //used in track listing in playlist
+int get_playlists(finyl_playlist* pls, char* usb);
 
-typedef struct {
-  char* usb;
-  char badge[BADGE_LENGTH];
-  char* error;
-  int playlists_size;
-  int tracks_size;
-  playlist* playlists;
-  track_meta* tracks;
-} finyl_output;
+cJSON* read_file_malloc_json(char* file);
 
-void free_finyl_output(finyl_output* fo);
