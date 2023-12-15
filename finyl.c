@@ -38,14 +38,25 @@ static finyl_sample**  init_channel_buffers() {
   return bufs;
 }
 
+void finyl_init_track_meta(finyl_track_meta* tm) {
+  tm->id = 0;
+  tm->bpm = 0;
+  tm->musickeyid = 0;
+  tm->filesize = 0;
+}
+
 void finyl_init_track(finyl_track* t) {
-  /* finyl_init_track_meta(&t->meta); */
+  finyl_init_track_meta(&t->meta);
   t->nchunks = 0;
   t->length = 0;
   t->index = 0;
+  t->cues_size = 0;
+  t->beats_size = 0;
   t->speed = 1.0;
   t->channels_size = 0;
   t->playing = false;
+  t->loop_in = -1;
+  t->loop_out = -1;
 }
 
 double finyl_get_quantized_time(finyl_track* t) {
@@ -118,7 +129,7 @@ static void free_channels(finyl_channel* channels, int channels_size) {
   free(channels);
 }
 
-bool file_exist(char* file) {
+static bool file_exist(char* file) {
   if (access(file, F_OK) == -1) {
     return false;
   }
@@ -126,7 +137,7 @@ bool file_exist(char* file) {
   return true;
 }
 
-int open_pcm_stream(FILE** fp, char* filename) {
+static int open_pcm_stream(FILE** fp, char* filename) {
   if (!file_exist(filename)) {
     printf("File does not exist: %s\n", filename);
     return -1;
@@ -143,7 +154,7 @@ int open_pcm_stream(FILE** fp, char* filename) {
 }
 
 //reads from fp, updates nchunks, length, channel
-int read_pcm(FILE* fp, finyl_channel channel, int* nchunks, int* length) {
+static int read_pcm(FILE* fp, finyl_channel channel, int* nchunks, int* length) {
   finyl_chunk chunk = make_chunk();
   while (1) {
     size_t count = fread(chunk, sizeof(finyl_sample), CHUNK_SIZE, fp);
@@ -162,7 +173,7 @@ int read_pcm(FILE* fp, finyl_channel channel, int* nchunks, int* length) {
   }
 }
 
-int read_channel(char* file, finyl_channel channel, int* nchunks, int* length) {
+static int read_channel(char* file, finyl_channel channel, int* nchunks, int* length) {
   FILE* fp = NULL;
   open_pcm_stream(&fp, file);
   if (fp == NULL) {
@@ -212,17 +223,21 @@ int finyl_read_channels_from_files(char** files, int channels_size, finyl_track*
 //TODO: one file has amny channels (eg. flac)
 void read_channels_from_file(char* file);
 
-void gain_filter(finyl_sample* buf, double gain) {
+static void gain_filter(finyl_sample* buf, double gain) {
   for (int i = 0; i<period_size*2;i=i+2) {
     buf[i] = gain * buf[i];
     buf[i+1] = gain * buf[i+1];
   }
 }
 
-void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t) {
+static void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t) {
   for (int i = 0; i < period_size*2; i=i+2) {
     t->index += t->speed;
 
+    if (t->loop_out != -1 && t->index >= t->loop_out) {
+      t->index = t->loop_in;
+    }
+    
     if (t->index >= t->length) {
       t->playing = false;
       
@@ -243,7 +258,7 @@ void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t) {
   }
 }
 
-int32_t clip_sample(int32_t s) {
+static int32_t clip_sample(int32_t s) {
   if (s > 32767) {
     s = 32767;
   } else if (s < -32768) {
@@ -276,7 +291,8 @@ double a1_filter = 1.0;
 double b0_filter = 0.2;
 double b1_filter = 1.0;
 
-void finyl_handle() {
+static void finyl_handle() {
+  
   memset(abuffer, 0, period_size*2*sizeof(finyl_sample));
   memset(bbuffer, 0, period_size*2*sizeof(finyl_sample));
   

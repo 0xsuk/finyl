@@ -54,14 +54,14 @@ void list_playlist_tracks() {
 //load track 5 to adeck
 void load_sample_track() {
   finyl_track t;
+  finyl_init_track(&t);
   get_track(&t, usb, 1);
-
-
-  char* files[1] = {t.meta->filepath};
+  
+  char* files[1] = {t.meta.filepath};
   finyl_read_channels_from_files(files, 1, &t);
   
   print_track(&t);
-
+    
   adeck = &t;
 }
 
@@ -117,6 +117,13 @@ void handleKey(char x) {
   }
   case 'C':
     adeck->index = 9791.0 * 44.1;
+    break;
+  case '1':
+    /* mark loop in */
+    adeck->loop_in = 44.1 * finyl_get_quantized_time(adeck);
+    break;
+  case '2':
+    adeck->loop_out = 44.1 * finyl_get_quantized_time(adeck);
     break;
   }
 }

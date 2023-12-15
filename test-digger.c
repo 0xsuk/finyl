@@ -25,10 +25,11 @@ void test_get_playlist_tracks() {
 
 void test_get_track() {
   finyl_track t;
-
+  finyl_init_track(&t);
+  
   get_track(&t, usb, 1);
 
-  print_track_meta(t.meta);
+  print_track_meta(&t.meta);
   printf("cues size is %d\n", t.cues_size);
   printf("cue1: %d\n", t.cues[1].time);
   printf("beats size is %d\n", t.beats_size);

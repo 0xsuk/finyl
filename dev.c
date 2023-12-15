@@ -13,9 +13,9 @@ void print_track_meta(finyl_track_meta* tm) {
 void print_track(finyl_track* t) {
   printf("track {\n");
   /* print_track_meta(t->meta); */
-  printf("\tid: %d\n", t->meta->id);
-  printf("\tfilename: %s\n", t->meta->filename);
-  printf("\tbpm: %d\n", t->meta->bpm);
+  printf("\tid: %d\n", t->meta.id);
+  printf("\tfilename: %s\n", t->meta.filename);
+  printf("\tbpm: %d\n", t->meta.bpm);
   printf("\tnchunks: %d\n", t->nchunks);
   printf("\tlength: %d\n", t->length);
   printf("\tcues_size: %d\n", t->cues_size);

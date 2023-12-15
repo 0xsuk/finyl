@@ -4,9 +4,6 @@
 
 char* finyl_output_path = "/home/null/.finyl-output"; //TODO
 
-void free_array(void *arr, int size, void(*free_func)(void*)) {
-}
-
 void free_playlist(finyl_playlist* pl) {
   free(pl->name);
 }
@@ -81,7 +78,7 @@ static int unmarshal_playlist(cJSON* pj, finyl_playlist* p) {
 static int unmarshal_playlists(cJSON* json, finyl_playlist** pls) {
   cJSON* playlistsj = cJSON_GetObjectItem(json, "playlists");
   int playlists_size = cJSON_GetArraySize(playlistsj);
-  *pls = (finyl_playlist*)malloc(sizeof(finyl_playlist) * playlists_size);
+  *pls = (finyl_playlist*)malloc(sizeof(finyl_playlist*) * playlists_size);
 
   finyl_playlist* _pls = *pls;
   
@@ -103,14 +100,6 @@ static int unmarshal_track_meta(cJSON* metaj, finyl_track_meta* tm) {
   cJSON_malloc_cpy(metaj, "filepath", &tm->filepath);
   cJSON_malloc_cpy(metaj, "filename", &tm->filename);
   
-  return 0;
-}
-
-static int unmarshal_track_meta1(cJSON* trackj, finyl_track_meta** tm) {
-  cJSON* metaj = cJSON_GetObjectItem(trackj, "t"); //meta
-  *tm = (finyl_track_meta*)malloc(sizeof(finyl_track_meta));
-  unmarshal_track_meta(metaj, *tm);
-
   return 0;
 }
 
@@ -182,8 +171,9 @@ static int unmarshal_beats(cJSON* trackj, finyl_beat** beats) {
 
 static int unmarshal_track(cJSON* json, finyl_track* t) {
   cJSON* trackj = cJSON_GetObjectItem(json, "track");
+  cJSON* metaj = cJSON_GetObjectItem(trackj, "t"); //meta
 
-  unmarshal_track_meta1(trackj, &t->meta);
+  unmarshal_track_meta(metaj, &t->meta);
   t->cues_size = unmarshal_cues(trackj, &t->cues);
   t->beats_size = unmarshal_beats(trackj, &t->beats);
   return 0;

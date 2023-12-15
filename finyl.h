@@ -48,14 +48,16 @@ typedef struct {
 typedef struct {
   finyl_channel channels[MAX_CHANNELS_SIZE];
   int channels_size; //number of stems
-  finyl_track_meta* meta;
+  finyl_track_meta meta;
   int nchunks; //the number of chunks in a channel
   int length;
   int cues_size;
   int beats_size;
+  bool playing;
   double index;
   double speed;
-  bool playing;
+  double loop_in; //index
+  double loop_out; //index
   finyl_cue* cues;
   finyl_beat* beats;
 } finyl_track;
