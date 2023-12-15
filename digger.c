@@ -26,7 +26,7 @@ void free_track(finyl_track_meta* tm) {
 /*   } */
 /* } */
 
-void generateRandomString(char* badge, size_t size) {
+static void generateRandomString(char* badge, size_t size) {
   char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   srand(time(NULL));
   
@@ -58,32 +58,39 @@ void generateRandomString(char* badge, size_t size) {
 /* } */
 
 //copy only the dest amount of src to dest
-void ncpy(char* dest, char* src, size_t size) {
+static void ncpy(char* dest, char* src, size_t size) {
   strncpy(dest, src, size);
   dest[size - 1] = '\0';;
 }
 
-void cJSON_ncpy(cJSON* json, char* key, char* dest, size_t size) {
+static void cJSON_ncpy(cJSON* json, char* key, char* dest, size_t size) {
   cJSON* itemj = cJSON_GetObjectItem(json, key);
   char* item = itemj->valuestring;
   ncpy(dest, item, size);
 }
 
-void cJSON_cpy(cJSON* json, char* key, char* dest) {
+static void cJSON_cpy(cJSON* json, char* key, char* dest) {
   cJSON* itemj = cJSON_GetObjectItem(json, key);
   char* item = itemj->valuestring;
   strcpy(dest, item);
 }
 
-void cJSON_malloc_cpy(cJSON* json, char* key, char** dest) {
+static void cJSON_malloc_cpy(cJSON* json, char* key, char** dest) {
   cJSON* itemj = cJSON_GetObjectItem(json, key);
   char* item = itemj->valuestring;
   *dest = (char*)malloc(strlen(item) + 1);
   strcpy(*dest, item);
 }
 
+static int unmarshal_playlist(cJSON* pj, finyl_playlist* p) {
+  cJSON_malloc_cpy(pj, "name", &p->name);
+  p->id = cJSON_GetObjectItem(pj, "id")->valueint;
+
+  return 0;
+}
+
 //returns size, -1 for error;
-int unmarshal_playlists(cJSON* json, finyl_playlist** pls) {
+static int unmarshal_playlists(cJSON* json, finyl_playlist** pls) {
   cJSON* playlistsj = cJSON_GetObjectItem(json, "playlists");
   int playlists_size = cJSON_GetArraySize(playlistsj);
   *pls = (finyl_playlist*)malloc(sizeof(finyl_playlist) * playlists_size);
@@ -92,36 +99,115 @@ int unmarshal_playlists(cJSON* json, finyl_playlist** pls) {
   
   for (int i = 0; i<playlists_size; i++) {
     cJSON* pj = cJSON_GetArrayItem(playlistsj, i);
-    cJSON_malloc_cpy(pj, "name", &_pls[i].name);
-    _pls[i].id = cJSON_GetObjectItem(pj, "id")->valueint;
+    unmarshal_playlist(pj, &_pls[i]);
   }
 
   return playlists_size;
 }
 
-int unmarshal_playlist_tracks(cJSON* json, finyl_track_meta** tracks) {
-  cJSON* tracksj = cJSON_GetObjectItem(json, "tracks");
-  int tracks_size = cJSON_GetArraySize(tracksj);
-  *tracks = (finyl_track*)malloc(sizeof(finyl_track) * tracks_size);
-
-  finyl_track_meta* _tracks = *tracks;
-
-  for (int i = 0; i<tracks_size; i++) {
-    cJSON* tj = cJSON_GetArrayItem(tracksj, i);
-    _tracks[i].id = cJSON_GetObjectItem(tj, "id")->valueint;
-    _tracks[i].musickeyid = cJSON_GetObjectItem(tj, "musickeyid")->valueint;
-    _tracks[i].bpm = cJSON_GetObjectItem(tj, "tempo")->valueint;
-    _tracks[i].filesize = cJSON_GetObjectItem(tj, "filesize")->valueint;
+static int unmarshal_track_meta(cJSON* metaj, finyl_track_meta* tm) {
+  tm->id = cJSON_GetObjectItem(metaj, "id")->valueint;
+  tm->musickeyid = cJSON_GetObjectItem(metaj, "musickeyid")->valueint;
+  tm->bpm = cJSON_GetObjectItem(metaj, "tempo")->valueint;
+  tm->filesize = cJSON_GetObjectItem(metaj, "filesize")->valueint;
     
-    cJSON_malloc_cpy(tj, "title", &_tracks[i].title);
-    cJSON_malloc_cpy(tj, "filepath", &_tracks[i].filepath);
-    cJSON_malloc_cpy(tj, "filename", &_tracks[i].filename);
-  }
-
-  return tracks_size;
+  cJSON_malloc_cpy(metaj, "title", &tm->title);
+  cJSON_malloc_cpy(metaj, "filepath", &tm->filepath);
+  cJSON_malloc_cpy(metaj, "filename", &tm->filename);
+  
+  return 0;
 }
 
-int unmarshal_error(cJSON* json, char* error) {
+static int unmarshal_track_meta1(cJSON* trackj, finyl_track_meta** tm) {
+  cJSON* metaj = cJSON_GetObjectItem(trackj, "t"); //meta
+  *tm = (finyl_track_meta*)malloc(sizeof(finyl_track_meta));
+  unmarshal_track_meta(metaj, *tm);
+
+  return 0;
+}
+
+static int unmarshal_track_metas(cJSON* tracksj, finyl_track_meta** tms) {
+  int tms_size = cJSON_GetArraySize(tracksj);
+  *tms = (finyl_track_meta*)malloc(sizeof(finyl_track_meta) * tms_size);
+  finyl_track_meta* _tms = *tms;
+
+  for (int i = 0; i<tms_size; i++) {
+    cJSON* metaj = cJSON_GetArrayItem(tracksj, i);
+    unmarshal_track_meta(metaj, &_tms[i]);
+  }
+
+  return tms_size;
+}
+
+static void free_track_meta(finyl_track_meta* tm) {
+  free(tm->title);
+  free(tm->filepath);
+  free(tm->filename);
+}
+
+static int unmarshal_playlist_tracks(cJSON* json, finyl_track_meta** tms) {
+  cJSON* tracksj = cJSON_GetObjectItem(json, "tracks");
+  int tms_size = unmarshal_track_metas(tracksj, tms);
+  return tms_size;
+}
+
+static int unmarshal_cue(cJSON* cuej, finyl_cue* cue) {
+  cJSON* typej = cJSON_GetObjectItem(cuej, "type");
+  cue->type = typej->valueint;
+  cJSON* timej = cJSON_GetObjectItem(cuej, "time");
+  cue->time = timej->valueint;
+
+  return 0;
+}
+
+static int unmarshal_cues(cJSON* trackj, finyl_cue** cues) {
+  cJSON* cuesj = cJSON_GetObjectItem(trackj, "cues");
+  int cues_size = cJSON_GetArraySize(cuesj);
+  *cues = (finyl_cue*)malloc(sizeof(finyl_cue) * cues_size);
+  
+  finyl_cue* _cues = *cues;
+  for (int i = 0; i<cues_size; i++) {
+    cJSON* cuej = cJSON_GetArrayItem(cuesj, i);
+    unmarshal_cue(cuej, &_cues[i]);
+  }
+
+  return cues_size;
+}
+
+static int unmarshal_beat(cJSON* beatj, finyl_beat* beat) {
+  cJSON* timej = cJSON_GetObjectItem(beatj, "time");
+  beat->time = timej->valueint;
+  cJSON* numberj = cJSON_GetObjectItem(beatj, "num");
+  beat->number = numberj->valueint;
+
+  return 0;
+}
+
+static int unmarshal_beats(cJSON* trackj, finyl_beat** beats) {
+  cJSON* beatsj = cJSON_GetObjectItem(trackj, "beats");
+  int beats_size = cJSON_GetArraySize(beatsj);
+  *beats = (finyl_beat*)malloc(sizeof(finyl_beat) * beats_size);
+
+  finyl_beat* _beats = *beats;
+
+  for (int i = 0; i<beats_size; i++) {
+    cJSON* beatj = cJSON_GetArrayItem(beatsj, i);
+    unmarshal_beat(beatj, &_beats[i]);
+  }
+
+  return beats_size;
+}
+
+static int unmarshal_track(cJSON* json, finyl_track* t) {
+  cJSON* trackj = cJSON_GetObjectItem(json, "track");
+
+  unmarshal_track_meta1(trackj, &t->meta);
+  t->cues_size = unmarshal_cues(trackj, &t->cues);
+  t->beats_size = unmarshal_beats(trackj, &t->beats);
+  return 0;
+}
+
+static int unmarshal_error(cJSON* json, char* error) {
   cJSON* errorj = cJSON_GetObjectItem(json, "error");
   if (cJSON_IsString(errorj)) {
     char* _error = errorj->valuestring;
@@ -131,7 +217,7 @@ int unmarshal_error(cJSON* json, char* error) {
   return 0;
 }
 
-int run_command(FILE** fp, char* badge, char* usb, char* op) {
+static int run_command(FILE** fp, char* badge, char* usb, char* op) {
   char command[1000];
   snprintf(command, sizeof(command), "java -jar crate-digger/target/finyl-1.0-SNAPSHOT.jar %s %s %s", badge, usb, op);
   
@@ -144,7 +230,7 @@ int run_command(FILE** fp, char* badge, char* usb, char* op) {
   return 0;
 }
 
-int check_command_error(FILE* fp) {
+static int check_command_error(FILE* fp) {
   char error_out[10000];
   fread(error_out, 1, sizeof(error_out), fp);
   int status = pclose(fp);
@@ -164,7 +250,7 @@ int check_command_error(FILE* fp) {
 }
 
 
-bool badge_valid(cJSON* json, char* badge)  {
+static bool badge_valid(cJSON* json, char* badge)  {
   cJSON* badgej = cJSON_GetObjectItem(json, "badge");
   char* _badge = badgej->valuestring;
 
@@ -175,7 +261,7 @@ bool badge_valid(cJSON* json, char* badge)  {
   return false;
 }
 
-int run_digger(cJSON** json, char* usb, char* op) {
+static int run_digger(cJSON** json, char* usb, char* op) {
   FILE* fp;
   char badge[6];
   generateRandomString(badge, sizeof(badge));
@@ -210,28 +296,31 @@ int get_playlists(finyl_playlist** pls, char* usb) {
   return playlists_size;
 }
 
-/* int get_track(finyl_track* t, char* usb, int id) { */
-/*   finyl_output fo; */
-/*   char params[100]; */
-/*   snprintf(params, sizeof(params), "track %d", id); */
-/*   if (run_digger(usb, params, gn) != -1) { */
-/*     return -1; */
-/*   } */
-/*   cJSON* json = read_file_malloc_json(finyl_output_path); */
-  
-/*   make_track(t, &fo); */
-  
-/*   cJSON_Delete(json); */
-  
-/*   return 0; */
-/* } */
+int get_track(finyl_track* t, char* usb, int tid) {
+  cJSON* json;
+  char op[30];
+  snprintf(op, sizeof(op), "track %d", tid);
+  if (run_digger(&json, usb, op) == -1) {
+    return -1;
+  }
 
-/* int get_all_tracks(char* usb) { */
-/*   if (run_digger(usb, "all-tracks")) { */
-/*     return -1; */
-/*   } */
+  unmarshal_track(json, t);
+  cJSON_Delete(json);
+
+  //TODO read file
   
-/*   return 0; */
+  return 0;
+}
+
+//TODO
+/* int get_all_tracks(finyl_track** ts, char* usb) { */
+  /* cJSON* json; */
+  /* if (run_digger(&json, usb, "all-tracks") == -1) { */
+    /* return -1; */
+  /* } */
+  
+  /* cJSON_Delete(json); */
+  /* return 0; */
 /* } */
 
 int get_playlist_tracks(finyl_track_meta** tracks, char* usb, int pid) {

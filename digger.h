@@ -17,5 +17,9 @@ int get_playlists(finyl_playlist** pls, char* usb);
 
 int get_playlist_tracks(finyl_track_meta** tracks, char* usb, int pid);
 
+int get_track(finyl_track* t, char* usb, int tid);
+
+int get_all_tracks(finyl_track** ts, char* usb);
+
 cJSON* read_file_malloc_json(char* file);
 

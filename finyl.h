@@ -21,10 +21,14 @@ extern double a0_gain;
 extern double a1_gain;
 
 typedef struct {
-  /* double time; //milli sec */
-  int index; //index of pcm
+  int type;
+  int time;
+} finyl_cue;
+
+typedef struct {
+  int time;
   int number; //1 to 4
-} beat;
+} finyl_beat;
 
 typedef struct {
   int id;
@@ -44,20 +48,16 @@ typedef struct {
 typedef struct {
   finyl_channel channels[MAX_CHANNELS_SIZE];
   int channels_size; //number of stems
-  int id;
-  int bpm;
-  int musickeyid;
-  int filesize;
+  finyl_track_meta* meta;
   int nchunks; //the number of chunks in a channel
   int length;
+  int cues_size;
   int beats_size;
   double index;
   double speed;
   bool playing;
-  beat beats;
-  char* title[300];
-  char* filepath;
-  char* filename;
+  finyl_cue* cues;
+  finyl_beat* beats;
 } finyl_track;
 
 typedef enum {
