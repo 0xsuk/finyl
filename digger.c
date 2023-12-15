@@ -14,18 +14,6 @@ void free_track(finyl_track_meta* tm) {
   free(tm->filename);
 }
 
-/* void free_finyl_output(finyl_output* fo) { */
-/*   free(fo->usb); */
-/*   free(fo->error); */
-/*   for (int i = 0; i<fo->playlists_size; i++) { */
-/*     free_playlist(&fo->playlists[i]); */
-/*   } */
-
-/*   for (int i = 0; i<fo->tracks_size; i++) { */
-/*     free_track(&fo->tracks[i]); */
-/*   } */
-/* } */
-
 static void generateRandomString(char* badge, size_t size) {
   char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   srand(time(NULL));
@@ -37,25 +25,6 @@ static void generateRandomString(char* badge, size_t size) {
   }
   badge[size - 1] = '\0';
 }
-
-/* void _print_playlist(playlist* p) { */
-/*   printf("\t\tid=%d\n", p->id); */
-/*   printf("\t\tname=%s\n", p->name); */
-/* } */
-
-/* void init_fo() { */
-/*   fo.error = NULL; */
-/*   fo.playlists_length = 0; */
-/* } */
-
-/* void free_fo() { */
-/*   for (int i = 0; i<fo.playlists_length; i++) { */
-/*     playlist* p = fo.playlists[i]; */
-/*     free(p); */
-/*   } */
-
-/*   free(fo.error); */
-/* } */
 
 //copy only the dest amount of src to dest
 static void ncpy(char* dest, char* src, size_t size) {
