@@ -55,7 +55,14 @@ void list_playlist_tracks() {
 void load_sample_track() {
   finyl_track t;
   get_track(&t, usb, 1);
+
+
+  char* files[1] = {t.meta->filepath};
+  finyl_read_channels_from_files(files, 1, &t);
+  
   print_track(&t);
+
+  adeck = &t;
 }
 
 void handleKey(char x) {
@@ -65,6 +72,10 @@ void handleKey(char x) {
     break;
   case 'g':
     adeck->playing = !adeck->playing;
+    printf("adeck is playing:%d\n", adeck->playing);
+    break;
+  case 'G':
+    adeck->speed = 1;
     break;
   case 'j':
     a0_gain = max(a0_gain-0.1, 0);
@@ -98,6 +109,14 @@ void handleKey(char x) {
     break;
   case '0':
     load_sample_track();
+    break;
+  case 'q': {
+    double q = finyl_get_quantized_time(adeck);
+    printf("time is %lf\n", q);
+    break;
+  }
+  case 'C':
+    adeck->index = 9791.0 * 44.1;
     break;
   }
 }

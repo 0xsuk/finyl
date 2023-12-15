@@ -48,6 +48,40 @@ void finyl_init_track(finyl_track* t) {
   t->playing = false;
 }
 
+double finyl_get_quantized_time(finyl_track* t) {
+  if (t->beats_size <= 0) {
+    return -1;
+  }
+  
+  //44100 samples = 1sec
+  //index samples = 1 / 44100 * index sec
+  //= 1 / 44100 * index * 1000 millisec
+  double nowtime = 1000.0 / 44100.0 * t->index;
+
+  if (nowtime < t->beats[0].time) {
+    return t->beats[0].time;
+  }
+  if (nowtime > t->beats[t->beats_size-1].time) {
+    return t->beats[t->beats_size-1].time;
+  }
+  for (int i = 1; i<t->beats_size-1; i++) {
+    if (t->beats[i-1].time < nowtime && nowtime < t->beats[i].time) {
+      // [i-1]      half       [i]
+      //     -margin-  -margin-
+      double margin = (t->beats[i].time - t->beats[i-1].time) / 2.0;
+      double half = t->beats[i-1].time + margin;
+      
+      if (nowtime < half) {
+        return t->beats[i-1].time;
+      } else {
+        return t->beats[i].time;
+      }
+    }
+  }
+
+  return -1;
+}
+
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c) {
   int position = floor(t->index);
   int ichunk = position / CHUNK_SIZE;
@@ -67,6 +101,8 @@ static void free_chunks(finyl_channel channel, int channel_size) {
     finyl_chunk chunk = channel[i];
     free(chunk);
   }
+
+  free(channel);
 }
 
 static finyl_channel make_channel() {
@@ -78,6 +114,8 @@ static void free_channels(finyl_channel* channels, int channels_size) {
     finyl_channel channel = channels[i];
     free(channel);
   }
+
+  free(channels);
 }
 
 bool file_exist(char* file) {
@@ -171,7 +209,7 @@ int finyl_read_channels_from_files(char** files, int channels_size, finyl_track*
   
   return 0;
 }
-//one file has amny channels (eg. flac)
+//TODO: one file has amny channels (eg. flac)
 void read_channels_from_file(char* file);
 
 void gain_filter(finyl_sample* buf, double gain) {
@@ -179,10 +217,6 @@ void gain_filter(finyl_sample* buf, double gain) {
     buf[i] = gain * buf[i];
     buf[i+1] = gain * buf[i+1];
   }
-}
-
-void finyl_jmp_cue(finyl_track* t) {
-  
 }
 
 void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t) {

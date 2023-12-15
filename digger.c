@@ -289,8 +289,6 @@ int get_track(finyl_track* t, char* usb, int tid) {
   unmarshal_track(json, t);
   cJSON_Delete(json);
 
-  //TODO read file
-  
   return 0;
 }
 

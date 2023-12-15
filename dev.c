@@ -1,4 +1,4 @@
-#include "finyl.h"
+#include "dev.h"
 
 char* usb = "/media/null/22BC-F655/";
 
