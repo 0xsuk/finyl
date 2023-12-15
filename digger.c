@@ -4,14 +4,33 @@
 
 char* finyl_output_path = "/home/null/.finyl-output"; //TODO
 
-/* void free_playlist(playlist* pl) { */
-/*   free(pl->name); */
-/* } */
+void free_array(void *arr, int size, void(*free_func)(void*)) {
+}
 
-void free_track(finyl_track_meta* tm) {
+void free_playlist(finyl_playlist* pl) {
+  free(pl->name);
+}
+
+void free_playlists(finyl_playlist* pls, int size) {
+  for (int i = 0; i<size; i++) {
+    free_playlist(&pls[i]);
+  }
+
+  free(pls);
+}
+
+void free_track_meta(finyl_track_meta* tm) {
   free(tm->title);
   free(tm->filepath);
   free(tm->filename);
+}
+
+void free_track_metas(finyl_track_meta* tms, int size) {
+  for (int i = 0; i<size; i++) {
+    free_track_meta(&tms[i]);
+  }
+
+  free(tms);
 }
 
 static void generateRandomString(char* badge, size_t size) {
@@ -106,12 +125,6 @@ static int unmarshal_track_metas(cJSON* tracksj, finyl_track_meta** tms) {
   }
 
   return tms_size;
-}
-
-static void free_track_meta(finyl_track_meta* tm) {
-  free(tm->title);
-  free(tm->filepath);
-  free(tm->filename);
 }
 
 static int unmarshal_playlist_tracks(cJSON* json, finyl_track_meta** tms) {

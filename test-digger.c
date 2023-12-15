@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include "digger.h"
-
-char* usb = "/media/null/22BC-F655/";
+#include "dev.h"
 
 void test_get_playlists() {
   finyl_playlist* pls;
@@ -12,14 +11,6 @@ void test_get_playlists() {
     printf("name: %s\n", pls[i].name);
     printf("id: %d\n", pls[i].id);
   }
-}
-
-void print_track_meta(finyl_track_meta* tm) {
-  printf("id is %d\n", tm->id);
-  printf("key is %d\n", tm->musickeyid);
-  printf("bpm is %d\n", tm->bpm);
-  printf("title is %s\n", tm->title);
-  printf("filepath is %s\n", tm->filepath);
 }
 
 void test_get_playlist_tracks() {
@@ -43,11 +34,11 @@ void test_get_track() {
   printf("beats size is %d\n", t.beats_size);
 }
 
-void test_get_all_tracks() {
-  finyl_track* t;
+/* void test_get_all_tracks() { */
+/*   finyl_track* t; */
 
-  get_all_tracks(&t, usb);
-}
+/*   get_all_tracks(&t, usb); */
+/* } */
 
 int main() {
   test_get_track();

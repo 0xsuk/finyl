@@ -48,17 +48,6 @@ void finyl_init_track(finyl_track* t) {
   t->playing = false;
 }
 
-void finyl_print_track(finyl_track* t) {
-  printf("track {\n");
-  printf("\tnchunks: %d\n", t->nchunks);
-  printf("\tlength: %d\n", t->length);
-  printf("\tindex: %lf\n", t->index);
-  printf("\tspeed: %lf\n", t->speed);
-  printf("\tchannels_size: %d\n", t->channels_size);
-  printf("\tplaying: %d\n", t->playing);
-  printf("}\n");
-}
-
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c) {
   int position = floor(t->index);
   int ichunk = position / CHUNK_SIZE;
@@ -192,7 +181,7 @@ void gain_filter(finyl_sample* buf, double gain) {
   }
 }
 
-void jmp_cue(finyl_track* t) {
+void finyl_jmp_cue(finyl_track* t) {
   
 }
 
@@ -257,7 +246,7 @@ void finyl_handle() {
   memset(abuffer, 0, period_size*2*sizeof(finyl_sample));
   memset(bbuffer, 0, period_size*2*sizeof(finyl_sample));
   
-  if (adeck->playing) {
+  if (adeck != NULL && adeck->playing) {
     make_channel_buffers(a_channel_buffers, adeck);
     gain_filter(a_channel_buffers[0], a0_gain);
     gain_filter(a_channel_buffers[1], a1_gain);

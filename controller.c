@@ -3,8 +3,7 @@
 #include <termios.h>
 #include "finyl.h"
 #include "digger.h"
-
-
+#include "dev.h"
 
 double max(double a, double b) {
   return a>b ? a : b;
@@ -26,6 +25,37 @@ void slide_right(finyl_track* t) {
     printf("t is %lf\n", t->speed);
   }
   t->speed = backup;
+}
+
+void list_playlists() {
+  finyl_playlist* pls;
+  int size = get_playlists(&pls, usb);
+
+  printf("\n");
+  for (int i = 0; i<size; i++) {
+    printf("%d %s\n", pls[i].id, pls[i].name);
+  }
+
+  free_playlists(pls, size);
+}
+
+void list_playlist_tracks() {
+  finyl_track_meta* tms;
+  int size = get_playlist_tracks(&tms, usb, 2); //2 = ukg
+
+  printf("\n");
+  for (int i = 0; i<size; i++) {
+    printf("%d %d %s\n", tms[i].id, tms[i].bpm, tms[i].title);
+  }
+
+  free_track_metas(tms, size);
+}
+
+//load track 5 to adeck
+void load_sample_track() {
+  finyl_track t;
+  get_track(&t, usb, 1);
+  print_track(&t);
 }
 
 void handleKey(char x) {
@@ -59,6 +89,15 @@ void handleKey(char x) {
     break;
   case 't':
     slide_right(adeck);
+    break;
+  case 'L':
+    list_playlists();
+    break;
+  case 'l':
+    list_playlist_tracks();
+    break;
+  case '0':
+    load_sample_track();
     break;
   }
 }

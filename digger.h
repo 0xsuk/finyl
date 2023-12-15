@@ -13,6 +13,10 @@
 /*   track_meta* tracks; */
 /* } finyl_output; */
 
+void free_playlists(finyl_playlist* pls, int size);
+
+void free_track_metas(finyl_track_meta* tms, int size);
+
 int get_playlists(finyl_playlist** pls, char* usb);
 
 int get_playlist_tracks(finyl_track_meta** tracks, char* usb, int pid);

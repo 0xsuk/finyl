@@ -28,10 +28,12 @@ class Beat {
 class Cue {
     public long type; //memory cue or loop
     public long time;
+    public long hotcue;
 
-    public Cue(long type, long time) {
+    public Cue(long type, long time, long hotcue) {
         this.type = type;
         this.time = time;
+        this.hotcue = hotcue;
     }
 }
 
@@ -200,7 +202,7 @@ class Track {
         for (RekordboxAnlz.CueTag cuetag : cuetags) {
             if (cuetag.lenCues() > 0) {
                 for (RekordboxAnlz.CueEntry ce : cuetag.cues()) {
-                    cues.add(new Cue(ce.type().id(), ce.time()));
+                    cues.add(new Cue(ce.type().id(), ce.time(), ce.hotCue()));
                 }
             }
         }

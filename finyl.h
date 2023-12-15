@@ -85,8 +85,6 @@ extern finyl_track* ddeck;
 
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c);
 
-void finyl_print_track(finyl_track* t);
-
 void finyl_init_track(finyl_track* t);
 
 int finyl_read_channels_from_files(char** files, int channels_length, finyl_track* t);
