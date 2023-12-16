@@ -1,6 +1,19 @@
 #include "dev.h"
 
-char* usb = "/media/null/22BC-F655/";
+#ifndef USB
+#define USB "/media/null/22BC-F655/"
+#endif
+#define STR_IMPL(x) #x
+#define STR(x) STR_IMPL(x)
+char* usb = STR(USB);
+
+char finyl_output_path[256];
+
+char* get_finyl_output_path() {
+  char* home = getenv("HOME");
+  snprintf(finyl_output_path, sizeof(finyl_output_path), "%s/.finyl-output", home);
+  return finyl_output_path;
+}
 
 void print_track_meta(finyl_track_meta* tm) {
   printf("id is %d\n", tm->id);

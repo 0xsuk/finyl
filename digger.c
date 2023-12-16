@@ -1,8 +1,7 @@
 #include "finyl.h"
 #include "digger.h"
 #include "cJSON.h"
-
-char* finyl_output_path = "/home/null/.finyl-output"; //TODO
+#include "dev.h"
 
 void free_playlist(finyl_playlist* pl) {
   free(pl->name);
@@ -246,7 +245,7 @@ static int run_digger(cJSON** json, char* usb, char* op) {
     return -1;
   }
   
-  *json = read_file_malloc_json(finyl_output_path);
+  *json = read_file_malloc_json(get_finyl_output_path());
   
   if (!badge_valid(*json, badge)) {
     return -1;
