@@ -115,7 +115,11 @@ finyl_sample finyl_get_sample1(finyl_channel c, int position) {
 }
 
 static finyl_chunk make_chunk() {
-  return (finyl_chunk)malloc(CHUNK_SIZE * sizeof(finyl_sample));
+  finyl_chunk chunk = (finyl_chunk)malloc(CHUNK_SIZE * sizeof(finyl_sample));
+  if (chunk == NULL) {
+    printf("failed to allocate chunk\n");
+  }
+  return chunk;
 }
 
 static void free_chunks(finyl_channel channel, int channel_size) {
@@ -128,7 +132,11 @@ static void free_chunks(finyl_channel channel, int channel_size) {
 }
 
 static finyl_channel make_channel() {
-  return (finyl_channel)malloc(MAX_CHUNKS_SIZE * sizeof(finyl_channel*));
+  finyl_channel c = (finyl_channel)malloc(MAX_CHUNKS_SIZE * sizeof(finyl_channel*));
+  if (c == NULL) {
+    printf("failed to allocate channel");
+  }
+  return c;
 }
 
 static void free_channels(finyl_channel* channels, int channels_size) {
