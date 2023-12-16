@@ -145,7 +145,9 @@ static void free_channels(finyl_channel* channels, int channels_size) {
     free(channel);
   }
 
-  free(channels);
+  if (channels_size > 0) {
+    free(channels);
+  }
 }
 
 static bool file_exist(char* file) {
@@ -194,7 +196,9 @@ static int read_pcm(FILE* fp, finyl_channel channel, int* nchunks, int* length) 
 
 static int read_channel(char* file, finyl_channel channel, int* nchunks, int* length) {
   FILE* fp = NULL;
-  open_pcm_stream(&fp, file);
+  if (open_pcm_stream(&fp, file) == -1)  {
+    return -1;
+  }
   if (fp == NULL) {
     return -1;
   }

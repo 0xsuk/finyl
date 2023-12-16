@@ -60,7 +60,9 @@ void load_sample_track() {
   get_track(&t, usb, 1);
   
   char* files[1] = {t.meta.filepath};
-  finyl_read_channels_from_files(files, 1, &t);
+  if (finyl_read_channels_from_files(files, 1, &t) == -1) {
+    return;
+  }
   
   print_track(&t);
     
