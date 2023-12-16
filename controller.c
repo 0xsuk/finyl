@@ -55,18 +55,18 @@ void list_playlist_tracks() {
 
 //load track 5 to adeck
 void load_sample_track() {
-  finyl_track t;
-  finyl_init_track(&t);
-  get_track(&t, usb, 1);
+  finyl_track* t = (finyl_track*)malloc(sizeof(finyl_track));
+  finyl_init_track(t);
+  get_track(t, usb, 1);
   
-  char* files[1] = {t.meta.filepath};
-  if (finyl_read_channels_from_files(files, 1, &t) == -1) {
+  char* files[1] = {t->meta.filepath};
+  if (finyl_read_channels_from_files(files, 1, t) == -1) {
     return;
   }
   
-  print_track(&t);
+  print_track(t);
     
-  adeck = &t;
+  adeck = t;
 }
 
 void* _interface() {
