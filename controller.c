@@ -4,6 +4,8 @@
 #include "finyl.h"
 #include "digger.h"
 #include "dev.h"
+#include "interface.h"
+#include <pthread.h>
 
 double max(double a, double b) {
   return a>b ? a : b;
@@ -65,6 +67,17 @@ void load_sample_track() {
   adeck = &t;
 }
 
+void* _interface() {
+  interface(adeck);
+
+  return NULL;
+}
+
+void start_interface() {
+  pthread_t interface_thread;
+  pthread_create(&interface_thread, NULL, _interface, NULL);
+}
+
 void handleKey(char x) {
   switch (x) {
   case 'h':
@@ -91,6 +104,9 @@ void handleKey(char x) {
     break;
   case 'c':
     adeck->index = 0;
+    break;
+  case 'p':
+    print_track(adeck);
     break;
   case 'a':
     adeck->speed = adeck->speed + 0.01;
@@ -121,9 +137,13 @@ void handleKey(char x) {
   case '1':
     /* mark loop in */
     adeck->loop_in = 44.1 * finyl_get_quantized_time(adeck);
+    adeck->loop_out = -1.0;
     break;
   case '2':
     adeck->loop_out = 44.1 * finyl_get_quantized_time(adeck);
+    break;
+  case '3':
+    start_interface();
     break;
   }
 }
@@ -135,10 +155,12 @@ void* key_input(void* arg) {
   newt = oldt;
   newt.c_lflag &= ~(ICANON);          
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-  while(1) {
+  while(finyl_running) {
     handleKey(getchar());                 
   }
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+  printf("key_input closed\n");
+  fflush(stdout);
   return NULL;
 }
 

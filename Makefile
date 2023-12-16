@@ -1,10 +1,10 @@
-LDFLAGS = -lasound -lm
+LDFLAGS = -lasound -lm -lSDL2
 CFLAGS = -Wall -std=gnu99 -O3 # gnu99 so that popen is defined
 
 ENTRY = entry.o
-BUT_ENTRY = finyl.o cJSON.o controller.o digger.o dev.o
+BUT_ENTRY = finyl.o cJSON.o controller.o digger.o dev.o interface.o
 OBJS = $(ENTRY) $(BUT_ENTRY)
-TESTS = test-digger test-controller
+TESTS = test-digger test-controller test-interface
 TEST_OBJS = $(addsuffix .o,$(TESTS))
 
 %.o: %.c
@@ -26,6 +26,8 @@ listdevice: listdevice.o
 tests: $(TESTS)
 test-digger: test-digger.o $(BUT_ENTRY)
 test-controller: test-controller.o $(BUT_ENTRY)
+test-interface: test-interface.o interface.o
+
 
 clean:
 	rm -f finyl \

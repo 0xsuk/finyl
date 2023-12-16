@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <sys/wait.h>
 
+bool finyl_running = true;
+
 finyl_track* adeck; //pointer to track, is a d
 finyl_track* bdeck;
 finyl_track* cdeck;
@@ -95,6 +97,15 @@ double finyl_get_quantized_time(finyl_track* t) {
 
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c) {
   int position = floor(t->index);
+  int ichunk = position / CHUNK_SIZE;
+  int isample = position - (CHUNK_SIZE * ichunk);
+
+  finyl_chunk chunk = c[ichunk];
+  finyl_sample sample = chunk[isample];
+  return sample;
+}
+
+finyl_sample finyl_get_sample1(finyl_channel c, int position) {
   int ichunk = position / CHUNK_SIZE;
   int isample = position - (CHUNK_SIZE * ichunk);
 
@@ -234,8 +245,8 @@ static void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t)
   for (int i = 0; i < period_size*2; i=i+2) {
     t->index += t->speed;
 
-    if (t->loop_out != -1 && t->index >= t->loop_out) {
-      t->index = t->loop_in;
+    if (t->loop_in != -1 && t->loop_out != -1 && t->index >= t->loop_out) {
+      t->index = t->loop_in + t->index - t->loop_out;
     }
     
     if (t->index >= t->length) {
@@ -337,7 +348,7 @@ static void cleanup_alsa(snd_pcm_t* handle) {
     printf("snd_pcm_drain failed: %s\n", snd_strerror(err));
   }
   snd_pcm_close(handle);
-  printf("closed\n");
+  printf("alsa closed\n");
 }
 
 void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
@@ -380,7 +391,7 @@ void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, s
   init_decks(a, b, c, d);
   init_buffers();
   
-  while (1) {
+  while (finyl_running) {
     finyl_handle(); //handle effects of each tracks
     
     //handle channels
@@ -395,7 +406,7 @@ void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, s
       printf("eagain\n");
     } else if (err < 0) {
       printf("error %s\n", snd_strerror(err));
-      cleanup_alsa(handle);
+      finyl_running = false;
       return;
     }
   }

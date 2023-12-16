@@ -80,12 +80,15 @@ typedef enum {
   finyl_7,
 } finyl_channel_target;
 
+extern bool finyl_running;
+
 extern finyl_track* adeck; //pointer to track, is a d
 extern finyl_track* bdeck;
 extern finyl_track* cdeck;
 extern finyl_track* ddeck;
 
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c);
+finyl_sample finyl_get_sample1(finyl_channel c, int position);
 
 void finyl_init_track(finyl_track* t);
 
