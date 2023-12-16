@@ -3,13 +3,13 @@
 #include "finyl.h"
 #include <pthread.h>
 
-#define WINDOW_WIDTH 1500
+#define WINDOW_WIDTH 1600
 #define WINDOW_HEIGHT 200
 #define SAMPLE_RATE 44100
 
 float get_scaled_sample(finyl_channel c, int position) {
-  float y = finyl_get_sample1(c, position-1) / 32768.0;
-  return pow(y, 5);
+  float y = finyl_get_sample1(c, position) / 32768.0;
+  return pow(y, 7);
 }
 
 void render_waveform_position(SDL_Renderer *renderer, finyl_track* t, int position) {
@@ -29,7 +29,7 @@ void write_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track* t
   
   SDL_SetRenderDrawColor(renderer, 100, 100, 250, 200); // Set draw color to black for the waveform
 
-  for (int i = 1; i < t->length; i++) {
+  for (int i = 1; i < t->length; i=i+2) {
     render_waveform_position(renderer, t, i);
   }
 
