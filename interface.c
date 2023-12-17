@@ -4,12 +4,12 @@
 #include <pthread.h>
 
 #define WINDOW_WIDTH 1600
-#define WINDOW_HEIGHT 200
+#define WINDOW_HEIGHT 100
 #define SAMPLE_RATE 44100
 
 float get_scaled_sample(finyl_channel c, int position) {
   float y = finyl_get_sample1(c, position) / 32768.0;
-  return pow(y, 7);
+  return y;
 }
 
 void render_waveform_position(SDL_Renderer *renderer, finyl_track* t, int position) {
@@ -94,11 +94,17 @@ int interface(finyl_track* t) {
   pthread_t event_thread;
   pthread_create(&event_thread, NULL, event_handler, NULL);
   
+  int fps = 30;
+  int duration_millisec = 1000 / fps;
   while (finyl_running) {
+    int start_millisec = SDL_GetTicks();
     write_position(renderer, position_texture, t);
     SDL_RenderCopy(renderer, waveform_texture, NULL, NULL);
     SDL_RenderCopy(renderer, position_texture, NULL, NULL);
     SDL_RenderPresent(renderer);
+    if (start_millisec < duration_millisec) {
+      SDL_Delay(duration_millisec - start_millisec);
+    }
   }
   
   

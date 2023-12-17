@@ -16,7 +16,7 @@ void test_get_playlists() {
 void test_get_playlist_tracks() {
   finyl_track_meta* tms;
   
-  int tms_size = get_playlist_tracks(&tms, usb, 1);
+  int tms_size = get_playlist_tracks(&tms, usb, 2);
 
   for (int i = 0; i<tms_size; i++) {
     print_track_meta(&tms[i]);
@@ -42,8 +42,8 @@ void test_get_track() {
 /* } */
 
 int main() {
-  test_get_track();
-  /* test_get_playlist_tracks(); */
+  /* test_get_track(); */
+  test_get_playlist_tracks();
   /* test_get_playlists(); */
 }
 

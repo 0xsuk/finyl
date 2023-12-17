@@ -257,10 +257,10 @@ static void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t)
   for (int i = 0; i < period_size*2; i=i+2) {
     t->index += t->speed;
 
-    if (t->loop_in != -1 && t->loop_out != -1 && t->index >= t->loop_out) {
+    if (t->loop_in != -1 && t->loop_out != -1 && t->index >= (t->loop_out - 2000)) {
       t->index = t->loop_in + t->index - t->loop_out;
     }
-    
+
     if (t->index >= t->length) {
       t->playing = false;
       

@@ -57,7 +57,7 @@ void list_playlist_tracks() {
 void load_sample_track() {
   finyl_track* t = (finyl_track*)malloc(sizeof(finyl_track));
   finyl_init_track(t);
-  get_track(t, usb, 1);
+  get_track(t, usb, 62);
   
   char* files[1] = {t->meta.filepath};
   if (finyl_read_channels_from_files(files, 1, t) == -1) {
@@ -141,9 +141,16 @@ void handleKey(char x) {
     adeck->loop_in = 44.1 * finyl_get_quantized_time(adeck);
     adeck->loop_out = -1.0;
     break;
-  case '2':
-    adeck->loop_out = 44.1 * finyl_get_quantized_time(adeck);
+  case '2': {
+    double now = 44.1 * finyl_get_quantized_time(adeck);
+    if (adeck->loop_in > now) {
+      adeck->loop_in = -1;
+    } else {
+      adeck->loop_out = now;
+    }
     break;
+  }
+
   case '3':
     start_interface();
     break;
