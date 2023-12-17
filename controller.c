@@ -57,7 +57,7 @@ void list_playlist_tracks() {
 void load_sample_track() {
   finyl_track* t = (finyl_track*)malloc(sizeof(finyl_track));
   finyl_init_track(t);
-  get_track(t, usb, 62);
+  get_track(t, usb, 110);
   
   char* files[1] = {t->meta.filepath};
   if (finyl_read_channels_from_files(files, 1, t) == -1) {
