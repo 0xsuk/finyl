@@ -41,9 +41,9 @@ void list_playlists() {
   free_playlists(pls, size);
 }
 
-void list_playlist_tracks() {
+void list_playlist_tracks(int pid) {
   finyl_track_meta* tms;
-  int size = get_playlist_tracks(&tms, usb, 2); //2 = ukg
+  int size = get_playlist_tracks(&tms, usb, pid);
 
   printf("\n");
   for (int i = 0; i<size; i++) {
@@ -54,10 +54,10 @@ void list_playlist_tracks() {
 }
 
 //load track 5 to adeck
-void load_sample_track() {
+void load_track(finyl_track** dest, int tid) {
   finyl_track* t = (finyl_track*)malloc(sizeof(finyl_track));
   finyl_init_track(t);
-  get_track(t, usb, 110);
+  get_track(t, usb, tid);
   
   char* files[1] = {t->meta.filepath};
   if (finyl_read_channels_from_files(files, 1, t) == -1) {
@@ -66,7 +66,7 @@ void load_sample_track() {
   
   print_track(t);
     
-  adeck = t;
+  *dest = t;
 }
 
 void* _interface() {
@@ -84,6 +84,7 @@ void handleKey(char x) {
   switch (x) {
   case 'h':
     bdeck->playing = !bdeck->playing;
+    printf("bdeck is playing:%d\n", bdeck->playing);
     break;
   case 'g':
     adeck->playing = !adeck->playing;
@@ -92,23 +93,40 @@ void handleKey(char x) {
   case 'G':
     adeck->speed = 1;
     break;
+  case 'H':
+    bdeck->speed = 1;
+    break;
   case 'j':
     a0_gain = max(a0_gain-0.1, 0);
+    printf("a0_gain %lf\n", a0_gain);
     break;
   case 'k':
     a0_gain = min(a0_gain+0.1, 1);
+    printf("a0_gain %lf\n", a0_gain);
     break;
   case 'n':
-    a1_gain = max(a1_gain-0.1, 0);
+    b0_gain = max(b0_gain-0.1, 0);
+    printf("b0_gain %lf\n", b0_gain);
     break;
   case 'm':
-    a1_gain = min(a1_gain+0.1, 1);
+    b0_gain = min(b0_gain+0.1, 1);
+    printf("b0_gain %lf\n", b0_gain);
     break;
   case 'c':
-    adeck->index = 0;
+    if (adeck->cues_size > 0) {
+      adeck->index = adeck->cues[0].time * 44.1;
+      printf("jumped to %lf\n", adeck->index);
+    }
+    break;
+  case 'C':
+    if (bdeck->cues_size > 0) {
+      bdeck->index = bdeck->cues[0].time * 44.1;
+      printf("jumped to %lf\n", bdeck->index);
+    }
     break;
   case 'p':
     print_track(adeck);
+    print_track(bdeck);
     break;
   case 'a':
     adeck->speed = adeck->speed + 0.01;
@@ -116,30 +134,55 @@ void handleKey(char x) {
   case 's':
     adeck->speed = adeck->speed - 0.01;
     break;
-  case 't':
-    slide_right(adeck);
+  case 't': {
+    double millisec = finyl_get_quantized_time(adeck);
+    adeck->index = millisec * 44.1;
+    printf("adeck->index %lf\n", adeck->index);
     break;
+  }
+  case 'T': {
+    double millisec = finyl_get_quantized_time(bdeck);
+    bdeck->index = millisec * 44.1;
+    printf("bdeck->index %lf\n", bdeck->index);
+    break;
+  }
   case 'L':
     list_playlists();
     break;
-  case 'l':
-    list_playlist_tracks();
-    break;
-  case '0':
-    load_sample_track();
-    break;
-  case 'q': {
-    double q = finyl_get_quantized_time(adeck);
-    printf("time is %lf\n", q);
+  case 'l': {
+    int pid;
+    printf("pid:");
+    scanf("%d", &pid);
+    printf("listing...\n");
+    list_playlist_tracks(pid);
     break;
   }
-  case 'C':
-    adeck->index = 9791.0 * 44.1;
+  case '9': {
+    int tid;
+    printf("tid:");
+    scanf("%d", &tid);
+    printf("loading...\n");
+    load_track(&adeck, tid);
     break;
+  }
+  case '0': {
+    int tid;
+    printf("tid:");
+    scanf("%d", &tid);
+    printf("loading...\n");
+    load_track(&bdeck, tid);
+    break;
+  }
+  case 'q': {
+    bdeck->speed = adeck->speed * ((double)adeck->meta.bpm / bdeck->meta.bpm);
+    printf("synced bdeck->speed: %lf\n", bdeck->speed);
+    break;
+  }
   case '1':
     /* mark loop in */
     adeck->loop_in = 44.1 * finyl_get_quantized_time(adeck);
     adeck->loop_out = -1.0;
+    printf("adeck loop in: %lf\n", adeck->loop_in);
     break;
   case '2': {
     double now = 44.1 * finyl_get_quantized_time(adeck);
@@ -147,10 +190,26 @@ void handleKey(char x) {
       adeck->loop_in = -1;
     } else {
       adeck->loop_out = now;
+      printf("adeck loop out: %lf\n", adeck->loop_out);
     }
     break;
   }
-
+  case '!':
+    /* mark loop in */
+    bdeck->loop_in = 44.1 * finyl_get_quantized_time(bdeck);
+    bdeck->loop_out = -1.0;
+    printf("bdeck loop in: %lf\n", bdeck->loop_in);
+    break;
+  case '`': {
+    double now = 44.1 * finyl_get_quantized_time(bdeck);
+    if (bdeck->loop_in > now) {
+      bdeck->loop_in = -1;
+    } else {
+      bdeck->loop_out = now;
+      printf("bdeck loop out: %lf\n", bdeck->loop_out);
+    }
+    break;
+  }
   case '3':
     start_interface();
     break;
