@@ -78,7 +78,7 @@ double finyl_get_quantized_time(finyl_track* t) {
     return t->beats[t->beats_size-1].time;
   }
   for (int i = 1; i<t->beats_size-1; i++) {
-    if (t->beats[i-1].time < nowtime && nowtime < t->beats[i].time) {
+    if (t->beats[i-1].time <= nowtime && nowtime <= t->beats[i].time) {
       // [i-1]      half       [i]
       //     -margin-  -margin-
       double margin = (t->beats[i].time - t->beats[i-1].time) / 2.0;
@@ -304,11 +304,11 @@ static void add_and_clip_two_buffers(finyl_sample* dest, finyl_sample* src1, fin
 }
 
 double a_gain = 1.0;
-double a0_gain = 1.0;
-double a1_gain = 1.0;
+double a0_gain = 0.0;
+double a1_gain = 0.0;
 double b_gain = 1.0;
-double b0_gain = 1.0;
-double b1_gain = 1.0;
+double b0_gain = 0.0;
+double b1_gain = 0.0;
 double a0_filter = 0.2;
 double a1_filter = 1.0;
 double b0_filter = 0.2;
@@ -326,12 +326,12 @@ static void finyl_handle() {
     add_two_buffers(abuffer, a_channel_buffers[0], a_channel_buffers[1]);
   }
   
-  // if (bdeck->playing) {
-    // make_channel_buffers(b_channel_buffers, bdeck);
-    // gain_filter(b_channel_buffers[0], b0_gain);
-    // gain_filter(b_channel_buffers[1], b1_gain);
-    // add_two_buffers(bbuffer, b_channel_buffers[0], b_channel_buffers[1]);
-  // }
+  if (bdeck != NULL && bdeck->playing) {
+    make_channel_buffers(b_channel_buffers, bdeck);
+    gain_filter(b_channel_buffers[0], b0_gain);
+    gain_filter(b_channel_buffers[1], b1_gain);
+    add_two_buffers(bbuffer, b_channel_buffers[0], b_channel_buffers[1]);
+  }
   
   add_and_clip_two_buffers(buffer, abuffer, bbuffer);
 }

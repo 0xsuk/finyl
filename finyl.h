@@ -19,6 +19,8 @@ typedef finyl_chunk* finyl_channel; //32 length array of chunk
 
 extern double a0_gain;
 extern double a1_gain;
+extern double b0_gain;
+extern double b1_gain;
 
 typedef struct {
   int type;
