@@ -26,7 +26,7 @@ listdevice: listdevice.o
 tests: $(TESTS)
 test-digger: test-digger.o $(BUT_ENTRY)
 test-controller: test-controller.o $(BUT_ENTRY)
-test-interface: test-interface.o interface.o
+test-interface: test-interface.o $(BUT_ENTRY)
 
 
 clean:
