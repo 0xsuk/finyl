@@ -222,7 +222,7 @@ void handleKey(char x) {
   }
   case 'v':
     adeck->index += 300;
-   break;
+    break;
   case 'b':
     bdeck->index += 300;
     break;
@@ -244,6 +244,21 @@ void handleKey(char x) {
   case '&':
     bdeck->index -= 3000;
     break;
+  case '7': {
+    int tmp = amount * 2;
+    if (tmp < 10000000) {
+      amount = tmp;
+    }
+    
+    break;
+  }
+  case '\'': {
+    int tmp = amount / 2;
+    if (tmp > 1000) {
+      amount = tmp;
+    }
+    break;
+  }
   }
 }
 

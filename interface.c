@@ -4,8 +4,7 @@
 #include <X11/Xlib.h>
 
 
-
-#define SAMPLE_RATE 44100
+int amount = 1000000;
 
 int window_width = 1000;
 int window_height = 500;
@@ -60,7 +59,7 @@ void render_waveform(SDL_Renderer *renderer, finyl_track* t, int pcm_start_index
   SDL_RenderFillRect(renderer, &rect);
 }
 
-int interface(finyl_track* adeck, finyl_track* bdeck) {
+int interface() {
   get_window_size();
   
   int window_height = wave_height_half * 4 + 20;
@@ -93,7 +92,6 @@ int interface(finyl_track* adeck, finyl_track* bdeck) {
       }
     }
 
-    int amount = 100000;
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // Background color
     SDL_RenderClear(renderer);
 
