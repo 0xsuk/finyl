@@ -8,6 +8,13 @@
 
 int main(int argc, char **argv) {
   
+  if (argc < 2) {
+    printf("usage ./test-controller <path to rekordbox usb: example /media/null/22BC-F655/ >\n");
+    return 0;
+  }
+  
+  usb = argv[1];
+  
   snd_pcm_t* handle;
   snd_pcm_uframes_t buffer_size = 1024 * 2;
   snd_pcm_uframes_t period_size = 1024;
