@@ -70,7 +70,7 @@ void load_track(finyl_track** dest, int tid) {
 }
 
 void* _interface() {
-  interface(adeck);
+  interface(adeck, bdeck);
 
   return NULL;
 }
@@ -133,6 +133,12 @@ void handleKey(char x) {
     break;
   case 's':
     adeck->speed = adeck->speed - 0.01;
+    break;
+  case 'A':
+    bdeck->speed = bdeck->speed + 0.01;
+    break;
+  case 'S':
+    bdeck->speed = bdeck->speed - 0.01;
     break;
   case 't': {
     double millisec = finyl_get_quantized_time(adeck);
@@ -210,13 +216,45 @@ void handleKey(char x) {
     }
     break;
   }
-  case '3':
+  case '3':{
     start_interface();
+    break;
+  }
+  case 'v':
+    adeck->index += 300;
+   break;
+  case 'b':
+    bdeck->index += 300;
+    break;
+  case 'V':
+    adeck->index -= 300;
+    break;
+  case 'B':
+    bdeck->index -= 300;
+    break;
+  case '5':
+    adeck->index += 3000;
+    break;
+  case '6':
+    bdeck->index += 3000;
+    break;
+  case '%':
+    adeck->index -= 3000;
+    break;
+  case '&':
+    bdeck->index -= 3000;
     break;
   }
 }
 
 void* key_input(void* arg) {
+  printf("deck initializing\n");
+  
+  load_track(&adeck, 1);
+  load_track(&bdeck, 1);
+  
+  printf("deck initialized\n");
+  
   static struct termios oldt, newt;
   
   tcgetattr(STDIN_FILENO, &oldt);

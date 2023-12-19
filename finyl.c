@@ -96,7 +96,7 @@ double finyl_get_quantized_time(finyl_track* t) {
 }
 
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c) {
-  int position = floor(t->index);
+  int position = (int)t->index;
   int ichunk = position / CHUNK_SIZE;
   int isample = position - (CHUNK_SIZE * ichunk);
 
