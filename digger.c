@@ -77,7 +77,7 @@ static int unmarshal_playlist(cJSON* pj, finyl_playlist* p) {
 static int unmarshal_playlists(cJSON* json, finyl_playlist** pls) {
   cJSON* playlistsj = cJSON_GetObjectItem(json, "playlists");
   int playlists_size = cJSON_GetArraySize(playlistsj);
-  *pls = (finyl_playlist*)malloc(sizeof(finyl_playlist*) * playlists_size);
+  *pls = (finyl_playlist*)malloc(sizeof(finyl_playlist) * playlists_size);
 
   finyl_playlist* _pls = *pls;
   
@@ -201,7 +201,7 @@ static int run_command(FILE** fp, char* badge, char* usb, char* op) {
   return 0;
 }
 
-static int check_command_error(FILE* fp) {
+static int close_command(FILE* fp) {
   char error_out[10000];
   fread(error_out, 1, sizeof(error_out), fp);
   int status = pclose(fp);
@@ -241,7 +241,7 @@ static int run_digger(cJSON** json, char* usb, char* op) {
     return -1;
   }
   
-  if (check_command_error(fp) == -1) {
+  if (close_command(fp) == -1) {
     return -1;
   }
   
@@ -259,6 +259,7 @@ static int run_digger(cJSON** json, char* usb, char* op) {
 int get_playlists(finyl_playlist** pls, char* usb) {
   cJSON* json;
   if (run_digger(&json, usb, "playlists") == -1) {
+    cJSON_Delete(json);
     return -1;
   }
   
@@ -272,6 +273,7 @@ int get_track(finyl_track* t, char* usb, int tid) {
   char op[30];
   snprintf(op, sizeof(op), "track %d", tid);
   if (run_digger(&json, usb, op) == -1) {
+    cJSON_Delete(json);
     return -1;
   }
 
@@ -297,6 +299,7 @@ int get_playlist_tracks(finyl_track_meta** tracks, char* usb, int pid) {
   char op[30];
   snprintf(op, sizeof(op), "playlist-tracks %d", pid);
   if (run_digger(&json, usb, op) == -1) {
+    cJSON_Delete(json);
     return -1;
   }
   
@@ -341,6 +344,6 @@ cJSON* read_file_malloc_json(char* file) {
   char* output = read_file_malloc(file);
   cJSON* json  = cJSON_Parse(output);
 
-  free(output); //TODO safe?
+  free(output); //TODO safe? probably yes
   return json;
 }
