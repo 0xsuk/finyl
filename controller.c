@@ -1,3 +1,4 @@
+#include <sys/resource.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <termios.h>
@@ -50,14 +51,19 @@ void list_playlist_tracks(int pid) {
     printf("%d %d %s\n", tms[i].id, tms[i].bpm, tms[i].title);
   }
 
-  free_track_metas(tms, size);
+  finyl_free_track_metas(tms, size);
 }
 
 //load track 5 to adeck
 void load_track(finyl_track** dest, int tid) {
+  finyl_track* before = *dest;
+  
   finyl_track* t = (finyl_track*)malloc(sizeof(finyl_track));
   finyl_init_track(t);
-  get_track(t, usb, tid);
+  if (get_track(t, usb, tid) == -1) {
+    printf("failed\n");
+    return;
+  }
   
   char* files[1] = {t->meta.filepath};
   if (finyl_read_channels_from_files(files, 1, t) == -1) {
@@ -67,6 +73,13 @@ void load_track(finyl_track** dest, int tid) {
   print_track(t);
     
   *dest = t;
+
+  if (before != NULL) {
+    add_track_to_free(before);
+    struct rusage usage;
+    getrusage(RUSAGE_SELF, &usage);
+    printf("Memory usage: %ld kilobytes\n", usage.ru_maxrss);
+  }
 }
 
 void* _interface() {
@@ -167,7 +180,7 @@ void handleKey(char x) {
     int tid;
     printf("tid:");
     scanf("%d", &tid);
-    printf("loading...\n");
+    printf("loading...%d\n", tid);
     load_track(&adeck, tid);
     break;
   }
@@ -175,7 +188,7 @@ void handleKey(char x) {
     int tid;
     printf("tid:");
     scanf("%d", &tid);
-    printf("loading...\n");
+    printf("loading...%d\n", tid);
     load_track(&bdeck, tid);
     break;
   }

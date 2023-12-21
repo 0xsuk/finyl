@@ -29,7 +29,7 @@ void print_track(finyl_track* t) {
   printf("\tid: %d\n", t->meta.id);
   printf("\tfilename: %s\n", t->meta.filename);
   printf("\tbpm: %d\n", t->meta.bpm);
-  printf("\tnchunks: %d\n", t->nchunks);
+  printf("\tchunks_size: %d\n", t->chunks_size);
   printf("\tlength: %d\n", t->length);
   printf("\tloop_in: %lf\n", t->loop_in);
   printf("\tloop_out: %lf\n", t->loop_out);

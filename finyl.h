@@ -51,7 +51,7 @@ typedef struct {
   finyl_channel channels[MAX_CHANNELS_SIZE];
   int channels_size; //number of stems
   finyl_track_meta meta;
-  int nchunks; //the number of chunks in a channel
+  int chunks_size; //the number of chunks in a channel
   int length;
   int cues_size;
   int beats_size;
@@ -88,6 +88,11 @@ extern finyl_track* adeck; //pointer to track, is a d
 extern finyl_track* bdeck;
 extern finyl_track* cdeck;
 extern finyl_track* ddeck;
+
+void finyl_free_track_metas(finyl_track_meta* tms, int size);
+void finyl_free_track_meta(finyl_track_meta* tm);
+
+void finyl_free_track(finyl_track* t);
 
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c);
 finyl_sample finyl_get_sample1(finyl_channel c, int position);

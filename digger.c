@@ -3,30 +3,12 @@
 #include "cJSON.h"
 #include "dev.h"
 
-void free_playlist(finyl_playlist* pl) {
-  free(pl->name);
-}
-
 void free_playlists(finyl_playlist* pls, int size) {
   for (int i = 0; i<size; i++) {
-    free_playlist(&pls[i]);
+    free(pls[i].name);
   }
 
   free(pls);
-}
-
-void free_track_meta(finyl_track_meta* tm) {
-  free(tm->title);
-  free(tm->filepath);
-  free(tm->filename);
-}
-
-void free_track_metas(finyl_track_meta* tms, int size) {
-  for (int i = 0; i<size; i++) {
-    free_track_meta(&tms[i]);
-  }
-
-  free(tms);
 }
 
 static void generateRandomString(char* badge, size_t size) {
@@ -183,6 +165,7 @@ static int unmarshal_error(cJSON* json, char* error) {
   if (cJSON_IsString(errorj)) {
     char* _error = errorj->valuestring;
     strcpy(error, _error);
+    return 1;
   }
 
   return 0;
@@ -255,10 +238,26 @@ static int run_digger(cJSON** json, char* usb, char* op) {
 }
 
 
+int has_error(cJSON* json) {
+  char error[1000];
+  int haserror = unmarshal_error(json, error);
+  if (haserror) {
+    printf("crate-digger error: %s\n", error);
+    return 1;
+  }
+
+  return 0;
+}
+
 //return size of playlists, or -1 for error
 int get_playlists(finyl_playlist** pls, char* usb) {
   cJSON* json;
   if (run_digger(&json, usb, "playlists") == -1) {
+    cJSON_Delete(json);
+    return -1;
+  }
+  
+  if (has_error(json)) {
     cJSON_Delete(json);
     return -1;
   }
@@ -277,6 +276,11 @@ int get_track(finyl_track* t, char* usb, int tid) {
     return -1;
   }
 
+  if (has_error(json)) {
+    cJSON_Delete(json);
+    return -1;
+  }
+  
   unmarshal_track(json, t);
   cJSON_Delete(json);
 
@@ -299,6 +303,11 @@ int get_playlist_tracks(finyl_track_meta** tracks, char* usb, int pid) {
   char op[30];
   snprintf(op, sizeof(op), "playlist-tracks %d", pid);
   if (run_digger(&json, usb, op) == -1) {
+    cJSON_Delete(json);
+    return -1;
+  }
+  
+  if (has_error(json)) {
     cJSON_Delete(json);
     return -1;
   }

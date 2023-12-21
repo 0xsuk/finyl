@@ -19,6 +19,38 @@ finyl_sample** b_channel_buffers;
 
 snd_pcm_uframes_t period_size;
 
+void finyl_free_track_meta(finyl_track_meta* tm) {
+  free(tm->title);
+  free(tm->filepath);
+  free(tm->filename);
+}
+
+void finyl_free_track_metas(finyl_track_meta* tms, int size) {
+  for (int i = 0; i<size; i++) {
+    finyl_free_track_meta(&tms[i]);
+  }
+  free(tms);
+}
+
+static void free_channel(finyl_channel channel, int chunks_size) {
+  for (int i = 0; i<chunks_size; i++) {
+    free(channel[i]);
+  }
+}
+
+static void free_channels(finyl_channel* channels, int channels_size, int chunks_size) {
+  for (int i = 0; i<channels_size; i++) {
+    free_channel(channels[i], chunks_size);
+  }
+}
+void finyl_free_track(finyl_track* t) {
+  free_channels(t->channels, t->channels_size, t->chunks_size);
+  finyl_free_track_meta(&t->meta);
+  free(t->cues);
+  free(t->beats);
+  free(t);
+}
+
 static finyl_sample* init_channel_buffer() {
   finyl_sample* buf =  (finyl_sample*)malloc(sizeof(finyl_sample) * period_size * 2);
    if (buf == NULL) {
@@ -49,7 +81,7 @@ void finyl_init_track_meta(finyl_track_meta* tm) {
 
 void finyl_init_track(finyl_track* t) {
   finyl_init_track_meta(&t->meta);
-  t->nchunks = 0;
+  t->chunks_size = 0;
   t->length = 0;
   t->index = 0;
   t->cues_size = 0;
@@ -122,32 +154,12 @@ static finyl_chunk make_chunk() {
   return chunk;
 }
 
-static void free_chunks(finyl_channel channel, int channel_size) {
-  for (int i = 0; i<channel_size;i++) {
-    finyl_chunk chunk = channel[i];
-    free(chunk);
-  }
-
-  free(channel);
-}
-
 static finyl_channel make_channel() {
-  finyl_channel c = (finyl_channel)malloc(MAX_CHUNKS_SIZE * sizeof(finyl_channel*));
+  finyl_channel c = (finyl_channel)malloc(MAX_CHUNKS_SIZE * sizeof(finyl_chunk));
   if (c == NULL) {
     printf("failed to allocate channel");
   }
   return c;
-}
-
-static void free_channels(finyl_channel* channels, int channels_size) {
-  for (int i = 0; i<channels_size; i++) {
-    finyl_channel channel = channels[i];
-    free(channel);
-  }
-
-  if (channels_size > 0) {
-    free(channels);
-  }
 }
 
 static bool file_exist(char* file) {
@@ -174,27 +186,30 @@ static int open_pcm_stream(FILE** fp, char* filename) {
   return 0;
 }
 
-//reads from fp, updates nchunks, length, channel
-static int read_pcm(FILE* fp, finyl_channel channel, int* nchunks, int* length) {
-  finyl_chunk chunk = make_chunk();
+//reads from fp, updates chunks_size, length, channel
+static int read_pcm(FILE* fp, finyl_channel channel, int* chunks_size, int* length) {
   while (1) {
+    finyl_chunk chunk = make_chunk();
+    if (chunk == NULL) {
+      printf("read_pcm failed to allocate chunk\n");
+      return -1;
+    }
+    
     size_t count = fread(chunk, sizeof(finyl_sample), CHUNK_SIZE, fp);
-    channel[*nchunks] = chunk;
-    (*nchunks)++;
+    channel[*chunks_size] = chunk;
+    (*chunks_size)++;
     *length += count;
     if (count < CHUNK_SIZE) {
       return 0;
     }
-    if (*nchunks == MAX_CHUNKS_SIZE) {
+    if (*chunks_size == MAX_CHUNKS_SIZE) {
       printf("File is too large\n");
-      free_chunks(channel, *nchunks);
-      return -1;
+      return 1;
     }
-    chunk = make_chunk();
   }
 }
 
-static int read_channel(char* file, finyl_channel channel, int* nchunks, int* length) {
+static int read_channel(char* file, finyl_channel channel, int* chunks_size, int* length) {
   FILE* fp = NULL;
   if (open_pcm_stream(&fp, file) == -1)  {
     return -1;
@@ -202,9 +217,13 @@ static int read_channel(char* file, finyl_channel channel, int* nchunks, int* le
   if (fp == NULL) {
     return -1;
   }
-  if (read_pcm(fp, channel, nchunks, length) == -1) {
+  int status = read_pcm(fp, channel, chunks_size, length);
+  if (status == -1) {
     return -1;
+  } else if (status == 1) {
+    return 1;
   }
+  
   pclose(fp);
   return 0;
 }
@@ -212,27 +231,29 @@ static int read_channel(char* file, finyl_channel channel, int* nchunks, int* le
 //each file corresponding to each channel
 int finyl_read_channels_from_files(char** files, int channels_size, finyl_track* t) {
   for (int i = 0; i < channels_size; i++) {
-    int nchunks = 0;
+    int chunks_size = 0;
     int length = 0;
     finyl_channel channel = make_channel();
     if (channel == NULL) {
       printf("failed to allocate memory in finyl_read_channels_from_files\n");
+      free_channels(t->channels, t->channels_size, t->chunks_size);
       return -1;
     }
-    if (read_channel(files[i], channel, &nchunks, &length) == -1) {
-      //free all channels
-      free(channel);
-      free_channels(t->channels, t->channels_size);
+    int status = read_channel(files[i], channel, &chunks_size, &length);
+    if (status == -1 || status == 1) {
+      free_channel(channel, chunks_size);
+      free_channels(t->channels, t->channels_size, t->chunks_size);
       return -1;
     }
+    
     if (i == 0) {
       t->length = length;
-      t->nchunks = nchunks;
+      t->chunks_size = chunks_size;
     } else {
-      if (length != t->length || nchunks != t->nchunks) {
+      if (length != t->length || chunks_size != t->chunks_size) {
         printf("all channels have to be the same length\n");
-        free(channel);
-        free_channels(t->channels, t->channels_size);
+        free_channel(channel, chunks_size);
+        free_channels(t->channels, t->channels_size, t->chunks_size);
         return -1;
       }
     }

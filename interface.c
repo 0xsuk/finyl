@@ -59,6 +59,21 @@ void render_waveform(SDL_Renderer *renderer, finyl_track* t, int pcm_start_index
   SDL_RenderFillRect(renderer, &rect);
 }
 
+finyl_track* tracks_to_free[8];
+int tracks_to_free_tail = 0;
+
+void add_track_to_free(finyl_track* t) {
+  tracks_to_free[tracks_to_free_tail] = t;
+  tracks_to_free_tail++;
+}
+
+void free_tracks() {
+  for (int i = 0; i<tracks_to_free_tail; i++) {
+    finyl_free_track(tracks_to_free[i]);
+  }
+  tracks_to_free_tail = 0;
+}
+
 int interface() {
   get_window_size();
   
@@ -81,9 +96,6 @@ int interface() {
     return 1;
   }
 
-  int scroll_position = 0;
-  int scroll_speed = 1; // Adjust this to change the scrolling speed
-
   SDL_Event event;
   while (finyl_running) {
     while (SDL_PollEvent(&event)) {
@@ -96,8 +108,14 @@ int interface() {
     SDL_RenderClear(renderer);
 
 
-    render_waveform(renderer, adeck, (int)adeck->index - (int)(amount/2), amount, 0);
-    render_waveform(renderer, bdeck, (int)bdeck->index - (int)(amount/2), amount, wave_height_half*2 + 10);
+    free_tracks();
+    
+    if (adeck != NULL) {
+      render_waveform(renderer, adeck, (int)adeck->index - (int)(amount/2), amount, 0);
+    }
+    if (bdeck != NULL) {
+      render_waveform(renderer, bdeck, (int)bdeck->index - (int)(amount/2), amount, wave_height_half*2 + 10);
+    }
     
     SDL_RenderPresent(renderer);
 

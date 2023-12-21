@@ -1,4 +1,4 @@
-CFLAGS = -Wall -std=gnu99 -O3 # gnu99 so that popen is defined
+CFLAGS = -Wall -Wno-unused-result -std=gnu99 -O3 # gnu99 so that popen is defined
 LDFLAGS = -lasound -lm -lSDL2 -lX11
 
 ENTRY = entry.o
