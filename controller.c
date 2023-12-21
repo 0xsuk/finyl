@@ -176,6 +176,9 @@ void handleKey(char x) {
     list_playlist_tracks(pid);
     break;
   }
+  case '4':
+    free_tracks();
+    break;
   case '9': {
     int tid;
     printf("tid:");

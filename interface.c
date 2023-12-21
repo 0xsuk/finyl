@@ -100,7 +100,7 @@ int interface() {
   while (finyl_running) {
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
-        finyl_running = false;
+        goto cleanup;
       }
     }
 
@@ -123,6 +123,7 @@ int interface() {
     SDL_Delay(16); // Approximately 60 frames per second
   }
 
+ cleanup:
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();
