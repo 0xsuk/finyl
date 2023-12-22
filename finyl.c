@@ -292,6 +292,8 @@ static void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t)
       }
       
       continue;
+    } else if (t->index < 0) {
+      t->index = 0;
     }
 
     for (int c = 0; c<t->channels_size; c++) {

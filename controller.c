@@ -34,6 +34,10 @@ void list_playlists() {
   finyl_playlist* pls;
   int size = get_playlists(&pls, usb);
 
+  if (size == -1) {
+    return;
+  }
+  
   printf("\n");
   for (int i = 0; i<size; i++) {
     printf("%d %s\n", pls[i].id, pls[i].name);
@@ -46,6 +50,10 @@ void list_playlist_tracks(int pid) {
   finyl_track_meta* tms;
   int size = get_playlist_tracks(&tms, usb, pid);
 
+  if (size == -1) {
+    return;
+  }
+  
   printf("\n");
   for (int i = 0; i<size; i++) {
     printf("%d %d %s\n", tms[i].id, tms[i].bpm, tms[i].title);
@@ -55,7 +63,7 @@ void list_playlist_tracks(int pid) {
 }
 
 //load track 5 to adeck
-void load_track(finyl_track** dest, int tid) {
+void load_track(finyl_track** dest, int tid, finyl_track_target deck) {
   finyl_track* before = *dest;
   
   finyl_track* t = (finyl_track*)malloc(sizeof(finyl_track));
@@ -71,8 +79,13 @@ void load_track(finyl_track** dest, int tid) {
   }
   
   print_track(t);
-    
+  
   *dest = t;
+  if (deck == finyl_a) {
+    render_adeck = true;
+  } else if (deck == finyl_b) {
+    render_bdeck = true;
+  }
 
   if (before != NULL) {
     add_track_to_free(before);
@@ -184,7 +197,7 @@ void handleKey(char x) {
     printf("tid:");
     scanf("%d", &tid);
     printf("loading...%d\n", tid);
-    load_track(&adeck, tid);
+    load_track(&adeck, tid, finyl_a);
     break;
   }
   case '0': {
@@ -192,7 +205,7 @@ void handleKey(char x) {
     printf("tid:");
     scanf("%d", &tid);
     printf("loading...%d\n", tid);
-    load_track(&bdeck, tid);
+    load_track(&bdeck, tid, finyl_b);
     break;
   }
   case 'q': {
@@ -281,8 +294,8 @@ void handleKey(char x) {
 void* key_input(void* arg) {
   printf("deck initializing\n");
   
-  load_track(&adeck, 1);
-  load_track(&bdeck, 1);
+  load_track(&adeck, 1, finyl_a);
+  load_track(&bdeck, 1, finyl_b);
   
   printf("deck initialized\n");
   

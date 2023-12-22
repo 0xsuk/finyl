@@ -5,6 +5,8 @@
 #include <SDL2/SDL.h>
 
 extern int amount;
+extern bool render_adeck;
+extern bool render_bdeck;
 
 int get_window_size();
 
