@@ -4,13 +4,32 @@
 #include <X11/Xlib.h>
 
 
-int amount = 1000000;
+int wave_range = 1000000; //number of samples in range
+int wave_iteration_margin = 100;
 
 int window_width = 1000;
 int window_height = 500;
 
 int wave_height = 100;
 int wave_height_half = 50;
+
+bool render_adeck = false;
+bool render_bdeck = false;
+
+
+void set_wave_range(int _wave_range) {
+  if (_wave_range < 10000) {
+    return;
+  } else if (_wave_range > 20000000){
+    return;
+  }
+  wave_range = _wave_range;
+  wave_iteration_margin = wave_range / 10000;
+  render_adeck = true;
+  render_bdeck = true;
+  printf("wave_range %d\n", wave_range);
+  printf("wave_iteration_margin %d\n", wave_iteration_margin);
+}
 
 int get_window_size() {
   Display* disp = XOpenDisplay(NULL);
@@ -82,12 +101,13 @@ void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t,
     idraw_offset_end = -draw_range;
   }
   
-  for (int i = idraw_offset; i < idraw_offset_end; i=i+2) {
+  for (int i = idraw_offset; i < idraw_offset_end; i=i+wave_iteration_margin) {
     int x = get_pixel(i, range, window_width);
+    
     int pcmi = i+starti;
     
     float sample = 0;
-    if (pcmi>=0) {
+    if (pcmi>=0 && pcmi < t->length) {
       sample = get_scaled_sample(t->channels[0], pcmi);
     }
     
@@ -100,7 +120,7 @@ int plus_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track* t, 
   SDL_SetRenderTarget(renderer, texture);
 
   int draw_range = starti - previ;
-  int xdiff = (draw_range / (float)range) * window_width;
+  int xdiff = round((draw_range / (float)range) * window_width);
   int newprevi = get_index(previ, xdiff, range);
   
   slide(renderer, texture, xdiff);
@@ -157,9 +177,6 @@ void free_tracks() {
   tracks_to_free_tail = 0;
 }
 
-bool render_adeck = false;
-bool render_bdeck = false;
-
 int previ_adeck = 0;
 int previ_bdeck = 0;
 
@@ -194,7 +211,7 @@ int interface() {
   SDL_SetTextureBlendMode(bstatic_grid_texture, SDL_BLENDMODE_BLEND);
   
   SDL_Event event;
-  int fps = 60;
+  int fps = 30;
   int desired_delta = 1000 / fps;
   while (finyl_running) {
     int start_msec = SDL_GetTicks();
@@ -212,23 +229,23 @@ int interface() {
 
     free_tracks();
     if (render_adeck) {
-      int starti = (int)adeck->index - (int)(amount/2);
-      render_waveform(renderer, awave_texture, adeck, starti, amount, 0);
+      int starti = (int)adeck->index - (int)(wave_range/2);
+      render_waveform(renderer, awave_texture, adeck, starti, wave_range, 0);
       render_adeck = false;
       previ_adeck = starti;
     } else if (adeck != NULL) {
-      int starti = (int)adeck->index - (int)(amount/2);
-      previ_adeck = plus_waveform(renderer, awave_texture, adeck, starti, amount, 0, previ_adeck);
+      int starti = (int)adeck->index - (int)(wave_range/2);
+      previ_adeck = plus_waveform(renderer, awave_texture, adeck, starti, wave_range, 0, previ_adeck);
     }
     
     if (render_bdeck) {
-      int starti = (int)bdeck->index - (int)(amount/2);
-      render_waveform(renderer, bwave_texture, bdeck, starti, amount, wave_height+10);
+      int starti = (int)bdeck->index - (int)(wave_range/2);
+      render_waveform(renderer, bwave_texture, bdeck, starti, wave_range, wave_height+10);
       render_bdeck = false;
       previ_bdeck = starti;
     } else if (bdeck != NULL) {
-      int starti = (int)bdeck->index - (int)(amount/2);
-      previ_bdeck = plus_waveform(renderer, bwave_texture, bdeck, starti, amount, wave_height+10, previ_bdeck);
+      int starti = (int)bdeck->index - (int)(wave_range/2);
+      previ_bdeck = plus_waveform(renderer, bwave_texture, bdeck, starti, wave_range, wave_height+10, previ_bdeck);
     }
     
     render_static_grid(renderer, astatic_grid_texture, 0);

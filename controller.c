@@ -274,18 +274,11 @@ void handleKey(char x) {
     bdeck->index -= 3000;
     break;
   case '7': {
-    int tmp = amount * 2;
-    if (tmp < 10000000) {
-      amount = tmp;
-    }
-    
+    set_wave_range(wave_range*2);
     break;
   }
   case '\'': {
-    int tmp = amount / 2;
-    if (tmp > 1000) {
-      amount = tmp;
-    }
+    set_wave_range(wave_range/2);
     break;
   }
   }
