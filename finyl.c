@@ -129,6 +129,9 @@ double finyl_get_quantized_time(finyl_track* t) {
 
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c) {
   int position = (int)t->index;
+  if (position >= t->length || position < 0) {
+    return 0;
+  }
   int ichunk = position / CHUNK_SIZE;
   int isample = position - (CHUNK_SIZE * ichunk);
 
@@ -278,22 +281,12 @@ static void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t)
   for (int i = 0; i < period_size*2; i=i+2) {
     t->index += t->speed;
 
-    if (t->loop_in != -1 && t->loop_out != -1 && t->index >= (t->loop_out - 2000)) {
+    if (t->loop_in != -1 && t->loop_out != -1 && t->index >= (t->loop_out - 1000)) {
       t->index = t->loop_in + t->index - t->loop_out;
     }
-
+    
     if (t->index >= t->length) {
       t->playing = false;
-      
-      for (int c = 0; c<t->channels_size; c++) {
-        finyl_sample* buf = channel_buffers[c];
-        buf[i] = 0;
-        buf[i+1] = 0;
-      }
-      
-      continue;
-    } else if (t->index < 0) {
-      t->index = 0;
     }
 
     for (int c = 0; c<t->channels_size; c++) {
