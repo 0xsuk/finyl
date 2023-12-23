@@ -313,12 +313,6 @@ static int32_t clip_sample(int32_t s) {
   return s;
 }
 
-static void add_two_buffers(finyl_sample* dest, finyl_sample* src1, finyl_sample* src2) {
-  for (int i = 0; i<period_size*2; i++) {
-    dest[i] = src1[i] + src2[i];
-  }
-}
-
 static void add_and_clip_two_buffers(finyl_sample* dest, finyl_sample* src1, finyl_sample* src2) {
   for (int i = 0; i<period_size*2; i++) {
     int32_t sample = src1[i] + src2[i];
@@ -346,14 +340,14 @@ static void finyl_handle() {
     make_channel_buffers(a_channel_buffers, adeck);
     gain_filter(a_channel_buffers[0], a0_gain);
     gain_filter(a_channel_buffers[1], a1_gain);
-    add_two_buffers(abuffer, a_channel_buffers[0], a_channel_buffers[1]);
+    add_and_clip_two_buffers(abuffer, a_channel_buffers[0], a_channel_buffers[1]);
   }
   
   if (bdeck != NULL && bdeck->playing) {
     make_channel_buffers(b_channel_buffers, bdeck);
     gain_filter(b_channel_buffers[0], b0_gain);
     gain_filter(b_channel_buffers[1], b1_gain);
-    add_two_buffers(bbuffer, b_channel_buffers[0], b_channel_buffers[1]);
+    add_and_clip_two_buffers(bbuffer, b_channel_buffers[0], b_channel_buffers[1]);
   }
   
   add_and_clip_two_buffers(buffer, abuffer, bbuffer);
