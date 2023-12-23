@@ -179,7 +179,7 @@ int interface() {
     return 1;
   }
 
-  SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+  SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
   if (renderer == NULL) {
     printf("Renderer creation failed: %s\n", SDL_GetError());
     return 1;
@@ -194,7 +194,11 @@ int interface() {
   SDL_SetTextureBlendMode(bstatic_grid_texture, SDL_BLENDMODE_BLEND);
   
   SDL_Event event;
+  int fps = 60;
+  int desired_delta = 1000 / fps;
   while (finyl_running) {
+    int start_msec = SDL_GetTicks();
+    
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
         goto cleanup;
@@ -231,9 +235,12 @@ int interface() {
     render_static_grid(renderer, bstatic_grid_texture, wave_height + 10);
         
     SDL_RenderPresent(renderer);
+    
 
-
-    SDL_Delay(16); // Approximately 60 frames per second
+    int delta = SDL_GetTicks() - start_msec;
+    if (delta < desired_delta) {
+      SDL_Delay(desired_delta - delta);
+    }
   }
 
  cleanup:
