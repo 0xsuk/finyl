@@ -104,7 +104,8 @@ finyl_sample finyl_get_sample1(finyl_channel c, int position);
 void finyl_init_track(finyl_track* t);
 void finyl_init_track_meta(finyl_track_meta* tm);
 
-double finyl_get_quantized_time(finyl_track* t);
+int finyl_get_quantized_beat_index(finyl_track* t, int index);
+int finyl_get_quantized_time(finyl_track* t, int index);
 
 int finyl_read_channels_from_files(char** files, int channels_length, finyl_track* t);
 

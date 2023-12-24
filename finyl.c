@@ -102,7 +102,7 @@ void finyl_init_track(finyl_track* t) {
   t->loop_out = -1;
 }
 
-double finyl_get_quantized_time(finyl_track* t) {
+int finyl_get_quantized_beat_index(finyl_track* t, int index) {
   if (t->beats_size <= 0) {
     return -1;
   }
@@ -110,13 +110,13 @@ double finyl_get_quantized_time(finyl_track* t) {
   //44100 samples = 1sec
   //index samples = 1 / 44100 * index sec
   //= 1 / 44100 * index * 1000 millisec
-  double nowtime = 1000.0 / 44100.0 * t->index;
+  double nowtime = 1000.0 / 44100.0 * index;
 
   if (nowtime < t->beats[0].time) {
-    return t->beats[0].time;
+    return 0;
   }
   if (nowtime > t->beats[t->beats_size-1].time) {
-    return t->beats[t->beats_size-1].time;
+    return t->beats_size-1;
   }
   for (int i = 1; i<t->beats_size-1; i++) {
     if (t->beats[i-1].time <= nowtime && nowtime <= t->beats[i].time) {
@@ -126,14 +126,22 @@ double finyl_get_quantized_time(finyl_track* t) {
       double half = t->beats[i-1].time + margin;
       
       if (nowtime < half) {
-        return t->beats[i-1].time;
+        return i-1;
       } else {
-        return t->beats[i].time;
+        return i;
       }
     }
   }
 
   return -1;
+}
+
+int finyl_get_quantized_time(finyl_track* t, int index) {
+  int i = finyl_get_quantized_beat_index(t, index);
+  if (i == -1) {
+    return -1;
+  }
+  return t->beats[i].time;
 }
 
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c) {

@@ -90,8 +90,7 @@ void slide(SDL_Renderer* renderer, SDL_Texture* texture, int xdiff) {
   }
 }
 
-void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t, int starti, int range, int draw_range) {
-
+void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t, int starti, int nowi, int range, int draw_range) {
   SDL_SetRenderDrawColor(renderer, 100, 100, 250, 255); // Waveform color
 
   int idraw_offset = range-draw_range;
@@ -101,6 +100,11 @@ void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t,
     idraw_offset_end = -draw_range;
   }
   
+  int prev_pcmi = starti+idraw_offset;
+  int beati = finyl_get_quantized_beat_index(t, prev_pcmi);
+  if (t->beats[beati].time * 44.1 < prev_pcmi) {
+    beati++;
+  }
   for (int i = idraw_offset; i < idraw_offset_end; i=i+wave_iteration_margin) {
     int x = get_pixel(i, range, window_width);
     
@@ -123,12 +127,26 @@ void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t,
       }
     }
       
+    
+    int beat_pcmi = t->beats[beati].time * 44.1;
+    if (prev_pcmi <= beat_pcmi && beat_pcmi < pcmi) {
+      SDL_Rect rect = {x-1, 0, 1, wave_height};
+      if (t->beats[beati].number == 1) {
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+      } else if (wave_iteration_margin < 200) {
+        SDL_SetRenderDrawColor(renderer, 150, 150, 150, 255);
+      }
+      SDL_RenderFillRect(renderer, &rect);
+      SDL_SetRenderDrawColor(renderer, 100, 100, 250, 255);
+      beati++;
+    }
+    prev_pcmi = pcmi;
   }
 }
 
-int plus_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track* t, int starti, int range, int wave_y, int previ) {
+int plus_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track* t, int nowi, int range, int wave_y, int previ) {
   SDL_SetRenderTarget(renderer, texture);
-
+  int starti = nowi - (int)range/2;
   int draw_range = starti - previ;
   int xdiff = (draw_range / (float)range) * window_width;
   int newprevi = get_index(previ, xdiff, range);
@@ -136,7 +154,7 @@ int plus_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track* t, 
   slide(renderer, texture, xdiff);
   erase_edge(renderer, xdiff);
   
-  draw_waveform(renderer, texture, t, starti, range, draw_range);
+  draw_waveform(renderer, texture, t, starti, nowi, range, draw_range);
   
   SDL_SetRenderTarget(renderer, NULL);
   SDL_Rect dst = {0, wave_y, window_width, wave_height};
@@ -145,12 +163,14 @@ int plus_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track* t, 
   return newprevi;
 }
 
-void render_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track* t, int starti, int range, int wave_y) {
+void render_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track* t, int nowi, int range, int wave_y) {
   SDL_SetRenderTarget(renderer, texture);
+  int starti = nowi - (int)range/2;
+
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
   SDL_RenderClear(renderer);
   
-  draw_waveform(renderer, texture, t, starti, range, range);
+  draw_waveform(renderer, texture, t, starti, nowi, range, range);
   
   SDL_SetRenderTarget(renderer, NULL);
   SDL_Rect dst = {0, wave_y, window_width, wave_height};
@@ -272,24 +292,22 @@ int interface() {
 
     free_tracks();
     if (render_adeck) {
-      int starti = (int)adeck->index - (int)(wave_range/2);
-      render_waveform(renderer, awave_texture, adeck, starti, wave_range, 0);
+      int nowi = (int)adeck->index;
+      render_waveform(renderer, awave_texture, adeck, nowi, wave_range, 0);
       render_adeck = false;
-      previ_adeck = starti;
+      previ_adeck = nowi - (int)wave_range/2;
     } else if (adeck != NULL) {
-      int starti = (int)adeck->index - (int)(wave_range/2);
-      previ_adeck = plus_waveform(renderer, awave_texture, adeck, starti, wave_range, 0, previ_adeck);
+      previ_adeck = plus_waveform(renderer, awave_texture, adeck, (int)adeck->index, wave_range, 0, previ_adeck);
       render_static_grids(renderer, astatic_grid_texture, adeck, wave_range, 0);
     }
     
     if (render_bdeck) {
-      int starti = (int)bdeck->index - (int)(wave_range/2);
-      render_waveform(renderer, bwave_texture, bdeck, starti, wave_range, wave_height+10);
+      int nowi = (int)bdeck->index;
+      render_waveform(renderer, bwave_texture, bdeck, nowi, wave_range, wave_height+10);
       render_bdeck = false;
-      previ_bdeck = starti;
+      previ_bdeck = nowi - (int)wave_range/2;;
     } else if (bdeck != NULL) {
-      int starti = (int)bdeck->index - (int)(wave_range/2);
-      previ_bdeck = plus_waveform(renderer, bwave_texture, bdeck, starti, wave_range, wave_height+10, previ_bdeck);
+      previ_bdeck = plus_waveform(renderer, bwave_texture, bdeck, (int)bdeck->index, wave_range, wave_height+10, previ_bdeck);
       render_static_grids(renderer, bstatic_grid_texture, bdeck, wave_range, wave_height + 10);
     }
     

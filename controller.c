@@ -189,13 +189,13 @@ void handleKey(char x) {
     bdeck->speed = bdeck->speed - 0.01;
     break;
   case 't': {
-    double millisec = finyl_get_quantized_time(adeck);
+    int millisec = finyl_get_quantized_time(adeck, adeck->index);
     adeck->index = millisec * 44.1;
     printf("adeck->index %lf\n", adeck->index);
     break;
   }
   case 'T': {
-    double millisec = finyl_get_quantized_time(bdeck);
+    int millisec = finyl_get_quantized_time(bdeck, bdeck->index);
     bdeck->index = millisec * 44.1;
     printf("bdeck->index %lf\n", bdeck->index);
     break;
@@ -258,12 +258,12 @@ void handleKey(char x) {
   }
   case '1':
     /* mark loop in */
-    adeck->loop_in = 44.1 * finyl_get_quantized_time(adeck);
+    adeck->loop_in = 44.1 * finyl_get_quantized_time(adeck, adeck->index);
     adeck->loop_out = -1.0;
     printf("adeck loop in: %lf\n", adeck->loop_in);
     break;
   case '2': {
-    double now = 44.1 * finyl_get_quantized_time(adeck);
+    double now = 44.1 * finyl_get_quantized_time(adeck, adeck->index);
     if (adeck->loop_in > now) {
       adeck->loop_in = -1;
     } else {
@@ -274,12 +274,12 @@ void handleKey(char x) {
   }
   case '!':
     /* mark loop in */
-    bdeck->loop_in = 44.1 * finyl_get_quantized_time(bdeck);
+    bdeck->loop_in = 44.1 * finyl_get_quantized_time(bdeck, bdeck->index);
     bdeck->loop_out = -1.0;
     printf("bdeck loop in: %lf\n", bdeck->loop_in);
     break;
   case '`': {
-    double now = 44.1 * finyl_get_quantized_time(bdeck);
+    double now = 44.1 * finyl_get_quantized_time(bdeck, bdeck->index);
     if (bdeck->loop_in > now) {
       bdeck->loop_in = -1;
     } else {
