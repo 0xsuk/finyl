@@ -30,44 +30,11 @@ void slide_right(finyl_track* t) {
   t->speed = backup;
 }
 
-void list_playlists() {
-  finyl_playlist* pls;
-  int size = get_playlists(&pls, usb);
-
-  if (size == -1) {
-    return;
-  }
-  
-  printf("\n");
-  for (int i = 0; i<size; i++) {
-    printf("%d %s\n", pls[i].id, pls[i].name);
-  }
-
-  free_playlists(pls, size);
-}
-
-void list_playlist_tracks(int pid) {
-  finyl_track_meta* tms;
-  int size = get_playlist_tracks(&tms, usb, pid);
-
-  if (size == -1) {
-    return;
-  }
-  
-  printf("\n");
-  for (int i = 0; i<size; i++) {
-    printf("%d %d %s\n", tms[i].id, tms[i].bpm, tms[i].title);
-  }
-
-  finyl_free_track_metas(tms, size);
-}
-
 //load track 5 to adeck
 void load_track(finyl_track** dest, int tid, finyl_track_target deck) {
   finyl_track* before = *dest;
   
   finyl_track* t = (finyl_track*)malloc(sizeof(finyl_track));
-  finyl_init_track(t);
   if (get_track(t, usb, tid) == -1) {
     printf("failed\n");
     return;

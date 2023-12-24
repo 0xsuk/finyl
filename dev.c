@@ -21,6 +21,9 @@ void print_track_meta(finyl_track_meta* tm) {
   printf("bpm is %d\n", tm->bpm);
   printf("title is %s\n", tm->title);
   printf("filepath is %s\n", tm->filepath);
+  for (int i = 0; i<tm->channels_size; i++) {
+    printf("%dth channel filepath is %s\n", i, tm->channel_filepaths[i]);
+  }
 }
 
 void print_track(finyl_track* t) {

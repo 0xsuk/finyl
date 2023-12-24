@@ -23,6 +23,9 @@ void finyl_free_track_meta(finyl_track_meta* tm) {
   free(tm->title);
   free(tm->filepath);
   free(tm->filename);
+  for (int i = 0; i<tm->channels_size; i++) {
+    free(tm->channel_filepaths[i]);
+  }
 }
 
 void finyl_free_track_metas(finyl_track_meta* tms, int size) {
@@ -77,6 +80,7 @@ void finyl_init_track_meta(finyl_track_meta* tm) {
   tm->bpm = 0;
   tm->musickeyid = 0;
   tm->filesize = 0;
+  tm->channels_size = 0;
 }
 
 void finyl_init_track(finyl_track* t) {
@@ -137,6 +141,7 @@ finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c) {
 
   finyl_chunk chunk = c[ichunk];
   finyl_sample sample = chunk[isample];
+
   return sample;
 }
 

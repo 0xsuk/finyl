@@ -2,48 +2,17 @@
 #include "digger.h"
 #include "dev.h"
 
-void test_get_playlists() {
-  finyl_playlist* pls;
-  
-  int playlists_size = get_playlists(&pls, usb);
-
-  for (int i = 0; i<playlists_size; i++) {
-    printf("name: %s\n", pls[i].name);
-    printf("id: %d\n", pls[i].id);
+int main(int argc, char **argv) {
+  if (argc < 2) {
+    printf("usage ./test-controller <path to rekordbox usb: example /media/null/22BC-F655/ >\n");
+    return 0;
   }
-}
+  
+  usb = argv[1];
 
-void test_get_playlist_tracks() {
   finyl_track_meta* tms;
-  
-  int tms_size = get_playlist_tracks(&tms, usb, 2);
-
-  for (int i = 0; i<tms_size; i++) {
-    print_track_meta(&tms[i]);
-  }
-}
-
-void test_get_track() {
-  finyl_track t;
-  finyl_init_track(&t);
-  
-  get_track(&t, usb, 1);
-
-  print_track_meta(&t.meta);
-  printf("cues size is %d\n", t.cues_size);
-  printf("cue1: %d\n", t.cues[1].time);
-  printf("beats size is %d\n", t.beats_size);
-}
-
-/* void test_get_all_tracks() { */
-/*   finyl_track* t; */
-
-/*   get_all_tracks(&t, usb); */
-/* } */
-
-int main() {
-  /* test_get_track(); */
-  test_get_playlist_tracks();
-  /* test_get_playlists(); */
+  int size = get_playlist_tracks(&tms, usb, 2);
+  printf("size is %d\n", size);
+  finyl_free_track_metas(tms, size);
 }
 

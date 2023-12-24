@@ -9,7 +9,7 @@
 #define CHUNK_SIZE 2097152 //(2048 * 1024);
 
 #ifndef MAX_CHANNELS_SIZE //number of stems
-#define MAX_CHANNELS_SIZE 2
+#define MAX_CHANNELS_SIZE 5
 #endif
 
 typedef signed short finyl_sample;
@@ -43,8 +43,10 @@ typedef struct {
   int musickeyid;
   int filesize;
   char* title;
-  char* filepath;
   char* filename;
+  char* filepath;
+  char* channel_filepaths[MAX_CHANNELS_SIZE];
+  int channels_size; //number of stems available
 } finyl_track_meta; //used in track listing in playlist
 
 typedef struct {
@@ -98,6 +100,7 @@ finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c);
 finyl_sample finyl_get_sample1(finyl_channel c, int position);
 
 void finyl_init_track(finyl_track* t);
+void finyl_init_track_meta(finyl_track_meta* tm);
 
 double finyl_get_quantized_time(finyl_track* t);
 

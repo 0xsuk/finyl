@@ -2,6 +2,96 @@
 #include "digger.h"
 #include "cJSON.h"
 #include "dev.h"
+#include <dirent.h>
+#include "util.h"
+
+void list_playlists() {
+  finyl_playlist* pls;
+  int size = get_playlists(&pls, usb);
+
+  if (size == -1) {
+    return;
+  }
+  
+  printf("\n");
+  for (int i = 0; i<size; i++) {
+    printf("%d %s\n", pls[i].id, pls[i].name);
+
+  }
+
+  free_playlists(pls, size);
+}
+
+void list_playlist_tracks(int pid) {
+  finyl_track_meta* tms;
+  int size = get_playlist_tracks(&tms, usb, pid);
+
+  if (size == -1) {
+    return;
+  }
+  
+  printf("\n");
+  for (int i = 0; i<size; i++) {
+    printf("%d %d %d %s\n", tms[i].id, tms[i].bpm, tms[i].channels_size, tms[i].title);
+  }
+
+  finyl_free_track_metas(tms, size);
+}
+
+bool match(char* hash, char* filename) {
+  int dot = find_char_last(filename, '.');
+  if (dot == -1) {
+    return false;
+  }
+  char f[dot+1];
+  strncpy(f, filename, dot);
+  f[dot] = '\0';
+
+  int under = find_char_last(f, '-');
+  if (under == -1) {
+    return false;
+  }
+  
+  if (dot - under == 33) {
+    if (strncmp(hash, &filename[under+1], 32) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void set_channels_filepaths(finyl_track_meta* tm, char* root) {
+  int dot_index = find_char_last(tm->filename, '.');
+  if (dot_index == -1) {
+    printf("no extension\n");
+    return;
+  }
+
+  char hash[32];
+  compute_md5(tm->filepath, hash);
+
+  DIR* d = opendir(root);
+  struct dirent* dir;
+  if (d) {
+    int channels_size = 0;
+    while ((dir = readdir(d)) != NULL) {
+      if (match(hash, dir->d_name)) {
+        int offset = 0;
+        if (root[strlen(root)] != '/') {
+          offset = 1;
+        }
+        int flen = strlen(root) + strlen(dir->d_name) + offset;
+        char* f = (char*)malloc(flen + 1);
+        join_path(f, root, dir->d_name);
+        f[flen] = '\0';
+        tm->channel_filepaths[channels_size] = f;
+        channels_size++;
+        tm->channels_size = channels_size;
+      }
+    }
+    closedir(d);
+  }
+}
 
 void free_playlists(finyl_playlist* pls, int size) {
   for (int i = 0; i<size; i++) {
@@ -9,43 +99,6 @@ void free_playlists(finyl_playlist* pls, int size) {
   }
 
   free(pls);
-}
-
-static void generateRandomString(char* badge, size_t size) {
-  char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  srand(time(NULL));
-  
-  int i;
-  for (i = 0; i < size - 1; ++i) {
-    int index = rand() % (sizeof(characters) - 1);
-    badge[i] = characters[index];
-  }
-  badge[size - 1] = '\0';
-}
-
-//copy only the dest amount of src to dest
-static void ncpy(char* dest, char* src, size_t size) {
-  strncpy(dest, src, size);
-  dest[size - 1] = '\0';;
-}
-
-static void cJSON_ncpy(cJSON* json, char* key, char* dest, size_t size) {
-  cJSON* itemj = cJSON_GetObjectItem(json, key);
-  char* item = itemj->valuestring;
-  ncpy(dest, item, size);
-}
-
-static void cJSON_cpy(cJSON* json, char* key, char* dest) {
-  cJSON* itemj = cJSON_GetObjectItem(json, key);
-  char* item = itemj->valuestring;
-  strcpy(dest, item);
-}
-
-static void cJSON_malloc_cpy(cJSON* json, char* key, char** dest) {
-  cJSON* itemj = cJSON_GetObjectItem(json, key);
-  char* item = itemj->valuestring;
-  *dest = (char*)malloc(strlen(item) + 1);
-  strcpy(*dest, item);
 }
 
 static int unmarshal_playlist(cJSON* pj, finyl_playlist* p) {
@@ -56,7 +109,7 @@ static int unmarshal_playlist(cJSON* pj, finyl_playlist* p) {
 }
 
 //returns size, -1 for error;
-static int unmarshal_playlists(cJSON* json, finyl_playlist** pls) {
+static int make_playlists(cJSON* json, finyl_playlist** pls) {
   cJSON* playlistsj = cJSON_GetObjectItem(json, "playlists");
   int playlists_size = cJSON_GetArraySize(playlistsj);
   *pls = (finyl_playlist*)malloc(sizeof(finyl_playlist) * playlists_size);
@@ -84,22 +137,28 @@ static int unmarshal_track_meta(cJSON* metaj, finyl_track_meta* tm) {
   return 0;
 }
 
-static int unmarshal_track_metas(cJSON* tracksj, finyl_track_meta** tms) {
+static int make_track_meta(cJSON* metaj, finyl_track_meta* tm) {
+  finyl_init_track_meta(tm);
+  unmarshal_track_meta(metaj, tm);
+  return 0;
+}
+
+static int make_track_metas(cJSON* tracksj, finyl_track_meta** tms) {
   int tms_size = cJSON_GetArraySize(tracksj);
   *tms = (finyl_track_meta*)malloc(sizeof(finyl_track_meta) * tms_size);
   finyl_track_meta* _tms = *tms;
 
   for (int i = 0; i<tms_size; i++) {
     cJSON* metaj = cJSON_GetArrayItem(tracksj, i);
-    unmarshal_track_meta(metaj, &_tms[i]);
+    make_track_meta(metaj, &_tms[i]);
   }
 
   return tms_size;
 }
 
-static int unmarshal_playlist_tracks(cJSON* json, finyl_track_meta** tms) {
+static int make_playlist_tracks(cJSON* json, finyl_track_meta** tms) {
   cJSON* tracksj = cJSON_GetObjectItem(json, "tracks");
-  int tms_size = unmarshal_track_metas(tracksj, tms);
+  int tms_size = make_track_metas(tracksj, tms);
   return tms_size;
 }
 
@@ -112,7 +171,7 @@ static int unmarshal_cue(cJSON* cuej, finyl_cue* cue) {
   return 0;
 }
 
-static int unmarshal_cues(cJSON* trackj, finyl_cue** cues) {
+static int make_cues(cJSON* trackj, finyl_cue** cues) {
   cJSON* cuesj = cJSON_GetObjectItem(trackj, "cues");
   int cues_size = cJSON_GetArraySize(cuesj);
   *cues = (finyl_cue*)malloc(sizeof(finyl_cue) * cues_size);
@@ -135,7 +194,7 @@ static int unmarshal_beat(cJSON* beatj, finyl_beat* beat) {
   return 0;
 }
 
-static int unmarshal_beats(cJSON* trackj, finyl_beat** beats) {
+static int make_beats(cJSON* trackj, finyl_beat** beats) {
   cJSON* beatsj = cJSON_GetObjectItem(trackj, "beats");
   int beats_size = cJSON_GetArraySize(beatsj);
   *beats = (finyl_beat*)malloc(sizeof(finyl_beat) * beats_size);
@@ -155,8 +214,14 @@ static int unmarshal_track(cJSON* json, finyl_track* t) {
   cJSON* metaj = cJSON_GetObjectItem(trackj, "t"); //meta
 
   unmarshal_track_meta(metaj, &t->meta);
-  t->cues_size = unmarshal_cues(trackj, &t->cues);
-  t->beats_size = unmarshal_beats(trackj, &t->beats);
+  t->cues_size = make_cues(trackj, &t->cues);
+  t->beats_size = make_beats(trackj, &t->beats);
+  return 0;
+}
+
+static int make_track(cJSON* json, finyl_track* t) {
+  finyl_init_track(t);
+  unmarshal_track(json, t);
   return 0;
 }
 
@@ -202,7 +267,6 @@ static int close_command(FILE* fp) {
 
   return 0;
 }
-
 
 static bool badge_valid(cJSON* json, char* badge)  {
   cJSON* badgej = cJSON_GetObjectItem(json, "badge");
@@ -262,7 +326,7 @@ int get_playlists(finyl_playlist** pls, char* usb) {
     return -1;
   }
   
-  int playlists_size = unmarshal_playlists(json, pls);
+  int playlists_size = make_playlists(json, pls);
   cJSON_Delete(json);
   return playlists_size;
 }
@@ -281,9 +345,11 @@ int get_track(finyl_track* t, char* usb, int tid) {
     return -1;
   }
   
-  unmarshal_track(json, t);
+  make_track(json, t);
   cJSON_Delete(json);
 
+  print_track(t);
+  
   return 0;
 }
 
@@ -298,7 +364,7 @@ int get_track(finyl_track* t, char* usb, int tid) {
   /* return 0; */
 /* } */
 
-int get_playlist_tracks(finyl_track_meta** tracks, char* usb, int pid) {
+int get_playlist_tracks(finyl_track_meta** tms, char* usb, int pid) {
   cJSON* json;
   char op[30];
   snprintf(op, sizeof(op), "playlist-tracks %d", pid);
@@ -306,53 +372,20 @@ int get_playlist_tracks(finyl_track_meta** tracks, char* usb, int pid) {
     cJSON_Delete(json);
     return -1;
   }
-  
   if (has_error(json)) {
     cJSON_Delete(json);
     return -1;
   }
   
-  int tracks_size = unmarshal_playlist_tracks(json, tracks);
+  int tms_size = make_playlist_tracks(json, tms);
   cJSON_Delete(json);
-  return tracks_size;
-}
 
-char* read_file_malloc(char* filename) {
-  FILE* fp = fopen(filename, "rb");
-
-  if (fp == NULL) {
-    printf("failed to read from file = %s\n", filename);
-    return NULL;
+  finyl_track_meta* _tms = *tms;
+  char root[500];
+  join_path(root, usb, "finyl/separated/hdemucs_mmi");
+  for (int i = 0; i<tms_size; i++) {
+    set_channels_filepaths(&_tms[i], root);
   }
-
-  fseek(fp, 0, SEEK_END);
-  long file_size = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-
-  char* buffer = (char*)malloc(file_size + 1);
-  if (buffer == NULL) {
-    printf("failed to allocate memory for buffer in read_file\n");
-    fclose(fp);
-    return NULL;
-  }
-
-  size_t count = fread((void*)buffer, 1, file_size, fp);
-  if (count != file_size) {
-    printf("Error reading a file in read_file_malloc\n");
-    free(buffer);
-    fclose(fp);
-    return NULL;
-  }
-
-  buffer[file_size] = '\0';
-  fclose(fp);
-  return buffer;
-}
-
-cJSON* read_file_malloc_json(char* file) {
-  char* output = read_file_malloc(file);
-  cJSON* json  = cJSON_Parse(output);
-
-  free(output); //TODO safe? probably yes
-  return json;
+  
+  return tms_size;
 }
