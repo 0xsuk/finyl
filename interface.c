@@ -113,14 +113,12 @@ void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t,
     }
     for (int c = 0; c<t->channels_size; c++) {
       float sample = get_scaled_sample(t->channels[c], pcmi);
-      int y = wave_height_half - 1*sample*wave_height_half;
+      int y = wave_height_half - sample*wave_height_half;
       if (t->channels_size > 1 && c==0) {
-        int y = wave_height_half - 1*sample*wave_height_half;
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_RenderDrawLine(renderer, x, y, x, wave_height_half);
         SDL_SetRenderDrawColor(renderer, 100, 100, 250, 255);
       } else {
-        int y = wave_height_half - sample*wave_height_half;
         SDL_RenderDrawLine(renderer, x, y, x, wave_height_half);
       }
     }
@@ -159,15 +157,48 @@ void render_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track* 
   SDL_RenderCopy(renderer, texture, NULL, &dst);
 }
 
-void render_static_grid(SDL_Renderer* renderer, SDL_Texture* texture, int wave_y) {
+void draw_center_line(SDL_Renderer* renderer) {
+  SDL_SetRenderDrawColor(renderer, 255, 0, 250, 255); // Waveform color
+  SDL_Rect rect = {window_width / 2 - 1, 0, 2, wave_height};
+  SDL_RenderFillRect(renderer, &rect);
+}
+
+void draw_static_grids(SDL_Renderer* renderer, finyl_track* t, int range) {
+  if (t->beats_size < 2) {
+    return;
+  }
+  
+  SDL_SetRenderDrawColor(renderer, 100, 0, 100, 255);
+
+  int dur = t->beats[1].time - t->beats[0].time; //msec
+  int samples = dur * 44.1;
+
+  int i = 1;
+  while (1) {
+    int xl = get_pixel(range/2 - 32*i*samples, range, window_width);
+    if (xl>window_width || xl<0) {
+      break;
+    }
+    SDL_Rect rectl = {xl-1, 0, 2, wave_height};
+    SDL_RenderFillRect(renderer, &rectl);
+    
+    int xr = get_pixel(range/2 + 32*i*samples, range, window_width);
+    
+    SDL_Rect rectr = {xr-1, 0, 2, wave_height};
+    SDL_RenderFillRect(renderer, &rectr);
+    i++;
+
+  }
+}
+
+void render_static_grids(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t, int range, int wave_y) {
   SDL_SetRenderTarget(renderer, texture);
   
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
   SDL_RenderClear(renderer);
 
-  SDL_SetRenderDrawColor(renderer, 255, 0, 250, 255); // Waveform color
-  SDL_Rect rect = {window_width / 2 - 1, 0, 2, wave_height};
-  SDL_RenderFillRect(renderer, &rect);
+  draw_center_line(renderer);
+  draw_static_grids(renderer, t, range);
   
   SDL_SetRenderTarget(renderer, NULL);
   SDL_Rect dst = {0, wave_y, window_width, wave_height};
@@ -248,6 +279,7 @@ int interface() {
     } else if (adeck != NULL) {
       int starti = (int)adeck->index - (int)(wave_range/2);
       previ_adeck = plus_waveform(renderer, awave_texture, adeck, starti, wave_range, 0, previ_adeck);
+      render_static_grids(renderer, astatic_grid_texture, adeck, wave_range, 0);
     }
     
     if (render_bdeck) {
@@ -258,10 +290,9 @@ int interface() {
     } else if (bdeck != NULL) {
       int starti = (int)bdeck->index - (int)(wave_range/2);
       previ_bdeck = plus_waveform(renderer, bwave_texture, bdeck, starti, wave_range, wave_height+10, previ_bdeck);
+      render_static_grids(renderer, bstatic_grid_texture, bdeck, wave_range, wave_height + 10);
     }
     
-    render_static_grid(renderer, astatic_grid_texture, 0);
-    render_static_grid(renderer, bstatic_grid_texture, wave_height + 10);
         
     SDL_RenderPresent(renderer);
     
