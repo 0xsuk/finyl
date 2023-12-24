@@ -120,7 +120,7 @@ int plus_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track* t, 
   SDL_SetRenderTarget(renderer, texture);
 
   int draw_range = starti - previ;
-  int xdiff = round((draw_range / (float)range) * window_width);
+  int xdiff = (draw_range / (float)range) * window_width;
   int newprevi = get_index(previ, xdiff, range);
   
   slide(renderer, texture, xdiff);
@@ -183,7 +183,7 @@ int previ_bdeck = 0;
 int interface() {
   get_window_size();
   
-  int window_height = wave_height * 2 + 20;
+  /* int window_height = wave_height * 2 + 20; */
   
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     printf("SDL initialization failed: %s\n", SDL_GetError());
@@ -211,7 +211,7 @@ int interface() {
   SDL_SetTextureBlendMode(bstatic_grid_texture, SDL_BLENDMODE_BLEND);
   
   SDL_Event event;
-  int fps = 30;
+  int fps = 100;
   int desired_delta = 1000 / fps;
   while (finyl_running) {
     int start_msec = SDL_GetTicks();

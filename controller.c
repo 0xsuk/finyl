@@ -123,21 +123,38 @@ void handleKey(char x) {
     bdeck->speed = 1;
     break;
   case 'j':
-    a0_gain = max(a0_gain-0.1, 0);
+    a0_gain = max(a0_gain-0.05, 0);
     printf("a0_gain %lf\n", a0_gain);
+    break;
+  case 'J':
+    a1_gain = max(a1_gain-0.05, 0);
+    printf("a1_gain %lf\n", a1_gain);
     break;
   case 'k':
-    a0_gain = min(a0_gain+0.1, 1);
+    a0_gain = min(a0_gain+0.05, 2);
     printf("a0_gain %lf\n", a0_gain);
     break;
+  case 'K':
+    a1_gain = min(a1_gain+0.05, 2);
+    printf("a0_gain %lf\n", a1_gain);
+    break;
   case 'n':
-    b0_gain = max(b0_gain-0.1, 0);
+    b0_gain = max(b0_gain-0.05, 0);
     printf("b0_gain %lf\n", b0_gain);
+    break;
+  case 'N':
+    b1_gain = max(b1_gain-0.05, 0);
+    printf("b0_gain %lf\n", b1_gain);
     break;
   case 'm':
-    b0_gain = min(b0_gain+0.1, 1);
+    b0_gain = min(b0_gain+0.1, 2);
     printf("b0_gain %lf\n", b0_gain);
     break;
+  case 'M':
+    b1_gain = min(b1_gain+0.05, 2);
+    printf("b0_gain %lf\n", b1_gain);
+    break;
+
   case 'c':
     if (adeck->cues_size > 0) {
       adeck->index = adeck->cues[0].time * 44.1;
@@ -211,6 +228,11 @@ void handleKey(char x) {
   case 'q': {
     bdeck->speed = adeck->speed * ((double)adeck->meta.bpm / bdeck->meta.bpm);
     printf("synced bdeck->speed: %lf\n", bdeck->speed);
+    break;
+  }
+  case 'Q': {
+    adeck->speed = bdeck->speed * ((double)bdeck->meta.bpm / adeck->meta.bpm);
+    printf("synced adeck->speed: %lf\n", adeck->speed);
     break;
   }
   case '1':
