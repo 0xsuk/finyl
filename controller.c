@@ -73,7 +73,7 @@ void load_track_2channels(finyl_track** dest, int tid, finyl_track_target deck) 
   
   
   if (t->meta.channels_size < 2) {
-    finyl_init_track(t);
+    finyl_free_track(t);
     printf("not enough channels\n");
     return;
   }

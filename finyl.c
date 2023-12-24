@@ -19,7 +19,7 @@ finyl_sample** b_channel_buffers;
 
 snd_pcm_uframes_t period_size;
 
-void finyl_free_track_meta(finyl_track_meta* tm) {
+void finyl_free_in_track_meta(finyl_track_meta* tm) {
   free(tm->title);
   free(tm->filepath);
   free(tm->filename);
@@ -30,7 +30,7 @@ void finyl_free_track_meta(finyl_track_meta* tm) {
 
 void finyl_free_track_metas(finyl_track_meta* tms, int size) {
   for (int i = 0; i<size; i++) {
-    finyl_free_track_meta(&tms[i]);
+    finyl_free_in_track_meta(&tms[i]);
   }
   free(tms);
 }
@@ -46,11 +46,16 @@ static void free_channels(finyl_channel* channels, int channels_size, int chunks
     free_channel(channels[i], chunks_size);
   }
 }
-void finyl_free_track(finyl_track* t) {
+
+void finyl_free_in_track(finyl_track* t) {
   free_channels(t->channels, t->channels_size, t->chunks_size);
-  finyl_free_track_meta(&t->meta);
+  finyl_free_in_track_meta(&t->meta);
   free(t->cues);
   free(t->beats);
+}
+
+void finyl_free_track(finyl_track* t) {
+  finyl_free_in_track(t);
   free(t);
 }
 
@@ -170,7 +175,7 @@ static finyl_channel make_channel() {
   return c;
 }
 
-static bool file_exist(char* file) {
+bool file_exist(char* file) {
   if (access(file, F_OK) == -1) {
     return false;
   }

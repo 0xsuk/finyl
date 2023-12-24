@@ -61,12 +61,6 @@ bool match(char* hash, char* filename) {
 }
 
 void set_channels_filepaths(finyl_track_meta* tm, char* root) {
-  int dot_index = find_char_last(tm->filename, '.');
-  if (dot_index == -1) {
-    printf("no extension\n");
-    return;
-  }
-
   char hash[32];
   compute_md5(tm->filepath, hash);
 
@@ -254,18 +248,18 @@ static int run_command(FILE** fp, char* badge, char* usb, char* op) {
   return 0;
 }
 
-static int close_command(FILE* fp) {
+int close_command(FILE* fp) {
   char error_out[10000];
   fread(error_out, 1, sizeof(error_out), fp);
   int status = pclose(fp);
   if (status == -1) {
-    printf("failed to close the stream in get_playlists\n");
+    printf("failed to close the command stream\n");
     return -1;
   }
   status = WEXITSTATUS(status);
   if (status == 1) {
     //there is a fatal error, and error message is printed in error_out
-    printf("fatal error in run_digger. Error:\n");
+    printf("Error:\n");
     printf("%s\n", error_out);
     return -1;
   }

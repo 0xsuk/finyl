@@ -106,13 +106,25 @@ void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t,
     
     int pcmi = i+starti;
     
-    float sample = 0;
-    if (pcmi>=0 && pcmi < t->length) {
-      sample = get_scaled_sample(t->channels[0], pcmi);
+    bool has_pcm = pcmi>=0 && pcmi < t->length;
+    if (!has_pcm) {
+      SDL_RenderDrawLine(renderer, x, wave_height_half, x, wave_height_half);
+      continue;
     }
-    
-    int y = wave_height_half - sample * wave_height_half;
-    SDL_RenderDrawLine(renderer, x, y, x, wave_height_half);
+    for (int c = 0; c<t->channels_size; c++) {
+      float sample = get_scaled_sample(t->channels[c], pcmi);
+      int y = wave_height_half - 1*sample*wave_height_half;
+      if (t->channels_size > 1 && c==0) {
+        int y = wave_height_half - 1*sample*wave_height_half;
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_RenderDrawLine(renderer, x, y, x, wave_height_half);
+        SDL_SetRenderDrawColor(renderer, 100, 100, 250, 255);
+      } else {
+        int y = wave_height_half - sample*wave_height_half;
+        SDL_RenderDrawLine(renderer, x, y, x, wave_height_half);
+      }
+    }
+      
   }
 }
 

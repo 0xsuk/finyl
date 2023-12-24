@@ -5,6 +5,7 @@
 
 void list_playlists();
 void list_playlist_tracks(int pid);
+int close_command(FILE* fp);
 
 void free_playlists(finyl_playlist* pls, int size);
 

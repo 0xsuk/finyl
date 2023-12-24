@@ -43,7 +43,7 @@ typedef struct {
   int musickeyid;
   int filesize;
   char* title;
-  char* filename;
+  char* filename; //caution: filename is compelte. filepath is sometimes incomplete. just use filepath
   char* filepath;
   char* channel_filepaths[MAX_CHANNELS_SIZE];
   int channels_size; //number of stems available
@@ -91,9 +91,11 @@ extern finyl_track* bdeck;
 extern finyl_track* cdeck;
 extern finyl_track* ddeck;
 
+bool file_exist(char* file);
 void finyl_free_track_metas(finyl_track_meta* tms, int size);
-void finyl_free_track_meta(finyl_track_meta* tm);
+void finyl_free_in_track_meta(finyl_track_meta* tm);
 
+void finyl_free_in_track(finyl_track* t);
 void finyl_free_track(finyl_track* t);
 
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c);

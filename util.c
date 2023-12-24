@@ -5,7 +5,7 @@
 #include <openssl/md5.h>
 #include <stdio.h>
 #include "cJSON.h"
-
+#include "util.h"
 
 void join_path(char* dst, char* path1, char* path2) {
   if (path1 == NULL && path2 == NULL) {
@@ -107,7 +107,7 @@ int find_char_last(char* str, char c) {
 //copy only the dest amount of src to dest
 void ncpy(char* dest, char* src, size_t size) {
   strncpy(dest, src, size);
-  dest[size - 1] = '\0';;
+  dest[size] = '\0';;
 }
 
 void cJSON_ncpy(cJSON* json, char* key, char* dest, size_t size) {
@@ -128,7 +128,6 @@ void cJSON_malloc_cpy(cJSON* json, char* key, char** dest) {
   int len = strlen(item);
   *dest = (char*)malloc(sizeof(char)*(len + 1));
   strcpy(*dest, item);
-  (*dest)[len] = '\0';
 }
 
 char* read_file_malloc(char* filename) {
