@@ -62,6 +62,44 @@ void load_track(finyl_track** dest, int tid, finyl_track_target deck) {
   }
 }
 
+void load_track_2channels(finyl_track** dest, int tid, finyl_track_target deck) {
+  finyl_track* before = *dest;
+  
+  finyl_track* t = (finyl_track*)malloc(sizeof(finyl_track));
+  if (get_track(t, usb, tid) == -1) {
+    printf("failed\n");
+    return;
+  }
+  
+  
+  if (t->meta.channels_size < 2) {
+    finyl_init_track(t);
+    printf("not enough channels\n");
+    return;
+  }
+  
+  if (finyl_read_channels_from_files(t->meta.channel_filepaths, 2, t) == -1) {
+    return;
+  }
+  
+  print_track(t);
+  
+  *dest = t;
+  if (deck == finyl_a) {
+    render_adeck = true;
+  } else if (deck == finyl_b) {
+    render_bdeck = true;
+  }
+
+  if (before != NULL) {
+    add_track_to_free(before);
+    struct rusage usage;
+    getrusage(RUSAGE_SELF, &usage);
+    printf("Memory usage: %ld kilobytes\n", usage.ru_maxrss);
+  }
+  
+}
+
 void* _interface() {
   interface(adeck, bdeck);
 
@@ -103,7 +141,7 @@ void handleKey(char x) {
     break;
   case 'K':
     a1_gain = min(a1_gain+0.05, 2);
-    printf("a0_gain %lf\n", a1_gain);
+    printf("a1_gain %lf\n", a1_gain);
     break;
   case 'n':
     b0_gain = max(b0_gain-0.05, 0);
@@ -111,7 +149,7 @@ void handleKey(char x) {
     break;
   case 'N':
     b1_gain = max(b1_gain-0.05, 0);
-    printf("b0_gain %lf\n", b1_gain);
+    printf("b1_gain %lf\n", b1_gain);
     break;
   case 'm':
     b0_gain = min(b0_gain+0.1, 2);
@@ -119,7 +157,7 @@ void handleKey(char x) {
     break;
   case 'M':
     b1_gain = min(b1_gain+0.05, 2);
-    printf("b0_gain %lf\n", b1_gain);
+    printf("b1_gain %lf\n", b1_gain);
     break;
 
   case 'c':
@@ -176,6 +214,22 @@ void handleKey(char x) {
   case '4':
     free_tracks();
     break;
+  case 'i': {
+    int tid;
+    printf("tid:");
+    scanf("%d", &tid);
+    printf("loading...%d\n", tid);
+    load_track_2channels(&adeck, tid, finyl_a);
+    break;
+  }
+  case 'o': {
+    int tid;
+    printf("tid:");
+    scanf("%d", &tid);
+    printf("loading...%d\n", tid);
+    load_track_2channels(&bdeck, tid, finyl_b);
+    break;
+  }
   case '9': {
     int tid;
     printf("tid:");

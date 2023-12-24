@@ -222,6 +222,11 @@ static int unmarshal_track(cJSON* json, finyl_track* t) {
 static int make_track(cJSON* json, finyl_track* t) {
   finyl_init_track(t);
   unmarshal_track(json, t);
+  
+  char root[500];
+  join_path(root, usb, "finyl/separated/hdemucs_mmi");
+  set_channels_filepaths(&t->meta, root);
+    
   return 0;
 }
 
@@ -347,8 +352,6 @@ int get_track(finyl_track* t, char* usb, int tid) {
   
   make_track(json, t);
   cJSON_Delete(json);
-
-  print_track(t);
   
   return 0;
 }
