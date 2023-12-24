@@ -132,15 +132,15 @@ void handleKey(char x) {
     printf("a0_gain %lf\n", a0_gain);
     break;
   case 'J':
+    a0_gain = min(a0_gain+0.05, 1);
+    printf("a0_gain %lf\n", a0_gain);
+    break;
+  case 'k':
     a1_gain = max(a1_gain-0.05, 0);
     printf("a1_gain %lf\n", a1_gain);
     break;
-  case 'k':
-    a0_gain = min(a0_gain+0.05, 2);
-    printf("a0_gain %lf\n", a0_gain);
-    break;
   case 'K':
-    a1_gain = min(a1_gain+0.05, 2);
+    a1_gain = min(a1_gain+0.05, 1);
     printf("a1_gain %lf\n", a1_gain);
     break;
   case 'n':
@@ -148,15 +148,15 @@ void handleKey(char x) {
     printf("b0_gain %lf\n", b0_gain);
     break;
   case 'N':
+    b0_gain = min(b0_gain+0.1, 1);
+    printf("b0_gain %lf\n", b0_gain);
+    break;
+  case 'm':
     b1_gain = max(b1_gain-0.05, 0);
     printf("b1_gain %lf\n", b1_gain);
     break;
-  case 'm':
-    b0_gain = min(b0_gain+0.1, 2);
-    printf("b0_gain %lf\n", b0_gain);
-    break;
   case 'M':
-    b1_gain = min(b1_gain+0.05, 2);
+    b1_gain = min(b1_gain+0.05, 1);
     printf("b1_gain %lf\n", b1_gain);
     break;
 
