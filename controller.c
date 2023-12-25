@@ -127,7 +127,7 @@ void handleKey(char x) {
   case 'H':
     bdeck->speed = 1;
     break;
-  case 'j':
+  case 'N':
     a0_gain = max(a0_gain-0.05, 0);
     printf("a0_gain %lf\n", a0_gain);
     break;
@@ -135,19 +135,19 @@ void handleKey(char x) {
     a0_gain = min(a0_gain+0.05, 1);
     printf("a0_gain %lf\n", a0_gain);
     break;
-  case 'k':
+  case 'n':
     a1_gain = max(a1_gain-0.05, 0);
     printf("a1_gain %lf\n", a1_gain);
     break;
-  case 'K':
+  case 'j':
     a1_gain = min(a1_gain+0.05, 1);
     printf("a1_gain %lf\n", a1_gain);
     break;
-  case 'n':
+  case 'M':
     b0_gain = max(b0_gain-0.05, 0);
     printf("b0_gain %lf\n", b0_gain);
     break;
-  case 'N':
+  case 'K':
     b0_gain = min(b0_gain+0.1, 1);
     printf("b0_gain %lf\n", b0_gain);
     break;
@@ -155,7 +155,7 @@ void handleKey(char x) {
     b1_gain = max(b1_gain-0.05, 0);
     printf("b1_gain %lf\n", b1_gain);
     break;
-  case 'M':
+  case 'k':
     b1_gain = min(b1_gain+0.05, 1);
     printf("b1_gain %lf\n", b1_gain);
     break;
