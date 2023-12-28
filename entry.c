@@ -21,13 +21,13 @@ int main(int argc, char **argv) {
   finyl_setup_alsa(&handle, &buffer_size, &period_size);
   printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
   
-  pthread_t key_thread;
-  if (pthread_create(&key_thread, NULL, key_input, NULL) != 0) {
+  pthread_t c;
+  if (pthread_create(&c, NULL, controller, NULL) != 0) {
     perror("pthread_create");
     return 1;
   }
   
   finyl_run(NULL, NULL, NULL, NULL, handle, buffer_size, period_size);
 
-  pthread_join(key_thread, NULL);
+  pthread_join(c, NULL);
 }

@@ -4,5 +4,5 @@
 
 void load_track(finyl_track** dest, int tid);
 
-void* key_input(void* arg);
+void* controller(void* args);
 #endif

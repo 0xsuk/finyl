@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include "finyl.h"
+#include "util.h"
 #include "digger.h"
 #include "dev.h"
 #include "interface.h"
@@ -98,6 +99,122 @@ void load_track_2channels(finyl_track** dest, int tid, finyl_track_target deck) 
     printf("Memory usage: %ld kilobytes\n", usage.ru_maxrss);
   }
   
+}
+
+void magic(int port, struct termios* tty) {
+  //reads existing settings
+  if(tcgetattr(port, tty) != 0) {
+    printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
+    return;
+  }
+
+  cfsetispeed(tty, B9600);
+  cfsetospeed(tty, B9600);
+  
+  tty->c_cflag &= ~PARENB; // Clear parity bit
+  tty->c_cflag &= ~CSTOPB; // Clear stop field
+  tty->c_cflag &= ~CSIZE; // Clear all bits that set the data size 
+  tty->c_cflag |= CS8; // 8 bits per byte
+  tty->c_cflag &= ~CRTSCTS; // Disable RTS/CTS hardware flow control
+  tty->c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines
+
+  tty->c_lflag &= ~ICANON;
+  tty->c_lflag &= ~ECHO; // Disable echo
+  tty->c_lflag &= ~ECHOE; // Disable erasure
+  tty->c_lflag &= ~ECHONL; // Disable new-line echo
+  tty->c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
+  tty->c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
+  tty->c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL); // Disable any special handling of received bytes
+
+  tty->c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
+  tty->c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
+
+  tty->c_cc[VTIME] = 10;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
+  tty->c_cc[VMIN] = 0;
+}
+
+void pot(int v) {
+  //v: 0 to 4095
+  double gain = v / 4095.0;
+  a0_gain = gain;
+}
+
+void handle_pot(char* s) {
+  int len = strlen(s);
+  int i = find_char_last(s, ':');
+  if (i != strlen("analog")) {
+    //no valid
+    return;
+  }
+  int vlen = len - i - 1;
+  char v[vlen+1];
+  strncpy(v, &s[i+1], vlen);
+  v[vlen] = '\0';
+  int n = atoi(v);
+  pot(n);
+}
+
+void* serial(void* args) {
+  int serialPort = open("/dev/ttyUSB0", O_RDWR);
+
+  printf("serial\n");
+  
+  if (serialPort < 0) {
+    printf("Error %i from open: %s\n", errno, strerror(errno));
+    return NULL;
+  }
+
+  struct termios tty;
+  magic(serialPort, &tty);
+  
+  if (tcsetattr(serialPort, TCSANOW, &tty) != 0) {
+    printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
+    return NULL;
+  }
+  
+  char tmp[100];
+  int tmplen = 0;
+  while(1) {
+    char read_buf [256]; //could contain error
+    int num_bytes = read(serialPort, &read_buf, sizeof(read_buf));
+    if (num_bytes < 0) {
+      printf("Error reading: %s\n", strerror(errno));
+      return NULL;
+    }
+    
+    int start_i = 0;
+    for (int i = 0; i<num_bytes; i++) {
+      int linelen = i - start_i; //\n not counted
+      char c = read_buf[i];
+      if (c != '\n') {
+        continue;
+      }
+      if (tmplen > 0) {
+        int len = tmplen + linelen;
+        char s[len+1];
+        strncpy(s, tmp, tmplen);
+        s[tmplen] = '\0';
+        strncat(s, &read_buf[start_i], linelen);
+        handle_pot(s);
+        tmplen = 0;
+      } else {
+        if (linelen == 0) continue;
+        //no need to care tmp
+        char s[linelen+1];
+        strncpy(s, &read_buf[start_i], linelen);
+        s[linelen] = '\0';
+        handle_pot(s);
+      }
+
+      start_i = i+1; //i+1 is next to newline
+    }
+
+    tmplen = num_bytes-start_i;
+    strncpy(tmp, &read_buf[start_i], tmplen);
+  }
+  
+  close(serialPort);
+  return NULL;
 }
 
 void* _interface() {
@@ -327,14 +444,7 @@ void handleKey(char x) {
   }
 }
 
-void* key_input(void* arg) {
-  printf("deck initializing\n");
-  
-  load_track(&adeck, 1, finyl_a);
-  load_track(&bdeck, 1, finyl_b);
-  
-  printf("deck initialized\n");
-  
+void* key_input(void* args) {
   static struct termios oldt, newt;
   
   tcgetattr(STDIN_FILENO, &oldt);
@@ -346,10 +456,24 @@ void* key_input(void* arg) {
   }
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
   printf("key_input closed\n");
-  fflush(stdout);
   return NULL;
 }
 
-
-///TODO list playlists, tracks
-///TODO get detailed information of track, and get it as finyl output
+void* controller(void* args) {
+  printf("deck initializing\n");
+  
+  load_track(&adeck, 1, finyl_a);
+  load_track(&bdeck, 1, finyl_b);
+  
+  printf("deck initialized\n");
+  
+  pthread_t k;
+  pthread_create(&k, NULL, key_input, NULL);
+  pthread_t s;
+  pthread_create(&s, NULL, serial, NULL);
+  
+  pthread_join(k, NULL);
+  pthread_cancel(s);
+  
+  return NULL;
+}
