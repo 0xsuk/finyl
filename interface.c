@@ -90,6 +90,40 @@ void slide(SDL_Renderer* renderer, SDL_Texture* texture, int xdiff) {
   }
 }
 
+void draw_wave(SDL_Renderer* renderer, finyl_track* t, int x, int i) {
+  if (t->channels_size == 1) {
+    float sample = get_scaled_sample(t->channels[0], i);
+    int y = wave_height_half - sample*wave_height_half;
+    SDL_RenderDrawLine(renderer, x, y, x, wave_height_half);
+    return;
+  }
+  
+  int amount0;
+  {
+    float sample = get_scaled_sample(t->channels[0], i);
+    amount0 = sample*wave_height_half;
+    int y = wave_height_half - amount0;
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); //white
+    SDL_RenderDrawLine(renderer, x, y, x, wave_height_half);
+    SDL_SetRenderDrawColor(renderer, 100, 100, 250, 255);
+  }
+  
+  {
+    float sample = get_scaled_sample(t->channels[1], i);
+    int amount1 = sample*wave_height_half;
+    SDL_SetRenderDrawColor(renderer, 100, 100, 250, 255);
+    if ((amount0 > 0 && amount1 > 0) || (amount0<0 && amount1<0)) {
+      int amount = amount0 + amount1;
+      int y = wave_height_half - amount;
+      int toy = wave_height_half - amount0;
+      SDL_RenderDrawLine(renderer, x, y, x, toy);
+    } else {
+      int y = wave_height_half - amount1;
+      SDL_RenderDrawLine(renderer, x, y, x, wave_height_half);
+    }
+  }
+}
+
 void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t, int starti, int nowi, int range, int draw_range) {
   SDL_SetRenderDrawColor(renderer, 100, 100, 250, 255); // Waveform color
 
@@ -115,18 +149,8 @@ void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t,
       SDL_RenderDrawLine(renderer, x, wave_height_half, x, wave_height_half);
       continue;
     }
-    for (int c = 0; c<t->channels_size; c++) {
-      float sample = get_scaled_sample(t->channels[c], pcmi);
-      int y = wave_height_half - sample*wave_height_half;
-      if (t->channels_size > 1 && c==0) {
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderDrawLine(renderer, x, y, x, wave_height_half);
-        SDL_SetRenderDrawColor(renderer, 100, 100, 250, 255);
-      } else {
-        SDL_RenderDrawLine(renderer, x, y, x, wave_height_half);
-      }
-    }
-      
+    
+    draw_wave(renderer, t, x, pcmi);
     
     int beat_pcmi = t->beats[beati].time * 44.1;
     if (prev_pcmi <= beat_pcmi && beat_pcmi < pcmi) {
