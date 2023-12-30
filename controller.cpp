@@ -58,9 +58,6 @@ void load_track(finyl_track** dest, int tid, finyl_track_target deck) {
   
   if (before != NULL) {
     add_track_to_free(before);
-    struct rusage usage;
-    getrusage(RUSAGE_SELF, &usage);
-    printf("Memory usage: %ld kilobytes\n", usage.ru_maxrss);
   }
 }
 
@@ -95,11 +92,7 @@ void load_track_2channels(finyl_track** dest, int tid, finyl_track_target deck) 
 
   if (before != NULL) {
     add_track_to_free(before);
-    struct rusage usage;
-    getrusage(RUSAGE_SELF, &usage);
-    printf("Memory usage: %ld kilobytes\n", usage.ru_maxrss);
   }
-  
 }
 
 void magic(int port, struct termios* tty) {
@@ -407,6 +400,14 @@ void handleKey(char x) {
   }
   case '3':{
     start_interface();
+    break;
+  }
+  case '#': {
+    free_tracks();
+    break;
+  }
+  case '$': {
+    memory_usage();
     break;
   }
   case 'v':

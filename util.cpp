@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
@@ -6,6 +7,14 @@
 #include <stdio.h>
 #include "cJSON.h"
 #include "util.h"
+
+void memory_usage() {
+  printf("memory used: ");
+  fflush(stdout);
+  char command[256];
+  sprintf(command, "ps -o rss= -p %d", getpid());
+  system(command);
+}
 
 void join_path(char* dst, char* path1, char* path2) {
   if (path1 == NULL && path2 == NULL) {

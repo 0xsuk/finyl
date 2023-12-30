@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include "cJSON.h"
-
+void memory_usage();
 void join_path(char* dst, char* path1, char* path2);
 
 void generateRandomString(char* badge, size_t size);
