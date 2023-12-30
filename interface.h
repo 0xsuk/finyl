@@ -18,6 +18,6 @@ void add_track_to_free(finyl_track* t);
 
 void free_tracks();
 
-int interface(finyl_track* adeck, finyl_track* bdeck);
+int interface();
 
 #endif

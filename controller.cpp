@@ -217,9 +217,8 @@ void* serial(void* args) {
   return NULL;
 }
 
-void* _interface() {
-  interface(adeck, bdeck);
-
+void* _interface(void*) {
+  interface();
   return NULL;
 }
 

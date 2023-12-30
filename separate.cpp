@@ -135,14 +135,6 @@ void print_usage() {
 }
 
 int main(int argc, char **argv) {
-  char* filepath = "/media/null/71CD-A534/Contents/あいみょん/愛を伝えたいだとか - EP/01 愛を伝えたいだとか.m4a";
-
-  char md5[33];
-  compute_md5(filepath, md5);
-  
-  bool is = all_channel_files_exist(filepath, "/media/null/71CD-A534/finyl/separated/hdemucs_mmi/", md5);
-  printf("is %d\n", is);
-
   if (argc < 3) {
     print_usage();
     return 0;

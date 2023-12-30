@@ -1,4 +1,5 @@
-CFLAGS = -Wall -Wno-unused-result -std=gnu99 -O3 # gnu99 so that popen is defined
+CFLAGS = -Wall -std=c99 -O3
+CPPFLAGS = -Wall -Wno-unused-result -Wno-write-strings -Wno-sign-compare -Wno-deprecated-declarations -std=c++11 -O3
 LDFLAGS = -lasound -lm -lSDL2 -lX11 -lcrypto
 
 ENTRY = entry.o
@@ -8,16 +9,15 @@ TESTS = test-digger test-controller test-interface
 TEST_OBJS = $(addsuffix .o,$(TESTS))
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+%.o: %.cpp
+	$(CC) $(CPPFLAGS) -c $< -o $@ $(LDFLAGS)
 
 %: %.o #%.o can be plural
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+	$(CC) $(CPPFLAGS) $^ -o $@ $(LDFLAGS)
 
-all: finyl listdevice
-
-shared:
-	$(CC) $(CFLAGS) -c finyl.c -fPIC -o finyl.o $(LDFLAGS)
-	$(CC) $(CFLAGS) -shared $^ -o finyl.so $(LDFLAGS)
+all: finyl
 
 finyl: $(OBJS)
 
@@ -32,8 +32,8 @@ test-interface: test-interface.o $(BUT_ENTRY)
 
 clean:
 	rm -f finyl \
-		listdevice \
-		separate \
+		listdevice listdevice.o \
+		separate separate.o\
 		$(TESTS) \
 		$(OBJS) \
 		$(TEST_OBJS)
