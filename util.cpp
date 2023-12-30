@@ -8,6 +8,27 @@
 #include "cJSON.h"
 #include "util.h"
 
+bool is_raspi() {
+  FILE *f;
+  char buffer[256];
+  bool isPi = false;
+
+  f = fopen("/proc/cpuinfo", "r");
+  if (f == NULL) {
+    return 0; // Can't open the file, assuming not a Pi
+  }
+
+  while (fgets(buffer, sizeof(buffer), f)) {
+    if (strstr(buffer, "Raspberry Pi")) {
+      isPi = true;
+      break;
+    }
+  }
+
+  fclose(f);
+  return isPi;
+}
+
 void memory_usage() {
   printf("memory used: ");
   fflush(stdout);

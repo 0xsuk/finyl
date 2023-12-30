@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include "cJSON.h"
+bool is_raspi();
 void memory_usage();
 void join_path(char* dst, char* path1, char* path2);
 

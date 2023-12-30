@@ -235,8 +235,14 @@ static int unmarshal_error(cJSON* json, char* error) {
 }
 
 static int run_command(FILE** fp, char* badge, char* usb, char* op) {
+  char exec[128] = "";
+  if (is_raspi()) {
+    strcat(exec, "./finyl-digger");
+  } else {
+    strcat(exec, "java -jar crate-digger/target/finyl-1.0-SNAPSHOT.jar");
+  }
   char command[1000];
-  snprintf(command, sizeof(command), "finyl-digger %s %s %s", badge, usb, op);
+  snprintf(command, sizeof(command), "%s %s %s %s", exec, badge, usb, op);
   
   *fp = popen(command, "r");
   if (fp == NULL) {
