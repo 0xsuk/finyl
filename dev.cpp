@@ -36,8 +36,6 @@ void print_track(finyl_track* t) {
   printf("\tlength: %d\n", t->length);
   printf("\tloop_in: %lf\n", t->loop_in);
   printf("\tloop_out: %lf\n", t->loop_out);
-  printf("\tcues_size: %d\n", t->cues_size);
-  printf("\tbeats_size: %d\n", t->beats_size);
   printf("\tindex: %lf\n", t->index);
   printf("\tspeed: %lf\n", t->speed);
   printf("\tchannels_size: %d\n", t->channels_size);

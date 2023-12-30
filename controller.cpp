@@ -35,7 +35,8 @@ void slide_right(finyl_track* t) {
 void load_track(finyl_track** dest, int tid, finyl_track_target deck) {
   finyl_track* before = *dest;
   
-  finyl_track* t = (finyl_track*)malloc(sizeof(finyl_track));
+  finyl_track* t = new finyl_track;
+
   if (get_track(t, usb, tid) == -1) {
     printf("failed\n");
     return;
@@ -54,7 +55,7 @@ void load_track(finyl_track** dest, int tid, finyl_track_target deck) {
   } else if (deck == finyl_b) {
     render_bdeck = true;
   }
-
+  
   if (before != NULL) {
     add_track_to_free(before);
     struct rusage usage;
@@ -66,7 +67,7 @@ void load_track(finyl_track** dest, int tid, finyl_track_target deck) {
 void load_track_2channels(finyl_track** dest, int tid, finyl_track_target deck) {
   finyl_track* before = *dest;
   
-  finyl_track* t = (finyl_track*)malloc(sizeof(finyl_track));
+  finyl_track* t = new finyl_track;
   if (get_track(t, usb, tid) == -1) {
     printf("failed\n");
     return;
@@ -277,13 +278,13 @@ void handleKey(char x) {
     break;
 
   case 'c':
-    if (adeck->cues_size > 0) {
+    if (adeck->cues.size() > 0) {
       adeck->index = adeck->cues[0].time * 44.1;
       printf("jumped to %lf\n", adeck->index);
     }
     break;
   case 'C':
-    if (bdeck->cues_size > 0) {
+    if (bdeck->cues.size() > 0) {
       bdeck->index = bdeck->cues[0].time * 44.1;
       printf("jumped to %lf\n", bdeck->index);
     }

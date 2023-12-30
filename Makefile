@@ -1,6 +1,6 @@
 CFLAGS = -Wall -std=c99 -O3
 CPPFLAGS = -Wall -Wno-unused-result -Wno-write-strings -Wno-sign-compare -Wno-deprecated-declarations -std=c++11 -O3
-LDFLAGS = -lasound -lm -lSDL2 -lX11 -lcrypto
+LDFLAGS = -lasound -lm -lSDL2 -lX11 -lcrypto -lstdc++
 
 ENTRY = entry.o
 BUT_ENTRY = finyl.o cJSON.o controller.o digger.o dev.o interface.o util.o

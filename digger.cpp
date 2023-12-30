@@ -165,15 +165,15 @@ static int unmarshal_cue(cJSON* cuej, finyl_cue* cue) {
   return 0;
 }
 
-static int make_cues(cJSON* trackj, finyl_cue** cues) {
+static int make_cues(cJSON* trackj, std::vector<finyl_cue>* cues) {
   cJSON* cuesj = cJSON_GetObjectItem(trackj, "cues");
   int cues_size = cJSON_GetArraySize(cuesj);
-  *cues = (finyl_cue*)malloc(sizeof(finyl_cue) * cues_size);
   
-  finyl_cue* _cues = *cues;
+  cues->resize(cues_size);
+  
   for (int i = 0; i<cues_size; i++) {
     cJSON* cuej = cJSON_GetArrayItem(cuesj, i);
-    unmarshal_cue(cuej, &_cues[i]);
+    unmarshal_cue(cuej, &((*cues)[i]));
   }
 
   return cues_size;
@@ -188,16 +188,15 @@ static int unmarshal_beat(cJSON* beatj, finyl_beat* beat) {
   return 0;
 }
 
-static int make_beats(cJSON* trackj, finyl_beat** beats) {
+static int make_beats(cJSON* trackj, std::vector<finyl_beat>* beats) {
   cJSON* beatsj = cJSON_GetObjectItem(trackj, "beats");
   int beats_size = cJSON_GetArraySize(beatsj);
-  *beats = (finyl_beat*)malloc(sizeof(finyl_beat) * beats_size);
-
-  finyl_beat* _beats = *beats;
-
+  
+  beats->resize(beats_size);
+  
   for (int i = 0; i<beats_size; i++) {
     cJSON* beatj = cJSON_GetArrayItem(beatsj, i);
-    unmarshal_beat(beatj, &_beats[i]);
+    unmarshal_beat(beatj, &(*beats)[i]);
   }
 
   return beats_size;
@@ -208,15 +207,15 @@ static int unmarshal_track(cJSON* json, finyl_track* t) {
   cJSON* metaj = cJSON_GetObjectItem(trackj, "t"); //meta
 
   unmarshal_track_meta(metaj, &t->meta);
-  t->cues_size = make_cues(trackj, &t->cues);
-  t->beats_size = make_beats(trackj, &t->beats);
+  make_cues(trackj, &t->cues);
+  make_beats(trackj, &t->beats);
   return 0;
 }
 
 static int make_track(cJSON* json, finyl_track* t) {
   finyl_init_track(t);
   unmarshal_track(json, t);
-  
+
   char root[500];
   join_path(root, usb, "finyl/separated/hdemucs_mmi");
   set_channels_filepaths(&t->meta, root);

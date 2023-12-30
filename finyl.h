@@ -2,6 +2,7 @@
 #define FINYL_H
 #include <alsa/asoundlib.h>
 #include "stdbool.h"
+#include <vector>
 
 #ifndef MAX_CHUNKS_SIZE
 #define MAX_CHUNKS_SIZE 32
@@ -22,22 +23,22 @@ extern double a1_gain;
 extern double b0_gain;
 extern double b1_gain;
 
-typedef struct {
+struct finyl_cue{
   int type;
   int time;
-} finyl_cue;
+};
 
-typedef struct {
+struct finyl_beat{
   int time;
   int number; //1 to 4
-} finyl_beat;
+};
 
-typedef struct {
+struct finyl_playlist{
   int id;
   char* name;
-} finyl_playlist;
+};
 
-typedef struct {
+struct finyl_track_meta {
   int id;
   int bpm;
   int musickeyid;
@@ -47,33 +48,31 @@ typedef struct {
   char* filepath;
   char* channel_filepaths[MAX_CHANNELS_SIZE];
   int channels_size; //number of stems available
-} finyl_track_meta; //used in track listing in playlist
+}; //used in track listing in playlist
 
-typedef struct {
+struct finyl_track{
   finyl_channel channels[MAX_CHANNELS_SIZE];
   int channels_size; //number of stems
   finyl_track_meta meta;
   int chunks_size; //the number of chunks in a channel
   int length;
-  int cues_size;
-  int beats_size;
   bool playing;
   double index;
   double speed;
   double loop_in; //index
   double loop_out; //index
-  finyl_cue* cues;
-  finyl_beat* beats;
-} finyl_track;
+  std::vector<finyl_cue> cues;
+  std::vector<finyl_beat> beats;
+};
 
-typedef enum {
+enum finyl_track_target{
   finyl_a,
   finyl_b,
   finyl_c,
   finyl_d,
-} finyl_track_target;
+};
 
-typedef enum {
+enum finyl_channel_target{
   finyl_0,
   finyl_1,
   finyl_2,
@@ -82,7 +81,7 @@ typedef enum {
   finyl_5,
   finyl_6,
   finyl_7,
-} finyl_channel_target;
+};
 
 extern bool finyl_running;
 

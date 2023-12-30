@@ -208,7 +208,7 @@ void draw_center_line(SDL_Renderer* renderer) {
 }
 
 void draw_static_grids(SDL_Renderer* renderer, finyl_track* t, int range) {
-  if (t->beats_size < 2) {
+  if (t->beats.size() < 2) {
     return;
   }
   

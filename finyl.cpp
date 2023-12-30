@@ -50,13 +50,11 @@ static void free_channels(finyl_channel* channels, int channels_size, int chunks
 void finyl_free_in_track(finyl_track* t) {
   free_channels(t->channels, t->channels_size, t->chunks_size);
   finyl_free_in_track_meta(&t->meta);
-  free(t->cues);
-  free(t->beats);
 }
 
 void finyl_free_track(finyl_track* t) {
   finyl_free_in_track(t);
-  free(t);
+  delete t;
 }
 
 static finyl_sample* init_channel_buffer() {
@@ -93,8 +91,6 @@ void finyl_init_track(finyl_track* t) {
   t->chunks_size = 0;
   t->length = 0;
   t->index = 0;
-  t->cues_size = 0;
-  t->beats_size = 0;
   t->speed = 1.0;
   t->channels_size = 0;
   t->playing = false;
@@ -103,7 +99,7 @@ void finyl_init_track(finyl_track* t) {
 }
 
 int finyl_get_quantized_beat_index(finyl_track* t, int index) {
-  if (t->beats_size <= 0) {
+  if (t->beats.size() <= 0) {
     return -1;
   }
   
@@ -115,10 +111,10 @@ int finyl_get_quantized_beat_index(finyl_track* t, int index) {
   if (nowtime < t->beats[0].time) {
     return 0;
   }
-  if (nowtime > t->beats[t->beats_size-1].time) {
-    return t->beats_size-1;
+  if (nowtime > t->beats[t->beats.size()-1].time) {
+    return t->beats.size()-1;
   }
-  for (int i = 1; i<t->beats_size-1; i++) {
+  for (int i = 1; i<t->beats.size()-1; i++) {
     if (t->beats[i-1].time <= nowtime && nowtime <= t->beats[i].time) {
       // [i-1]      half       [i]
       //     -margin-  -margin-
