@@ -94,6 +94,7 @@ void finyl_init_track(finyl_track* t) {
   t->speed = 1.0;
   t->channels_size = 0;
   t->playing = false;
+  t->loop_active = false;
   t->loop_in = -1;
   t->loop_out = -1;
 }
@@ -138,6 +139,13 @@ int finyl_get_quantized_time(finyl_track* t, int index) {
     return -1;
   }
   return t->beats[i].time;
+}
+
+double finyl_get_quantized_index(finyl_track *t, int index) {
+  printf("index was %d\n", index);
+  double v =  44.1 * finyl_get_quantized_time(t, index);
+
+  return v;
 }
 
 finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c) {
@@ -295,7 +303,7 @@ static void make_channel_buffers(finyl_sample** channel_buffers, finyl_track* t)
   for (int i = 0; i < period_size*2; i=i+2) {
     t->index += t->speed;
 
-    if (t->loop_in != -1 && t->loop_out != -1 && t->index >= (t->loop_out - 1000)) {
+    if (t->loop_active && t->loop_in != -1 && t->loop_out != -1 && t->index >= (t->loop_out - 1000)) {
       t->index = t->loop_in + t->index - t->loop_out;
     }
     

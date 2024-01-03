@@ -59,6 +59,7 @@ struct finyl_track{
   bool playing;
   double index;
   double speed;
+  bool loop_active;
   double loop_in; //index
   double loop_out; //index
   std::vector<finyl_cue> cues;
@@ -105,7 +106,7 @@ void finyl_init_track_meta(finyl_track_meta* tm);
 
 int finyl_get_quantized_beat_index(finyl_track* t, int index);
 int finyl_get_quantized_time(finyl_track* t, int index);
-
+double finyl_get_quantized_index(finyl_track *t, int index);
 int finyl_read_channels_from_files(char** files, int channels_length, finyl_track* t);
 
 void finyl_track_callback_play(unsigned long period_size, finyl_sample* buf, finyl_track* t);

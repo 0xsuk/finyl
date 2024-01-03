@@ -8,14 +8,8 @@
 #include "dev.h"
 #include "interface.h"
 #include <pthread.h>
-
-double max(double a, double b) {
-  return a>b ? a : b;
-}
-
-double min(double a, double b) {
-  return a<b ? a : b;
-}
+#include <memory>
+#include "action.h"
 
 void slide_right(finyl_track* t) {
   double backup = t->speed;
@@ -31,37 +25,8 @@ void slide_right(finyl_track* t) {
   t->speed = backup;
 }
 
-//load track 5 to adeck
-void load_track(finyl_track** dest, int tid, finyl_track_target deck) {
-  finyl_track* before = *dest;
-  
-  finyl_track* t = new finyl_track;
-
-  if (get_track(t, usb, tid) == -1) {
-    printf("failed\n");
-    return;
-  }
-  
-  char* files[1] = {t->meta.filepath};
-  if (finyl_read_channels_from_files(files, 1, t) == -1) {
-    return;
-  }
-  
-  print_track(t);
-  
-  *dest = t;
-  if (deck == finyl_a) {
-    render_adeck = true;
-  } else if (deck == finyl_b) {
-    render_bdeck = true;
-  }
-  
-  if (before != NULL) {
-    add_track_to_free(before);
-  }
-}
-
-void load_track_2channels(finyl_track** dest, int tid, finyl_track_target deck) {
+//n = 0 means load an original file
+void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, int n) {
   finyl_track* before = *dest;
   
   finyl_track* t = new finyl_track;
@@ -71,13 +36,21 @@ void load_track_2channels(finyl_track** dest, int tid, finyl_track_target deck) 
   }
   
   
-  if (t->meta.channels_size < 2) {
+  if (t->meta.channels_size < n) {
     finyl_free_track(t);
     printf("not enough channels\n");
     return;
   }
   
-  if (finyl_read_channels_from_files(t->meta.channel_filepaths, 2, t) == -1) {
+  char* filepaths[max(n, 1)];
+  if (n > 0) {
+    for (int i = 0; i<min(t->meta.channels_size, n); i++) {
+      filepaths[i] = t->meta.channel_filepaths[i];
+    }
+  } else {
+    filepaths[0] = t->meta.filepath;
+  }
+  if (finyl_read_channels_from_files(filepaths, n, t) == -1) {
     return;
   }
   
@@ -93,6 +66,10 @@ void load_track_2channels(finyl_track** dest, int tid, finyl_track_target deck) 
   if (before != NULL) {
     add_track_to_free(before);
   }
+}
+
+void load_track(finyl_track** dest, int tid, finyl_track_target deck) {
+  load_track_nchannels(dest, tid, deck, 0);
 }
 
 void magic(int port, struct termios* tty) {
@@ -238,35 +215,35 @@ void handleKey(char x) {
     bdeck->speed = 1;
     break;
   case 'N':
-    a0_gain = max(a0_gain-0.05, 0);
+    a0_gain = max(a0_gain-0.05, 0.0);
     printf("a0_gain %lf\n", a0_gain);
     break;
   case 'J':
-    a0_gain = min(a0_gain+0.05, 1);
+    a0_gain = min(a0_gain+0.05, 1.0);
     printf("a0_gain %lf\n", a0_gain);
     break;
   case 'n':
-    a1_gain = max(a1_gain-0.05, 0);
+    a1_gain = max(a1_gain-0.05, 0.0);
     printf("a1_gain %lf\n", a1_gain);
     break;
   case 'j':
-    a1_gain = min(a1_gain+0.05, 1);
+    a1_gain = min(a1_gain+0.05, 1.0);
     printf("a1_gain %lf\n", a1_gain);
     break;
   case 'M':
-    b0_gain = max(b0_gain-0.05, 0);
+    b0_gain = max(b0_gain-0.05, 0.0);
     printf("b0_gain %lf\n", b0_gain);
     break;
   case 'K':
-    b0_gain = min(b0_gain+0.1, 1);
+    b0_gain = min(b0_gain+0.1, 1.0);
     printf("b0_gain %lf\n", b0_gain);
     break;
   case 'm':
-    b1_gain = max(b1_gain-0.05, 0);
+    b1_gain = max(b1_gain-0.05, 0.0);
     printf("b1_gain %lf\n", b1_gain);
     break;
   case 'k':
-    b1_gain = min(b1_gain+0.05, 1);
+    b1_gain = min(b1_gain+0.05, 1.0);
     printf("b1_gain %lf\n", b1_gain);
     break;
 
@@ -299,14 +276,12 @@ void handleKey(char x) {
     bdeck->speed = bdeck->speed - 0.01;
     break;
   case 't': {
-    int millisec = finyl_get_quantized_time(adeck, adeck->index);
-    adeck->index = millisec * 44.1;
+    adeck->index = finyl_get_quantized_index(adeck, adeck->index);
     printf("adeck->index %lf\n", adeck->index);
     break;
   }
   case 'T': {
-    int millisec = finyl_get_quantized_time(bdeck, bdeck->index);
-    bdeck->index = millisec * 44.1;
+    bdeck->index = finyl_get_quantized_index(bdeck, bdeck->index);
     printf("bdeck->index %lf\n", bdeck->index);
     break;
   }
@@ -329,7 +304,7 @@ void handleKey(char x) {
     printf("tid:");
     scanf("%d", &tid);
     printf("loading...%d\n", tid);
-    load_track_2channels(&adeck, tid, finyl_a);
+    load_track_nchannels(&adeck, tid, finyl_a, 2);
     break;
   }
   case 'o': {
@@ -337,7 +312,7 @@ void handleKey(char x) {
     printf("tid:");
     scanf("%d", &tid);
     printf("loading...%d\n", tid);
-    load_track_2channels(&bdeck, tid, finyl_b);
+    load_track_nchannels(&bdeck, tid, finyl_b, 2);
     break;
   }
   case '9': {
@@ -368,28 +343,28 @@ void handleKey(char x) {
   }
   case '1':
     /* mark loop in */
-    adeck->loop_in = 44.1 * finyl_get_quantized_time(adeck, adeck->index);
+    adeck->loop_in = finyl_get_quantized_index(adeck, adeck->index);
     adeck->loop_out = -1.0;
     printf("adeck loop in: %lf\n", adeck->loop_in);
     break;
   case '2': {
-    double now = 44.1 * finyl_get_quantized_time(adeck, adeck->index);
-    if (adeck->loop_in > now) {
+    double tmp = finyl_get_quantized_index(adeck, adeck->index);
+    if (adeck->loop_in > tmp) {
       adeck->loop_in = -1;
     } else {
-      adeck->loop_out = now;
+      adeck->loop_out = tmp;
       printf("adeck loop out: %lf\n", adeck->loop_out);
     }
     break;
   }
   case '!':
     /* mark loop in */
-    bdeck->loop_in = 44.1 * finyl_get_quantized_time(bdeck, bdeck->index);
+    bdeck->loop_in = finyl_get_quantized_index(bdeck, bdeck->index);
     bdeck->loop_out = -1.0;
     printf("bdeck loop in: %lf\n", bdeck->loop_in);
     break;
   case '`': {
-    double now = 44.1 * finyl_get_quantized_time(bdeck, bdeck->index);
+    double now = finyl_get_quantized_index(bdeck, bdeck->index);
     if (bdeck->loop_in > now) {
       bdeck->loop_in = -1;
     } else {

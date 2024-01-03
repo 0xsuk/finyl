@@ -3,6 +3,18 @@
 
 #include <stdlib.h>
 #include "cJSON.h"
+template<typename T>
+T max(T a, T b) {
+  return a>b ? a : b;
+}
+
+template<typename T>
+T min(T a, T b) {
+  return a<b ? a : b;
+}
+
+
+
 bool is_raspi();
 void memory_usage();
 void join_path(char* dst, char* path1, char* path2);
