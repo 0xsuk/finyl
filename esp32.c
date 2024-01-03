@@ -1,8 +1,14 @@
-const int button1 = 12;
 const int pot1 = 32;
 
-bool button1_pressed = false;
-bool prev_button1_pressed = false;
+const int pots_size = 2;
+int pots[pots_size] = {32, 33};
+int pot_threshold = 20;
+int pots_sprev[pots_size] = {0};
+
+const int buttons_size = 5;
+int buttons[buttons_size] = {0, 13, 23, 4, 14};
+bool buttons_sprev[buttons_size] = {false};
+bool buttons_s[buttons_size] = {false};
 
 template <typename T>
 void print(T v) {
@@ -15,41 +21,86 @@ void println(T v) {
   Serial.print("\n");
 }
 
-void read_button() {
-  if (digitalRead(button1) == HIGH) {
-    button1_pressed = false;
-  } else {
-    button1_pressed = true;
+void read_buttons() {
+  for (int i = 0; i<buttons_size; i++) {
+    if (digitalRead(buttons[i]) == HIGH) {
+      buttons_s[i] = false;
+    } else {
+      buttons_s[i] = true;
+    }
   }
 }
 
-void read_potmeter() {
-  int v = analogRead(pot1);
-  print("analog:");
-  println(v);
+void init_potmeters() {
+  for (int i = 0; i<pots_size; i++) {
+    int v = analogRead(pots[i]);
+    print("pot");
+    print(i);
+    print(":");
+    println(v);
+    pots_sprev[i] = v;
+  }
+}
+
+void read_potmeters() {
+  for (int i = 0; i<pots_size; i++) {
+    int v = analogRead(pots[i]);
+    if (abs(v-pots_sprev[i]) > pot_threshold) {
+      print("pot");
+      print(i);
+      print(":");
+      println(v);
+
+      pots_sprev[i] = v;
+    }
+  }
 }
 
 void send() {
-  if (prev_button1_pressed != button1_pressed) {
-    if (button1_pressed) {
-      println("yes");
-      /* Serial.write(0b10000000); */
-      prev_button1_pressed = true;
-    } else {
-      println("no");
-      /* Serial.write(0b00000000); */
-      prev_button1_pressed = false;
+  bool some = false;
+  for (int i = 0; i<buttons_size; i++) {
+    if (buttons_sprev[i] != buttons_s[i]) {
+      if (buttons_s[i]) {
+        print("button");
+        print(i);
+        println(":y");
+        buttons_sprev[i] = true;
+        some = true;
+      } else {
+        print("button");
+        print(i);
+        println(":n");
+        buttons_sprev[i] = false;
+      }
     }
+  }
+
+  if (some) {
+    delay(50);
   }
 }
 
 void setup() {
   Serial.begin(9600);
-  pinMode(button1, INPUT_PULLUP);
+  for (int i = 0; i<buttons_size; i++) {
+    pinMode(buttons[i], INPUT_PULLUP);
+  }
+  init_potmeters();
 }
 
 void loop() {
-  read_button();
-  read_potmeter();
+  if (Serial.available() > 0) {
+    String s = Serial.readString();
+    s.trim();
+    print("received:");
+    println(s);
+    if (s == "init") {
+      init_potmeters();
+      println("initialized\n");
+    }
+  }
+  
+  read_buttons();
+  read_potmeters();
   send();
 }

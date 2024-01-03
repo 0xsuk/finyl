@@ -110,19 +110,82 @@ void pot(int v) {
   a0_gain = gain;
 }
 
-void handle_pot(char* s) {
+static bool match(char* s, char* x, int i) {
+  return (strlen(x) == i && strncmp(s, x, i) == 0);
+}
+
+static std::unique_ptr<char[]> trim_svalue(char* s, int i) {
   int len = strlen(s);
-  int i = find_char_last(s, ':');
-  if (i != strlen("analog")) {
-    //no valid
-    return;
-  }
   int vlen = len - i - 1;
-  char v[vlen+1];
-  strncpy(v, &s[i+1], vlen);
+  auto v = std::make_unique<char[]>(vlen+1);
+  strncpy(v.get(), &s[i+1], vlen);
   v[vlen] = '\0';
-  int n = atoi(v);
-  pot(n);
+  return v;
+}
+
+//i is index of the :
+static int trim_ivalue(char* s, int i) {
+  auto v = trim_svalue(s, i);
+  return atoi(v.get());
+}
+
+static bool is_y(char* s, int i) {
+  auto _v = trim_svalue(s, i);
+  char* v = _v.get();
+  if (strcmp(v, "y") == 0) {
+    return true;
+  }
+  return false;
+}
+
+void handle_toggle_playing(char* s, int i, finyl_track* t) {
+  if (is_y(s, i)) {
+    toggle_playing(t);
+  }
+}
+
+void handle_loop_in(char* s, int i, finyl_track* t) {
+  auto _v = trim_svalue(s, i);
+  if (is_y(s, i)) {
+    loop_in_now(t);
+  }
+}
+
+void handle_loop_out(char* s, int i, finyl_track* t) {
+  auto _v = trim_svalue(s, i);
+  if (is_y(s, i)) {
+    loop_out_now(t);
+  }
+}
+
+void handle_what(char* s) {
+  int i = find_char_last(s, ':');
+
+  if (match(s, "pot0", i)) {
+    printf("pot0\n");
+  }
+  else if (match(s, "pot1", i)) {
+    printf("pot1\n");
+  }
+  else if (match(s, "button0", i)) {
+    printf("button0\n");
+    handle_toggle_playing(s, i, adeck);
+  }
+  else if (match(s, "button1", i)) {
+    printf("button1\n");
+    handle_toggle_playing(s, i, bdeck);
+  }
+  else if (match(s, "button2", i)) { //bdeck
+    printf("button2\n");
+    handle_loop_in(s, i, bdeck);
+  }
+  else if(match(s, "button3", i)) {
+    printf("button3\n");
+    handle_loop_out(s, i, bdeck);
+  } else {
+    printf("unknown:");
+    printf("%s\n", s);
+  }
 }
 
 void* serial(void* args) {
@@ -142,6 +205,8 @@ void* serial(void* args) {
     printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
     return NULL;
   }
+  
+  write(serialPort, "init", 4);
   
   char tmp[100];
   int tmplen = 0;
@@ -166,7 +231,7 @@ void* serial(void* args) {
         strncpy(s, tmp, tmplen);
         s[tmplen] = '\0';
         strncat(s, &read_buf[start_i], linelen);
-        handle_pot(s);
+        handle_what(s);
         tmplen = 0;
       } else {
         if (linelen == 0) continue;
@@ -174,7 +239,7 @@ void* serial(void* args) {
         char s[linelen+1];
         strncpy(s, &read_buf[start_i], linelen);
         s[linelen] = '\0';
-        handle_pot(s);
+        handle_what(s);
       }
 
       start_i = i+1; //i+1 is next to newline
