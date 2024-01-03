@@ -142,7 +142,6 @@ int finyl_get_quantized_time(finyl_track* t, int index) {
 }
 
 double finyl_get_quantized_index(finyl_track *t, int index) {
-  printf("index was %d\n", index);
   double v =  44.1 * finyl_get_quantized_time(t, index);
 
   return v;

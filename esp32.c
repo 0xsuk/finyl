@@ -1,12 +1,10 @@
-const int pot1 = 32;
-
-const int pots_size = 2;
-int pots[pots_size] = {32, 33};
+const int pots_size = 4;
+int pots[pots_size] = {32, 33, 35, 34};
 int pot_threshold = 20;
 int pots_sprev[pots_size] = {0};
 
-const int buttons_size = 5;
-int buttons[buttons_size] = {0, 13, 23, 4, 14};
+const int buttons_size = 6;
+int buttons[buttons_size] = {0, 13, 23, 4, 14, 12};
 bool buttons_sprev[buttons_size] = {false};
 bool buttons_s[buttons_size] = {false};
 

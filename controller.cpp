@@ -105,29 +105,17 @@ void magic(int port, struct termios* tty) {
   tty->c_cc[VMIN] = 0;
 }
 
-void pot(int v) {
-  //v: 0 to 4095
-  double gain = v / 4095.0;
-  a0_gain = gain;
-}
-
 static bool match(char* s, char* x, int i) {
   return (strlen(x) == i && strncmp(s, x, i) == 0);
 }
 
-static std::unique_ptr<char[]> trim_svalue(char* s, int i) {
+static std::unique_ptr<char[]> trim_value(char* s, int i) {
   int len = strlen(s);
   int vlen = len - i - 1;
   auto v = std::make_unique<char[]>(vlen+1);
   strncpy(v.get(), &s[i+1], vlen);
   v[vlen] = '\0';
   return v;
-}
-
-//i is index of the :
-static int trim_ivalue(char* s, int i) {
-  auto v = trim_svalue(s, i);
-  return atoi(v.get());
 }
 
 static bool is_y(char* v) {
@@ -159,7 +147,7 @@ void handle_gain(char* v, double* g) {
   char* endptr;
   int n = strtol(v, &endptr, 10);
   if (endptr == v || *endptr != '\0') return;
-  *g = n / 4095.0;
+  *g = n / 2046.0;
   printf("gain %lf\n", *g);
 }
 
@@ -169,7 +157,7 @@ void handle_what(char* s) {
     return;
   }
   
-  auto _v = trim_svalue(s, i);
+  auto _v = trim_value(s, i);
   char* v = _v.get();
 
   if (match(s, "pot0", i)) {
@@ -180,13 +168,21 @@ void handle_what(char* s) {
     printf("pot1\n");
     handle_gain(v, &a1_gain);
   }
+  else if (match(s, "pot2", i)) {
+    printf("pot2\n");
+    handle_gain(v, &b0_gain);
+  }
+  else if (match(s, "pot3", i)) {
+    printf("pot3\n");
+    handle_gain(v, &b1_gain);
+  }
   else if (match(s, "button0", i)) {
     printf("button0\n");
-    handle_toggle_playing(v, adeck);
+    handle_toggle_playing(v, bdeck);
   }
   else if (match(s, "button1", i)) {
     printf("button1\n");
-    handle_toggle_playing(v, bdeck);
+    handle_toggle_playing(v, adeck);
   }
   else if (match(s, "button2", i)) { //bdeck
     printf("button2\n");
@@ -195,7 +191,16 @@ void handle_what(char* s) {
   else if(match(s, "button3", i)) {
     printf("button3\n");
     handle_loop_out(v, bdeck);
-  } else {
+  }
+  else if (match(s, "button4", i)) {
+    printf("button4\n");
+    handle_loop_in(v, adeck);
+  }
+  else if (match(s, "button5", i)) {
+    printf("button5\n");
+    handle_loop_out(v, adeck);
+  }
+  else {
     printf("unknown:");
     printf("%s\n", s);
   }
