@@ -34,11 +34,13 @@ void print_track(finyl_track* t) {
   printf("\tbpm: %d\n", t->meta.bpm);
   printf("\tchunks_size: %d\n", t->chunks_size);
   printf("\tlength: %d\n", t->length);
+  printf("\tloop_active: %d\n", t->loop_active);
   printf("\tloop_in: %lf\n", t->loop_in);
   printf("\tloop_out: %lf\n", t->loop_out);
   printf("\tindex: %lf\n", t->index);
   printf("\tspeed: %lf\n", t->speed);
   printf("\tchannels_size: %d\n", t->channels_size);
+  printf("\tbeats_size:%d\n", (int)t->beats.size());
   printf("\tplaying: %d\n", t->playing);
   printf("}\n");
 }

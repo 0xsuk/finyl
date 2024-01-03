@@ -49,12 +49,13 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
     }
   } else {
     filepaths[0] = t->meta.filepath;
+    n = 1;
   }
   if (finyl_read_channels_from_files(filepaths, n, t) == -1) {
     return;
   }
   
-  print_track(t);
+  printf("%s\n", t->meta.filename);
   
   *dest = t;
   if (deck == finyl_a) {
@@ -129,59 +130,71 @@ static int trim_ivalue(char* s, int i) {
   return atoi(v.get());
 }
 
-static bool is_y(char* s, int i) {
-  auto _v = trim_svalue(s, i);
-  char* v = _v.get();
+static bool is_y(char* v) {
   if (strcmp(v, "y") == 0) {
     return true;
   }
   return false;
 }
 
-void handle_toggle_playing(char* s, int i, finyl_track* t) {
-  if (is_y(s, i)) {
+void handle_toggle_playing(char* v, finyl_track* t) {
+  if (is_y(v)) {
     toggle_playing(t);
   }
 }
 
-void handle_loop_in(char* s, int i, finyl_track* t) {
-  auto _v = trim_svalue(s, i);
-  if (is_y(s, i)) {
+void handle_loop_in(char* v, finyl_track* t) {
+  if (is_y(v)) {
     loop_in_now(t);
   }
 }
 
-void handle_loop_out(char* s, int i, finyl_track* t) {
-  auto _v = trim_svalue(s, i);
-  if (is_y(s, i)) {
+void handle_loop_out(char* v, finyl_track* t) {
+  if (is_y(v)) {
     loop_out_now(t);
   }
 }
 
+void handle_gain(char* v, double* g) {
+  char* endptr;
+  int n = strtol(v, &endptr, 10);
+  if (endptr == v || *endptr != '\0') return;
+  *g = n / 4095.0;
+  printf("gain %lf\n", *g);
+}
+
 void handle_what(char* s) {
   int i = find_char_last(s, ':');
+  if (i<1) {
+    return;
+  }
+  
+  auto _v = trim_svalue(s, i);
+  char* v = _v.get();
 
   if (match(s, "pot0", i)) {
     printf("pot0\n");
+    handle_gain(v, &a0_gain);
   }
   else if (match(s, "pot1", i)) {
     printf("pot1\n");
+    handle_gain(v, &a1_gain);
   }
   else if (match(s, "button0", i)) {
     printf("button0\n");
-    handle_toggle_playing(s, i, adeck);
+    handle_toggle_playing(v, adeck);
   }
   else if (match(s, "button1", i)) {
     printf("button1\n");
-    handle_toggle_playing(s, i, bdeck);
+    handle_toggle_playing(v, bdeck);
   }
   else if (match(s, "button2", i)) { //bdeck
     printf("button2\n");
-    handle_loop_in(s, i, bdeck);
+    handle_loop_in(v, bdeck);
   }
   else if(match(s, "button3", i)) {
     printf("button3\n");
-    handle_loop_out(s, i, bdeck);
+    handle_loop_out(v, bdeck);
   } else {
     printf("unknown:");
     printf("%s\n", s);
@@ -408,34 +421,17 @@ void handleKey(char x) {
   }
   case '1':
     /* mark loop in */
-    adeck->loop_in = finyl_get_quantized_index(adeck, adeck->index);
-    adeck->loop_out = -1.0;
-    printf("adeck loop in: %lf\n", adeck->loop_in);
+    loop_in_now(adeck);
     break;
   case '2': {
-    double tmp = finyl_get_quantized_index(adeck, adeck->index);
-    if (adeck->loop_in > tmp) {
-      adeck->loop_in = -1;
-    } else {
-      adeck->loop_out = tmp;
-      printf("adeck loop out: %lf\n", adeck->loop_out);
-    }
+    loop_out_now(adeck);
     break;
   }
   case '!':
-    /* mark loop in */
-    bdeck->loop_in = finyl_get_quantized_index(bdeck, bdeck->index);
-    bdeck->loop_out = -1.0;
-    printf("bdeck loop in: %lf\n", bdeck->loop_in);
+    loop_in_now(bdeck);
     break;
   case '`': {
-    double now = finyl_get_quantized_index(bdeck, bdeck->index);
-    if (bdeck->loop_in > now) {
-      bdeck->loop_in = -1;
-    } else {
-      bdeck->loop_out = now;
-      printf("bdeck loop out: %lf\n", bdeck->loop_out);
-    }
+    loop_out_now(bdeck);
     break;
   }
   case '3':{
