@@ -283,6 +283,7 @@ static bool badge_valid(cJSON* json, char* badge)  {
   return false;
 }
 
+//1 for not valid badge. -1 for command error
 static int run_digger(cJSON** json, char* usb, char* op) {
   FILE* fp;
   char badge[6];
@@ -299,7 +300,7 @@ static int run_digger(cJSON** json, char* usb, char* op) {
   *json = read_file_malloc_json(get_finyl_output_path());
   
   if (!badge_valid(*json, badge)) {
-    return -1;
+    return 1;
   }
   
   return 0;
@@ -320,7 +321,9 @@ int has_error(cJSON* json) {
 //return size of playlists, or -1 for error
 int get_playlists(finyl_playlist** pls, char* usb) {
   cJSON* json;
-  if (run_digger(&json, usb, "playlists") == -1) {
+  int status = run_digger(&json, usb, "playlists");
+  if (status == -1) return -1;
+  if (status == 1) {
     cJSON_Delete(json);
     return -1;
   }
@@ -339,7 +342,9 @@ int get_track(finyl_track* t, char* usb, int tid) {
   cJSON* json;
   char op[30];
   snprintf(op, sizeof(op), "track %d", tid);
-  if (run_digger(&json, usb, op) == -1) {
+  int status = run_digger(&json, usb, op);
+  if (status == -1) return -1;
+  if (status == 1) {
     cJSON_Delete(json);
     return -1;
   }
@@ -370,7 +375,9 @@ int get_playlist_tracks(finyl_track_meta** tms, char* usb, int pid) {
   cJSON* json;
   char op[30];
   snprintf(op, sizeof(op), "playlist-tracks %d", pid);
-  if (run_digger(&json, usb, op) == -1) {
+  int status = run_digger(&json, usb, op);
+  if (status == -1) return -1;
+  if (status == 1) {
     cJSON_Delete(json);
     return -1;
   }
