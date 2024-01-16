@@ -298,11 +298,11 @@ void handleKey(char x) {
     bdeck->speed = 1;
     break;
   case 'N':
-    a0_gain = max(a0_gain-0.05, 0.0);
+    a0_gain = 0;
     printf("a0_gain %lf\n", a0_gain);
     break;
   case 'J':
-    a0_gain = min(a0_gain+0.05, 1.0);
+    a0_gain = 1;
     printf("a0_gain %lf\n", a0_gain);
     break;
   case 'n':
@@ -314,11 +314,11 @@ void handleKey(char x) {
     printf("a1_gain %lf\n", a1_gain);
     break;
   case 'M':
-    b0_gain = max(b0_gain-0.05, 0.0);
+    b0_gain = 0;
     printf("b0_gain %lf\n", b0_gain);
     break;
   case 'K':
-    b0_gain = min(b0_gain+0.1, 1.0);
+    b0_gain = 1;
     printf("b0_gain %lf\n", b0_gain);
     break;
   case 'm':
@@ -363,7 +363,7 @@ void handleKey(char x) {
     printf("adeck->index %lf\n", adeck->index);
     break;
   }
-  case 'T': {
+  case 'y': {
     bdeck->index = finyl_get_quantized_index(bdeck, bdeck->index);
     printf("bdeck->index %lf\n", bdeck->index);
     break;
@@ -398,22 +398,22 @@ void handleKey(char x) {
     load_track_nchannels(&bdeck, tid, finyl_b, 2);
     break;
   }
-  case '9': {
-    int tid;
-    printf("tid:");
-    scanf("%d", &tid);
-    printf("loading...%d\n", tid);
-    load_track(&adeck, tid, finyl_a);
-    break;
-  }
-  case '0': {
-    int tid;
-    printf("tid:");
-    scanf("%d", &tid);
-    printf("loading...%d\n", tid);
-    load_track(&bdeck, tid, finyl_b);
-    break;
-  }
+  // case '9': {
+  //   int tid;
+  //   printf("tid:");
+  //   scanf("%d", &tid);
+  //   printf("loading...%d\n", tid);
+  //   load_track(&adeck, tid, finyl_a);
+  //   break;
+  // }
+  // case '0': {
+  //   int tid;
+  //   printf("tid:");
+  //   scanf("%d", &tid);
+  //   printf("loading...%d\n", tid);
+  //   load_track(&bdeck, tid, finyl_b);
+  //   break;
+  // }
   case 'q': {
     bdeck->speed = adeck->speed * ((double)adeck->meta.bpm / bdeck->meta.bpm);
     printf("synced bdeck->speed: %lf\n", bdeck->speed);
@@ -432,10 +432,10 @@ void handleKey(char x) {
     loop_out_now(adeck);
     break;
   }
-  case '!':
+  case '9':
     loop_in_now(bdeck);
     break;
-  case '`': {
+  case '0': {
     loop_out_now(bdeck);
     break;
   }

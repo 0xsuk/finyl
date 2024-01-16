@@ -32,7 +32,8 @@ void print_track(finyl_track* t) {
   printf("\tid: %d\n", t->meta.id);
   printf("\tfilename: %s\n", t->meta.filename);
   printf("\tbpm: %d\n", t->meta.bpm);
-  printf("\tchunks_size: %d\n", t->chunks_size);
+  printf("\teffective bpm: %lf\n", t->meta.bpm * t->speed);
+  // printf("\tchunks_size: %d\n", t->chunks_size);
   printf("\tlength: %d\n", t->length);
   printf("\tloop_active: %d\n", t->loop_active);
   printf("\tloop_in: %lf\n", t->loop_in);

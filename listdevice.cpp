@@ -9,8 +9,8 @@ void check_formats(snd_pcm_t *handle) {
     return;
   }
 
-  for (int format = 0; format <= SND_PCM_FORMAT_LAST; format++) {
-    if (snd_pcm_hw_params_test_format(handle, params, format) == 0) {
+  for (size_t format = 0; format <= SND_PCM_FORMAT_LAST; format++) {
+    if (snd_pcm_hw_params_test_format(handle, params, (snd_pcm_format_t)format) == 0) {
       printf("Format %s is supported.\n", snd_pcm_format_name((snd_pcm_format_t)format));
     }
   }
