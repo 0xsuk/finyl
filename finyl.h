@@ -3,6 +3,8 @@
 #include <alsa/asoundlib.h>
 #include "stdbool.h"
 #include <vector>
+#include <string>
+#include <array>
 
 #ifndef MAX_CHUNKS_SIZE
 #define MAX_CHUNKS_SIZE 32
@@ -13,10 +15,11 @@
 #define MAX_CHANNELS_SIZE 5
 #endif
 
-typedef signed short finyl_sample;
-typedef finyl_sample* finyl_chunk; //chunk_size array of sample
-typedef finyl_chunk* finyl_channel; //32 length array of chunk
-
+using finyl_sample = signed short;
+using finyl_chunk = std::vector<finyl_sample>;
+using finyl_channel = std::vector<finyl_chunk>;
+using finyl_buffer = std::vector<finyl_sample>;
+using finyl_channel_buffers = std::array<finyl_buffer, MAX_CHANNELS_SIZE>;
 
 extern double a0_gain;
 extern double a1_gain;
@@ -35,33 +38,31 @@ struct finyl_beat{
 
 struct finyl_playlist{
   int id;
-  char* name;
+  std::string name;
 };
 
 struct finyl_track_meta {
-  int id;
-  int bpm;
-  int musickeyid;
-  int filesize;
-  char* title;
-  char* filename; //caution: filename is compelte. filepath is sometimes incomplete. just use filepath
-  char* filepath;
-  char* channel_filepaths[MAX_CHANNELS_SIZE];
-  int channels_size; //number of stems available
+  int id = 0;
+  int bpm = 0;
+  int musickeyid = 0;
+  int filesize = 0;
+  std::string title;
+  std::string filename; //caution: filename is compelte. filepath is sometimes incomplete. just use filepath
+  std::string filepath;
+  std::vector<std::string> channel_filepaths;
 }; //used in track listing in playlist
 
 struct finyl_track{
-  finyl_channel channels[MAX_CHANNELS_SIZE];
-  int channels_size; //number of stems
   finyl_track_meta meta;
-  int chunks_size; //the number of chunks in a channel
-  int length;
-  bool playing;
-  double index;
-  double speed;
-  bool loop_active;
-  double loop_in; //index
-  double loop_out; //index
+  // int chunks_size; //the number of chunks in a channel
+  int length = 0; //number of samples per channel
+  bool playing = false;
+  double index = 0;
+  double speed = 0;
+  bool loop_active = false;
+  double loop_in = -1; //index
+  double loop_out = -1; //index
+  std::vector<finyl_channel> channels;
   std::vector<finyl_cue> cues;
   std::vector<finyl_beat> beats;
 };
@@ -91,25 +92,15 @@ extern finyl_track* bdeck;
 extern finyl_track* cdeck;
 extern finyl_track* ddeck;
 
-bool file_exist(char* file);
-void finyl_free_track_metas(finyl_track_meta* tms, int size);
-void finyl_free_in_track_meta(finyl_track_meta* tm);
+bool file_exist(std::string file);
 
-void finyl_free_in_track(finyl_track* t);
-void finyl_free_track(finyl_track* t);
+finyl_sample finyl_get_sample(finyl_track& t, finyl_channel& c);
+finyl_sample finyl_get_sample1(finyl_channel& c, int position);
 
-finyl_sample finyl_get_sample(finyl_track* t, finyl_channel c);
-finyl_sample finyl_get_sample1(finyl_channel c, int position);
-
-void finyl_init_track(finyl_track* t);
-void finyl_init_track_meta(finyl_track_meta* tm);
-
-int finyl_get_quantized_beat_index(finyl_track* t, int index);
-int finyl_get_quantized_time(finyl_track* t, int index);
-double finyl_get_quantized_index(finyl_track *t, int index);
-int finyl_read_channels_from_files(char** files, int channels_length, finyl_track* t);
-
-void finyl_track_callback_play(unsigned long period_size, finyl_sample* buf, finyl_track* t);
+int finyl_get_quantized_beat_index(finyl_track& t, int index);
+int finyl_get_quantized_time(finyl_track& t, int index);
+double finyl_get_quantized_index(finyl_track& t, int index);
+int finyl_read_channels_from_files(std::vector<std::string>& files, finyl_track& t);
 
 void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size);
 

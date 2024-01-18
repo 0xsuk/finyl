@@ -90,9 +90,9 @@ void slide(SDL_Renderer* renderer, SDL_Texture* texture, int xdiff) {
   }
 }
 
-void draw_wave(SDL_Renderer* renderer, finyl_track* t, int x, int i) {
-  if (t->channels_size == 1) {
-    float sample = get_scaled_sample(t->channels[0], i);
+void draw_wave(SDL_Renderer* renderer, finyl_track& t, int x, int i) {
+  if (t.channels.size() == 1) {
+    float sample = get_scaled_sample(t.channels[0], i);
     int y = wave_height_half - sample*wave_height_half;
     SDL_RenderDrawLine(renderer, x, y, x, wave_height_half);
     return;
@@ -100,7 +100,7 @@ void draw_wave(SDL_Renderer* renderer, finyl_track* t, int x, int i) {
   
   int amount0;
   {
-    float sample = get_scaled_sample(t->channels[0], i);
+    float sample = get_scaled_sample(t.channels[0], i);
     amount0 = sample*wave_height_half;
     int y = wave_height_half - amount0;
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); //white
@@ -109,7 +109,7 @@ void draw_wave(SDL_Renderer* renderer, finyl_track* t, int x, int i) {
   }
   
   {
-    float sample = get_scaled_sample(t->channels[1], i);
+    float sample = get_scaled_sample(t.channels[1], i);
     int amount1 = sample*wave_height_half;
     SDL_SetRenderDrawColor(renderer, 100, 100, 250, 255);
     if ((amount0 > 0 && amount1 > 0) || (amount0<0 && amount1<0)) {
@@ -124,7 +124,7 @@ void draw_wave(SDL_Renderer* renderer, finyl_track* t, int x, int i) {
   }
 }
 
-void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t, int starti, int nowi, int range, int draw_range) {
+void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track& t, int starti, int nowi, int range, int draw_range) {
   SDL_SetRenderDrawColor(renderer, 100, 100, 250, 255); // Waveform color
 
   int idraw_offset = range-draw_range;
@@ -136,7 +136,7 @@ void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t,
   
   int prev_pcmi = starti+idraw_offset;
   int beati = finyl_get_quantized_beat_index(t, prev_pcmi);
-  if (t->beats[beati].time * 44.1 < prev_pcmi) {
+  if (t.beats[beati].time * 44.1 < prev_pcmi) {
     beati++;
   }
   for (int i = idraw_offset; i < idraw_offset_end; i=i+wave_iteration_margin) {
@@ -144,7 +144,7 @@ void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t,
     
     int pcmi = i+starti;
     
-    bool has_pcm = pcmi>=0 && pcmi < t->length;
+    bool has_pcm = pcmi>=0 && pcmi < t.length;
     if (!has_pcm) {
       SDL_RenderDrawLine(renderer, x, wave_height_half, x, wave_height_half);
       continue;
@@ -152,10 +152,10 @@ void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t,
     
     draw_wave(renderer, t, x, pcmi);
     
-    int beat_pcmi = t->beats[beati].time * 44.1;
+    int beat_pcmi = t.beats[beati].time * 44.1;
     if (prev_pcmi <= beat_pcmi && beat_pcmi < pcmi) {
       SDL_Rect rect = {x-1, 0, 1, wave_height};
-      if (t->beats[beati].number == 1) {
+      if (t.beats[beati].number == 1) {
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
       } else if (wave_iteration_margin < 200) {
         SDL_SetRenderDrawColor(renderer, 150, 150, 150, 255);
@@ -168,7 +168,7 @@ void draw_waveform(SDL_Renderer* renderer, SDL_Texture* texture, finyl_track* t,
   }
 }
 
-int plus_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track* t, int nowi, int range, int wave_y, int previ) {
+int plus_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track& t, int nowi, int range, int wave_y, int previ) {
   SDL_SetRenderTarget(renderer, texture);
   int starti = nowi - (int)range/2;
   int draw_range = starti - previ;
@@ -187,7 +187,7 @@ int plus_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track* t, 
   return newprevi;
 }
 
-void render_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track* t, int nowi, int range, int wave_y) {
+void render_waveform(SDL_Renderer *renderer, SDL_Texture* texture, finyl_track& t, int nowi, int range, int wave_y) {
   SDL_SetRenderTarget(renderer, texture);
   int starti = nowi - (int)range/2;
 
@@ -259,7 +259,7 @@ void add_track_to_free(finyl_track* t) {
 
 void free_tracks() {
   for (int i = 0; i<tracks_to_free_tail; i++) {
-    finyl_free_track(tracks_to_free[i]);
+    delete tracks_to_free[i];
   }
   tracks_to_free_tail = 0;
 }
@@ -317,21 +317,21 @@ int interface() {
     free_tracks();
     if (render_adeck) {
       int nowi = (int)adeck->index;
-      render_waveform(renderer, awave_texture, adeck, nowi, wave_range, 0);
+      render_waveform(renderer, awave_texture, *adeck, nowi, wave_range, 0);
       render_adeck = false;
       previ_adeck = nowi - (int)wave_range/2;
     } else if (adeck != NULL) {
-      previ_adeck = plus_waveform(renderer, awave_texture, adeck, (int)adeck->index, wave_range, 0, previ_adeck);
+      previ_adeck = plus_waveform(renderer, awave_texture, *adeck, (int)adeck->index, wave_range, 0, previ_adeck);
       render_static_grids(renderer, astatic_grid_texture, adeck, wave_range, 0);
     }
     
     if (render_bdeck) {
       int nowi = (int)bdeck->index;
-      render_waveform(renderer, bwave_texture, bdeck, nowi, wave_range, wave_height+10);
+      render_waveform(renderer, bwave_texture, *bdeck, nowi, wave_range, wave_height+10);
       render_bdeck = false;
       previ_bdeck = nowi - (int)wave_range/2;;
     } else if (bdeck != NULL) {
-      previ_bdeck = plus_waveform(renderer, bwave_texture, bdeck, (int)bdeck->index, wave_range, wave_height+10, previ_bdeck);
+      previ_bdeck = plus_waveform(renderer, bwave_texture, *bdeck, (int)bdeck->index, wave_range, wave_height+10, previ_bdeck);
       render_static_grids(renderer, bstatic_grid_texture, bdeck, wave_range, wave_height + 10);
     }
     

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <openssl/md5.h>
 #include <stdio.h>
+#include <string>
 #include "cJSON.h"
 #include "util.h"
 
@@ -37,22 +38,19 @@ void memory_usage() {
   system(command);
 }
 
-void join_path(char* dst, char* path1, char* path2) {
-  if (path1 == NULL && path2 == NULL) {
-    return;
+std::string join_path(char* path1, char* path2) {
+  if (path1 == nullptr && path2 == nullptr) {
+    return "";
   }
-  if (path1 == NULL && path2 != NULL) {
-    strcpy(dst, path2);
-    return;
+  if (path1 == nullptr && path2 != nullptr) {
+    return path2;
   }
-  if (path1 != NULL && path2 == NULL) {
-    strcpy(dst, path1);
-    return;
+  if (path1 != nullptr && path2 == nullptr) {
+    return path1;
   }
   //then (path1 != NULL && path2 != NULL)
   if (strlen(path2) == 1 && path2[0] == '/') {
-    strcpy(dst, path1);
-    return;
+    return path1;
   }
 
   //then path1!=NULL && path2.len > 0
@@ -66,46 +64,49 @@ void join_path(char* dst, char* path1, char* path2) {
     start_with_slash = true;
   }
 
-  strcpy(dst, path1);
+  std::string dst = path1;
   if (end_with_slash && start_with_slash) {
     // path1/+/path2
-    strcat(dst, &path2[1]);
-    return;
+    dst += &path2[1];
+    return dst;
   }
   if ((end_with_slash && !start_with_slash) || (!end_with_slash && start_with_slash)) {
     // path1/ + path2
     // path1 + /path2
-    strcat(dst, path2);
-    return;
+    dst += path2;
+    return dst;
   }
   //then path1 + path2
-  strcat(dst, "/");
-  strcat(dst, path2);
+  dst += "/";
+  dst += path2;
+  return dst;
 }
 
-void generateRandomString(char* badge, size_t size) {
+std::string generate_random_string(size_t size) {
+  std::string badge;
   char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   srand(time(NULL));
   
   int i;
-  for (i = 0; i < size - 1; ++i) {
+  for (i = 0; i < size; ++i) {
     int index = rand() % (sizeof(characters) - 1);
-    badge[i] = characters[index];
+    badge.push_back(characters[index]);
   }
-  badge[size - 1] = '\0';
+  
+  return badge;
 }
 
-void compute_md5(const char *filepath, char *dst) {
+std::string compute_md5(std::string& filepath) {
   unsigned char c[MD5_DIGEST_LENGTH];
   int i;
-  FILE *inFile = fopen(filepath, "rb");
+  FILE *inFile = fopen(filepath.data(), "rb");
   MD5_CTX mdContext;
   int bytes;
   unsigned char data[1024];
 
   if (inFile == NULL) {
-    printf("%s can't be opened.\n", filepath);
-    return;
+    printf("%s can't be opened.\n", filepath.data());
+    return "";
   }
 
   MD5_Init(&mdContext);
@@ -113,12 +114,16 @@ void compute_md5(const char *filepath, char *dst) {
     MD5_Update(&mdContext, data, bytes);
   MD5_Final(c,&mdContext);
 
+  std::string dst;
+  dst.reserve(32);
   for(i = 0; i < MD5_DIGEST_LENGTH; i++) {
     sprintf(&dst[i*2], "%02x", (unsigned int)c[i]);
   }
   dst[32] = '\0';
   
   fclose(inFile);
+
+  return dst;
 }
 
 int find_char_last(char* str, char c) {
@@ -132,6 +137,16 @@ int find_char_last(char* str, char c) {
     return -1;
   }
   return (unsigned)(last - str);
+}
+
+std::string cJSON_get_string(cJSON* json, char* key) {
+  return cJSON_GetObjectItem(json, key)->valuestring;
+}
+
+void cJSON_copy(std::string& dest, cJSON* json, char* key) {
+ char* item = cJSON_GetObjectItem(json, key)->valuestring;
+
+ dest = item;
 }
 
 //copy only the dest amount of src to dest

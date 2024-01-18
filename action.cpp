@@ -14,7 +14,7 @@ void loop_in_now(finyl_track* t) {
     return;
   }
 
-  t->loop_in = finyl_get_quantized_index(t, now);
+  t->loop_in = finyl_get_quantized_index(*t, now);
   t->loop_active = false;
 }
 
@@ -24,7 +24,7 @@ void loop_out_now(finyl_track* t) {
     return;
   }
 
-  auto tmp = finyl_get_quantized_index(t, now);
+  auto tmp = finyl_get_quantized_index(*t, now);
   if (tmp <= t->loop_in) {
     return;
   }

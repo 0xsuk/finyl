@@ -30,33 +30,32 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
   finyl_track* before = *dest;
   
   finyl_track* t = new finyl_track;
-  if (get_track(t, usb, tid) == -1) {
+  if (get_track(*t, usb, tid) == -1) {
     printf("failed\n");
     return;
   }
   
-  
-  if (t->meta.channels_size < n) {
-    finyl_free_track(t);
+  if (t->meta.channel_filepaths.size() < n) {
     printf("not enough channels\n");
     return;
   }
   
-  char* filepaths[max(n, 1)];
+  std::vector<std::string> filepaths;
+  filepaths.resize(max(n, 1));
   if (n > 0) {
-    for (int i = 0; i<min(t->meta.channels_size, n); i++) {
+    for (int i = 0; i<min((int)t->meta.channel_filepaths.size(), n); i++) {
       filepaths[i] = t->meta.channel_filepaths[i];
     }
   } else {
     filepaths[0] = t->meta.filepath;
-    n = 1;
   }
-  if (finyl_read_channels_from_files(filepaths, n, t) == -1) {
+  
+  if (finyl_read_channels_from_files(filepaths, *t) == -1) {
     return;
   }
   
-  printf("%s\n", t->meta.filename);
-  
+  printf("%s\n", t->meta.filename.data());
+
   *dest = t;
   if (deck == finyl_a) {
     render_adeck = true;
@@ -64,7 +63,7 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
     render_bdeck = true;
   }
 
-  if (before != NULL) {
+  if (before != nullptr) {
     add_track_to_free(before);
   }
 }
@@ -212,7 +211,7 @@ void* serial(void* args) {
   printf("serial\n");
   
   if (serialPort < 0) {
-    printf("Error %i from open: %s\n", errno, strerror(errno));
+    printf("Error %i from serial open: %s\n", errno, strerror(errno));
     return NULL;
   }
 
@@ -343,8 +342,8 @@ void handleKey(char x) {
     }
     break;
   case 'p':
-    print_track(adeck);
-    print_track(bdeck);
+    print_track(*adeck);
+    print_track(*bdeck);
     break;
   case 'a':
     adeck->speed = adeck->speed + 0.01;
@@ -359,12 +358,12 @@ void handleKey(char x) {
     bdeck->speed = bdeck->speed - 0.01;
     break;
   case 't': {
-    adeck->index = finyl_get_quantized_index(adeck, adeck->index);
+    adeck->index = finyl_get_quantized_index(*adeck, adeck->index);
     printf("adeck->index %lf\n", adeck->index);
     break;
   }
   case 'y': {
-    bdeck->index = finyl_get_quantized_index(bdeck, bdeck->index);
+    bdeck->index = finyl_get_quantized_index(*bdeck, bdeck->index);
     printf("bdeck->index %lf\n", bdeck->index);
     break;
   }

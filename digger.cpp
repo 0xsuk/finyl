@@ -5,40 +5,53 @@
 #include <dirent.h>
 #include "util.h"
 
-void list_playlists() {
-  finyl_playlist* pls;
-  int size = get_playlists(&pls, usb);
 
-  if (size == -1) {
+template<typename T>
+using unmarshal_func = void (*)(cJSON*, T&);
+
+template<typename T>
+static void make_objs(cJSON* json, std::vector<T>& arr, char* key, unmarshal_func<T> f) {
+  cJSON* listj = cJSON_GetObjectItem(json, key);
+  int size = cJSON_GetArraySize(listj);
+
+  arr.resize(size);
+  for (int i = 0; i<size; i++) {
+    cJSON* j = cJSON_GetArrayItem(listj, i);
+    f(j, arr[i]);
+  }
+}
+
+
+void list_playlists() {
+  std::vector<finyl_playlist> pls;
+  int status = get_playlists(pls, usb);
+  
+  if (status == -1) {
     return;
   }
   
   printf("\n");
-  for (int i = 0; i<size; i++) {
-    printf("%d %s\n", pls[i].id, pls[i].name);
+  for (int i = 0; i<pls.size(); i++) {
+    printf("%d %s\n", pls[i].id, pls[i].name.data());
 
   }
-
-  free_playlists(pls, size);
 }
 
 void list_playlist_tracks(int pid) {
-  finyl_track_meta* tms;
-  int size = get_playlist_tracks(&tms, usb, pid);
+  std::vector<finyl_track_meta> tms;
+  int status = get_playlist_tracks(tms, usb, pid);
 
-  if (size == -1) {
+  if (status == -1) {
     return;
   }
   
   printf("\n");
-  for (int i = 0; i<size; i++) {
-    printf("%d %d %d %s\n", tms[i].id, tms[i].bpm, tms[i].channels_size, tms[i].title);
+  for (int i = 0; i<tms.size(); i++) {
+    printf("%d %d %d %s\n", tms[i].id, tms[i].bpm, (int)tms[i].channel_filepaths.size(), tms[i].title.data());
   }
-
-  finyl_free_track_metas(tms, size);
 }
 
-bool match(char* hash, char* filename) {
+bool match(std::string hash, char* filename) {
   int dot = find_char_last(filename, '.');
   if (dot == -1) {
     return false;
@@ -53,188 +66,101 @@ bool match(char* hash, char* filename) {
   }
   
   if (dot - under == 33) {
-    if (strncmp(hash, &filename[under+1], 32) == 0) {
+    if (strncmp(hash.data(), &filename[under+1], 32) == 0) {
       return true;
     }
   }
   return false;
 }
 
-void set_channels_filepaths(finyl_track_meta* tm, char* root) {
-  char hash[32];
-  compute_md5(tm->filepath, hash);
+void set_channels_filepaths(finyl_track_meta& tm, std::string root) {
+  std::string hash = compute_md5(tm.filepath);
 
-  DIR* d = opendir(root);
+  DIR* d = opendir(root.data());
   struct dirent* dir;
   if (d) {
-    int channels_size = 0;
     while ((dir = readdir(d)) != NULL) {
       if (match(hash, dir->d_name)) {
-        int offset = 0;
-        if (root[strlen(root)] != '/') {
-          offset = 1;
-        }
-        int flen = strlen(root) + strlen(dir->d_name) + offset;
-        char* f = (char*)malloc(flen + 1);
-        join_path(f, root, dir->d_name);
-        f[flen] = '\0';
-        tm->channel_filepaths[channels_size] = f;
-        channels_size++;
-        tm->channels_size = channels_size;
+        auto f = join_path(root.data(), dir->d_name);
+        tm.channel_filepaths.push_back(f);
       }
     }
     closedir(d);
   }
 }
 
-void free_playlists(finyl_playlist* pls, int size) {
-  for (int i = 0; i<size; i++) {
-    free(pls[i].name);
-  }
-
-  free(pls);
+static void unmarshal_playlist(cJSON* pj, finyl_playlist& p) {
+  p.name = cJSON_get_string(pj, "name");
+  p.id = cJSON_GetObjectItem(pj, "id")->valueint;
 }
 
-static int unmarshal_playlist(cJSON* pj, finyl_playlist* p) {
-  cJSON_malloc_cpy(pj, "name", &p->name);
-  p->id = cJSON_GetObjectItem(pj, "id")->valueint;
-
-  return 0;
+static void make_playlists(cJSON* json, std::vector<finyl_playlist>& pls) {
+  make_objs(json, pls, "playlists", &unmarshal_playlist);
 }
 
-//returns size, -1 for error;
-static int make_playlists(cJSON* json, finyl_playlist** pls) {
-  cJSON* playlistsj = cJSON_GetObjectItem(json, "playlists");
-  int playlists_size = cJSON_GetArraySize(playlistsj);
-  *pls = (finyl_playlist*)malloc(sizeof(finyl_playlist) * playlists_size);
-
-  finyl_playlist* _pls = *pls;
-  
-  for (int i = 0; i<playlists_size; i++) {
-    cJSON* pj = cJSON_GetArrayItem(playlistsj, i);
-    unmarshal_playlist(pj, &_pls[i]);
-  }
-
-  return playlists_size;
-}
-
-static int unmarshal_track_meta(cJSON* metaj, finyl_track_meta* tm) {
-  tm->id = cJSON_GetObjectItem(metaj, "id")->valueint;
-  tm->musickeyid = cJSON_GetObjectItem(metaj, "musickeyid")->valueint;
-  tm->bpm = cJSON_GetObjectItem(metaj, "tempo")->valueint;
-  tm->filesize = cJSON_GetObjectItem(metaj, "filesize")->valueint;
+static void unmarshal_track_meta(cJSON* metaj, finyl_track_meta& tm) {
+  tm.id = cJSON_GetObjectItem(metaj, "id")->valueint;
+  tm.musickeyid = cJSON_GetObjectItem(metaj, "musickeyid")->valueint;
+  tm.bpm = cJSON_GetObjectItem(metaj, "tempo")->valueint;
+  tm.filesize = cJSON_GetObjectItem(metaj, "filesize")->valueint;
     
-  cJSON_malloc_cpy(metaj, "title", &tm->title);
-  cJSON_malloc_cpy(metaj, "filepath", &tm->filepath);
-  cJSON_malloc_cpy(metaj, "filename", &tm->filename);
-  
-  return 0;
+  tm.title = cJSON_get_string(metaj, "title");
+  tm.filepath = cJSON_get_string(metaj, "filepath");
+  tm.filename = cJSON_get_string(metaj, "filename");
 }
 
-static int make_track_meta(cJSON* metaj, finyl_track_meta* tm) {
-  finyl_init_track_meta(tm);
-  unmarshal_track_meta(metaj, tm);
-  return 0;
+static void make_playlist_tracks(cJSON* json, std::vector<finyl_track_meta>& tms) {
+  make_objs(json, tms, "tracks", &unmarshal_track_meta);
 }
 
-static int make_track_metas(cJSON* tracksj, finyl_track_meta** tms) {
-  int tms_size = cJSON_GetArraySize(tracksj);
-  *tms = (finyl_track_meta*)malloc(sizeof(finyl_track_meta) * tms_size);
-  finyl_track_meta* _tms = *tms;
-
-  for (int i = 0; i<tms_size; i++) {
-    cJSON* metaj = cJSON_GetArrayItem(tracksj, i);
-    make_track_meta(metaj, &_tms[i]);
-  }
-
-  return tms_size;
-}
-
-static int make_playlist_tracks(cJSON* json, finyl_track_meta** tms) {
-  cJSON* tracksj = cJSON_GetObjectItem(json, "tracks");
-  int tms_size = make_track_metas(tracksj, tms);
-  return tms_size;
-}
-
-static int unmarshal_cue(cJSON* cuej, finyl_cue* cue) {
+static void unmarshal_cue(cJSON* cuej, finyl_cue& cue) {
   cJSON* typej = cJSON_GetObjectItem(cuej, "type");
-  cue->type = typej->valueint;
+  cue.type = typej->valueint;
   cJSON* timej = cJSON_GetObjectItem(cuej, "time");
-  cue->time = timej->valueint;
-
-  return 0;
+  cue.time = timej->valueint;
 }
 
-static int make_cues(cJSON* trackj, std::vector<finyl_cue>* cues) {
-  cJSON* cuesj = cJSON_GetObjectItem(trackj, "cues");
-  int cues_size = cJSON_GetArraySize(cuesj);
-  
-  cues->resize(cues_size);
-  
-  for (int i = 0; i<cues_size; i++) {
-    cJSON* cuej = cJSON_GetArrayItem(cuesj, i);
-    unmarshal_cue(cuej, &((*cues)[i]));
-  }
-
-  return cues_size;
+static void make_cues(cJSON* trackj, std::vector<finyl_cue>& cues) {
+  make_objs(trackj, cues, "cues", &unmarshal_cue);
 }
 
-static int unmarshal_beat(cJSON* beatj, finyl_beat* beat) {
+static void unmarshal_beat(cJSON* beatj, finyl_beat& beat) {
   cJSON* timej = cJSON_GetObjectItem(beatj, "time");
-  beat->time = timej->valueint;
+  beat.time = timej->valueint;
   cJSON* numberj = cJSON_GetObjectItem(beatj, "num");
-  beat->number = numberj->valueint;
-
-  return 0;
+  beat.number = numberj->valueint;
 }
 
-static int make_beats(cJSON* trackj, std::vector<finyl_beat>* beats) {
-  cJSON* beatsj = cJSON_GetObjectItem(trackj, "beats");
-  int beats_size = cJSON_GetArraySize(beatsj);
-  
-  beats->resize(beats_size);
-  
-  for (int i = 0; i<beats_size; i++) {
-    cJSON* beatj = cJSON_GetArrayItem(beatsj, i);
-    unmarshal_beat(beatj, &(*beats)[i]);
-  }
-
-  return beats_size;
+static void make_beats(cJSON* trackj, std::vector<finyl_beat>& beats) {
+  make_objs(trackj, beats, "beats", &unmarshal_beat);
 }
 
-static int unmarshal_track(cJSON* json, finyl_track* t) {
+static void unmarshal_track(cJSON* json, finyl_track& t) {
   cJSON* trackj = cJSON_GetObjectItem(json, "track");
   cJSON* metaj = cJSON_GetObjectItem(trackj, "t"); //meta
 
-  unmarshal_track_meta(metaj, &t->meta);
-  make_cues(trackj, &t->cues);
-  make_beats(trackj, &t->beats);
-  return 0;
+  unmarshal_track_meta(metaj, t.meta);
+  make_cues(trackj, t.cues);
+  make_beats(trackj, t.beats);
 }
 
-static int make_track(cJSON* json, finyl_track* t) {
-  finyl_init_track(t);
+static void make_track(cJSON* json, finyl_track& t) {
   unmarshal_track(json, t);
 
-  char root[500];
-  join_path(root, usb, "finyl/separated/hdemucs_mmi");
-  set_channels_filepaths(&t->meta, root);
-    
-  return 0;
+  std::string root = join_path(usb.data(), "finyl/separated/hdemucs_mmi");
+  set_channels_filepaths(t.meta, root);
 }
 
-static int unmarshal_error(cJSON* json, char* error) {
+static std::string unmarshal_error(cJSON* json) {
   cJSON* errorj = cJSON_GetObjectItem(json, "error");
   if (cJSON_IsString(errorj)) {
-    char* _error = errorj->valuestring;
-    strcpy(error, _error);
-    return 1;
+    return errorj->valuestring;
   }
 
-  return 0;
+  return "";
 }
 
-static int run_command(FILE** fp, char* badge, char* usb, char* op) {
+static int run_command(FILE** fp, std::string badge, std::string usb, std::string op) {
   char exec[128] = "";
   if (is_raspi()) {
     strcat(exec, "./finyl-digger");
@@ -242,11 +168,11 @@ static int run_command(FILE** fp, char* badge, char* usb, char* op) {
     strcat(exec, "java -jar crate-digger/target/finyl-1.0-SNAPSHOT.jar");
   }
   char command[1000];
-  snprintf(command, sizeof(command), "%s %s %s %s", exec, badge, usb, op);
+  snprintf(command, sizeof(command), "%s %s %s %s", exec, badge.data(), usb.data(), op.data());
   
   *fp = popen(command, "r");
-  if (fp == NULL) {
-    printf("failed to open stream for usb=%s and op=%s\n", usb, op);
+  if (fp == nullptr) {
+    printf("failed to open stream for usb=%s and op=%s\n", usb.data(), op.data());
     return -1;
   }
 
@@ -272,24 +198,20 @@ int close_command(FILE* fp) {
   return 0;
 }
 
-static bool badge_valid(cJSON* json, char* badge)  {
-  cJSON* badgej = cJSON_GetObjectItem(json, "badge");
-  char* _badge = badgej->valuestring;
-
-  if (strcmp(badge, _badge) == 0) {
+static bool badge_valid(cJSON* json, std::string badge)  {
+  if (badge == cJSON_get_string(json, "badge")) {
     return true;
   }
-
   return false;
 }
 
 //1 for not valid badge. -1 for command error
-static int run_digger(cJSON** json, char* usb, char* op) {
-  FILE* fp;
-  char badge[6];
-  generateRandomString(badge, sizeof(badge));
+static int run_digger(cJSON** json ,std::string usb, std::string op) {
+  std::string badge = generate_random_string(5);
 
-  if (run_command(&fp, badge, usb, op) == -1) {
+  FILE* fp;
+  auto status = run_command(&fp, badge, usb, op);
+  if (status == -1) {
     return -1;
   }
   
@@ -308,18 +230,16 @@ static int run_digger(cJSON** json, char* usb, char* op) {
 
 
 int has_error(cJSON* json) {
-  char error[1000];
-  int haserror = unmarshal_error(json, error);
-  if (haserror) {
-    printf("crate-digger error: %s\n", error);
+  auto error = unmarshal_error(json);
+  if (error != "") {
+    printf("crate-digger error: %s\n", error.data());
     return 1;
   }
 
   return 0;
 }
 
-//return size of playlists, or -1 for error
-int get_playlists(finyl_playlist** pls, char* usb) {
+int get_playlists(std::vector<finyl_playlist>& pls, std::string usb) {
   cJSON* json;
   int status = run_digger(&json, usb, "playlists");
   if (status == -1) return -1;
@@ -333,12 +253,12 @@ int get_playlists(finyl_playlist** pls, char* usb) {
     return -1;
   }
   
-  int playlists_size = make_playlists(json, pls);
+  make_playlists(json, pls);
   cJSON_Delete(json);
-  return playlists_size;
+  return 0;
 }
 
-int get_track(finyl_track* t, char* usb, int tid) {
+int get_track(finyl_track& t, std::string usb, int tid) {
   cJSON* json;
   char op[30];
   snprintf(op, sizeof(op), "track %d", tid);
@@ -371,7 +291,7 @@ int get_track(finyl_track* t, char* usb, int tid) {
   /* return 0; */
 /* } */
 
-int get_playlist_tracks(finyl_track_meta** tms, char* usb, int pid) {
+int get_playlist_tracks(std::vector<finyl_track_meta>& tms, std::string usb, int pid) {
   cJSON* json;
   char op[30];
   snprintf(op, sizeof(op), "playlist-tracks %d", pid);
@@ -386,15 +306,13 @@ int get_playlist_tracks(finyl_track_meta** tms, char* usb, int pid) {
     return -1;
   }
   
-  int tms_size = make_playlist_tracks(json, tms);
+  make_playlist_tracks(json, tms);
   cJSON_Delete(json);
 
-  finyl_track_meta* _tms = *tms;
-  char root[500];
-  join_path(root, usb, "finyl/separated/hdemucs_mmi");
-  for (int i = 0; i<tms_size; i++) {
-    set_channels_filepaths(&_tms[i], root);
+  std::string root = join_path(usb.data(), "finyl/separated/hdemucs_mmi");
+  for (int i = 0; i<tms.size(); i++) {
+    set_channels_filepaths(tms[i], root);
   }
   
-  return tms_size;
+  return 0;
 }
