@@ -51,7 +51,7 @@ void list_playlist_tracks(int pid) {
   }
 }
 
-bool match(std::string hash, char* filename) {
+bool match(std::string_view hash, char* filename) {
   int dot = find_char_last(filename, '.');
   if (dot == -1) {
     return false;
@@ -60,13 +60,13 @@ bool match(std::string hash, char* filename) {
   strncpy(f, filename, dot);
   f[dot] = '\0';
 
-  int under = find_char_last(f, '-');
-  if (under == -1) {
+  int hyphen = find_char_last(f, '-');
+  if (hyphen == -1) {
     return false;
   }
   
-  if (dot - under == 33) {
-    if (strncmp(hash.data(), &filename[under+1], 32) == 0) {
+  if (dot - hyphen == 33) {
+    if (strncmp(hash.data(), &filename[hyphen+1], 32) == 0) {
       return true;
     }
   }

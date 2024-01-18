@@ -23,6 +23,21 @@ finyl_channel_buffers b_channel_buffers;
 snd_pcm_uframes_t period_size;
 snd_pcm_uframes_t period_size_2;
 
+finyl_track_meta::finyl_track_meta(): id(0),
+                                      bpm(0),
+                                      musickeyid(0),
+                                      filesize(0) {};
+
+finyl_track::finyl_track(): meta(),
+                            length(0),
+                            playing(false),
+                            index(0),
+                            speed(1),
+                            loop_active(false),
+                            loop_in(-1),
+                            loop_out(-1) {};
+
+
 int finyl_get_quantized_beat_index(finyl_track& t, int index) {
   if (t.beats.size() <= 0) {
     return -1;
@@ -71,7 +86,7 @@ double finyl_get_quantized_index(finyl_track& t, int index) {
   return v;
 }
 
-finyl_sample finyl_get_sample(finyl_track& t, finyl_channel& c) {
+finyl_sample finyl_get_sample(finyl_track& t, int chan_index) {
   int position = (int)t.index;
   if (position >= t.length || position < 0) {
     return 0;
@@ -79,7 +94,7 @@ finyl_sample finyl_get_sample(finyl_track& t, finyl_channel& c) {
   int ichunk = position / CHUNK_SIZE;
   int isample = position - (CHUNK_SIZE * ichunk);
 
-  finyl_chunk chunk = c[ichunk];
+  finyl_chunk& chunk = t.channels[chan_index][ichunk];
   finyl_sample sample = chunk[isample];
 
   return sample;
@@ -89,7 +104,7 @@ finyl_sample finyl_get_sample1(finyl_channel& c, int position) {
   int ichunk = position / CHUNK_SIZE;
   int isample = position - (CHUNK_SIZE * ichunk);
 
-  finyl_chunk chunk = c[ichunk];
+  finyl_chunk& chunk = c[ichunk];
   finyl_sample sample = chunk[isample];
   return sample;
 }
@@ -138,7 +153,7 @@ static int open_pcm_stream(FILE** fp, std::string_view filename) {
 static int read_pcm(FILE* fp, finyl_channel& channel, int& length) {
   while (1) {
     finyl_chunk chunk;
-    chunk.reserve(CHUNK_SIZE);
+    chunk.resize(CHUNK_SIZE);
     size_t count = fread(chunk.data(), sizeof(finyl_sample), CHUNK_SIZE, fp);
     chunk.resize(count);
     channel.push_back(std::move(chunk));
@@ -161,9 +176,7 @@ static int read_channel(std::string_view file, finyl_channel& channel, int& leng
   }
   
   status = read_pcm(fp, channel, length);
-  if (status == -1) {
-    return -1;
-  } else if (status == 1) {
+  if (status == 1) {
     return 1;
   }
   
@@ -179,7 +192,6 @@ int finyl_read_channels_from_files(std::vector<std::string>& files, finyl_track&
     //   free_channels(t->channels, t->channels_size, t->chunks_size);
     //   return -1;
     int status = read_channel(files[i], channel, length);
-    printf("yes?\n");
     if (status == -1 || status == 1) {
       return -1;
     }
@@ -221,8 +233,8 @@ static void make_channel_buffers(finyl_channel_buffers& channel_buffers, finyl_t
     }
 
     for (int c = 0; c<t.channels.size(); c++) {
-      auto buf = channel_buffers[c];
-      buf[i] = finyl_get_sample(t, t.channels[c]);
+      auto& buf = channel_buffers[c];
+      buf[i] = finyl_get_sample(t, c);
       buf[i+1] = buf[i];
     }
   }

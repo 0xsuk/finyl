@@ -53,7 +53,7 @@ int get_pixel(int ioffset, int range, int window_width) {
   return (ioffset / (float)range) * window_width;
 }
 
-float get_scaled_sample(finyl_channel c, int position) {
+float get_scaled_sample(finyl_channel& c, int position) {
   float y = finyl_get_sample1(c, position) / 32768.0;
   return y;
 }

@@ -42,29 +42,32 @@ struct finyl_playlist{
 };
 
 struct finyl_track_meta {
-  int id = 0;
-  int bpm = 0;
-  int musickeyid = 0;
-  int filesize = 0;
+  int id;
+  int bpm;
+  int musickeyid;
+  int filesize;
   std::string title;
   std::string filename; //caution: filename is compelte. filepath is sometimes incomplete. just use filepath
   std::string filepath;
   std::vector<std::string> channel_filepaths;
+
+  finyl_track_meta();
 }; //used in track listing in playlist
 
 struct finyl_track{
   finyl_track_meta meta;
-  // int chunks_size; //the number of chunks in a channel
-  int length = 0; //number of samples per channel
-  bool playing = false;
-  double index = 0;
-  double speed = 0;
-  bool loop_active = false;
-  double loop_in = -1; //index
-  double loop_out = -1; //index
+  int length; //number of samples per channel
+  bool playing;
+  double index;
+  double speed;
+  bool loop_active;
+  double loop_in; //index
+  double loop_out; //index
   std::vector<finyl_channel> channels;
   std::vector<finyl_cue> cues;
   std::vector<finyl_beat> beats;
+
+  finyl_track();
 };
 
 enum finyl_track_target{
@@ -94,7 +97,7 @@ extern finyl_track* ddeck;
 
 bool file_exist(std::string file);
 
-finyl_sample finyl_get_sample(finyl_track& t, finyl_channel& c);
+finyl_sample finyl_get_sample(finyl_track& t, int chan_index);
 finyl_sample finyl_get_sample1(finyl_channel& c, int position);
 
 int finyl_get_quantized_beat_index(finyl_track& t, int index);

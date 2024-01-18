@@ -33,7 +33,6 @@ void print_track(finyl_track& t) {
   printf("\tfilename: %s\n", t.meta.filename.c_str());
   printf("\tbpm: %d\n", t.meta.bpm);
   printf("\teffective bpm: %lf\n", t.meta.bpm * t.speed);
-  // printf("\tchunks_size: %d\n", t->chunks_size);
   printf("\tlength: %d\n", t.length);
   printf("\tloop_active: %d\n", t.loop_active);
   printf("\tloop_in: %lf\n", t.loop_in);
@@ -44,5 +43,4 @@ void print_track(finyl_track& t) {
   printf("\tbeats_size:%d\n", (int)t.beats.size());
   printf("\tplaying: %d\n", t.playing);
   printf("}\n");
-  printf("size of chunks is %d\n", (int)t.channels[0].size());
 }
