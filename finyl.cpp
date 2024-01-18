@@ -5,7 +5,6 @@
 #include <sys/wait.h>
 #include <string_view>
 #include <memory>
-#include "util.h"
 
 bool finyl_running = true;
 
@@ -109,22 +108,6 @@ finyl_sample finyl_get_sample1(finyl_channel& c, int position) {
   return sample;
 }
 
-// static finyl_chunk make_chunk() {
-//   finyl_chunk chunk = (finyl_chunk)malloc(CHUNK_SIZE * sizeof(finyl_sample));
-//   if (chunk == NULL) {
-//     printf("failed to allocate chunk\n");
-//   }
-//   return chunk;
-// }
-
-// static finyl_channel make_channel() {
-//   finyl_channel c = (finyl_channel)malloc(MAX_CHUNKS_SIZE * sizeof(finyl_chunk));
-//   if (c == NULL) {
-//     printf("failed to allocate channel");
-//   }
-//   return c;
-// }
-
 bool file_exist(std::string_view file) {
   if (access(file.data(), F_OK) == -1) {
     return false;
@@ -188,9 +171,6 @@ int finyl_read_channels_from_files(std::vector<std::string>& files, finyl_track&
   for (size_t i = 0; i < files.size(); i++) {
     int length = 0;
     finyl_channel channel;
-    //   printf("failed to allocate memory in finyl_read_channels_from_files\n");
-    //   free_channels(t->channels, t->channels_size, t->chunks_size);
-    //   return -1;
     int status = read_channel(files[i], channel, length);
     if (status == -1 || status == 1) {
       return -1;
@@ -353,11 +333,7 @@ void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, s
   resize_buffers();
   
   while (finyl_running) {
-    finyl_handle(); //handle effects of each tracks
-    
-    //handle channels
-    //handle tracks
-    //handle master
+    finyl_handle();
     
     err = snd_pcm_writei(handle, buffer.data(), period_size);
     if (err == -EPIPE) {
