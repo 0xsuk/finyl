@@ -7,12 +7,10 @@
 #define STR(x) STR_IMPL(x)
 std::string usb = STR(USB);
 
-char finyl_output_path[256];
-
-char* get_finyl_output_path() {
-  char* home = getenv("HOME");
-  snprintf(finyl_output_path, sizeof(finyl_output_path), "%s/.finyl-output", home);
-  return finyl_output_path;
+std::string get_finyl_output_path() {
+  std::string home = getenv("HOME");
+  std::string s = home + "/.finyl-output";
+  return s;
 }
 
 void print_track_meta(finyl_track_meta& tm) {

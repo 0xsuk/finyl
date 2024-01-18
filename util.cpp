@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
+#include <string_view>
 #include <openssl/md5.h>
 #include <stdio.h>
 #include <string>
@@ -38,7 +39,7 @@ void memory_usage() {
   system(command);
 }
 
-std::string join_path(char* path1, char* path2) {
+std::string join_path(const char* path1, const char* path2) {
   if (path1 == nullptr && path2 == nullptr) {
     return "";
   }
@@ -96,7 +97,7 @@ std::string generate_random_string(size_t size) {
   return badge;
 }
 
-std::string compute_md5(std::string& filepath) {
+std::string compute_md5(std::string_view filepath) {
   unsigned char c[MD5_DIGEST_LENGTH];
   int i;
   FILE *inFile = fopen(filepath.data(), "rb");
@@ -143,7 +144,7 @@ std::string cJSON_get_string(cJSON* json, char* key) {
   return cJSON_GetObjectItem(json, key)->valuestring;
 }
 
-void cJSON_copy(std::string& dest, cJSON* json, char* key) {
+void cJSON_copy(std::string_view dest, cJSON* json, char* key) {
  char* item = cJSON_GetObjectItem(json, key)->valuestring;
 
  dest = item;
@@ -175,11 +176,11 @@ void cJSON_malloc_cpy(cJSON* json, char* key, char** dest) {
   strcpy(*dest, item);
 }
 
-char* read_file_malloc(char* filename) {
-  FILE* fp = fopen(filename, "rb");
+char* read_file_malloc(std::string_view filename) {
+  FILE* fp = fopen(filename.data(), "rb");
 
   if (fp == NULL) {
-    printf("failed to read from file = %s\n", filename);
+    printf("failed to read from file = %s\n", filename.data());
     return NULL;
   }
 
@@ -207,7 +208,7 @@ char* read_file_malloc(char* filename) {
   return buffer;
 }
 
-cJSON* read_file_malloc_json(char* file) {
+cJSON* read_file_malloc_json(std::string_view file) {
   char* output = read_file_malloc(file);
   cJSON* json  = cJSON_Parse(output);
 

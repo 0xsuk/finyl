@@ -4,7 +4,7 @@
 #include "dev.h"
 #include <dirent.h>
 #include "util.h"
-
+#include <string_view>
 
 template<typename T>
 using unmarshal_func = void (*)(cJSON*, T&);
@@ -73,7 +73,7 @@ bool match(std::string_view hash, char* filename) {
   return false;
 }
 
-void set_channels_filepaths(finyl_track_meta& tm, std::string root) {
+void set_channels_filepaths(finyl_track_meta& tm, std::string_view root) {
   std::string hash = compute_md5(tm.filepath);
 
   DIR* d = opendir(root.data());
@@ -82,7 +82,7 @@ void set_channels_filepaths(finyl_track_meta& tm, std::string root) {
     while ((dir = readdir(d)) != NULL) {
       if (match(hash, dir->d_name)) {
         auto f = join_path(root.data(), dir->d_name);
-        tm.channel_filepaths.push_back(f);
+        tm.channel_filepaths.push_back(std::move(f));
       }
     }
     closedir(d);
@@ -160,7 +160,7 @@ static std::string unmarshal_error(cJSON* json) {
   return "";
 }
 
-static int run_command(FILE** fp, std::string badge, std::string usb, std::string op) {
+static int run_command(FILE** fp, std::string_view badge, std::string_view usb, std::string_view op) {
   char exec[128] = "";
   if (is_raspi()) {
     strcat(exec, "./finyl-digger");
@@ -198,7 +198,7 @@ int close_command(FILE* fp) {
   return 0;
 }
 
-static bool badge_valid(cJSON* json, std::string badge)  {
+static bool badge_valid(cJSON* json, std::string_view badge)  {
   if (badge == cJSON_get_string(json, "badge")) {
     return true;
   }
@@ -206,7 +206,7 @@ static bool badge_valid(cJSON* json, std::string badge)  {
 }
 
 //1 for not valid badge. -1 for command error
-static int run_digger(cJSON** json ,std::string usb, std::string op) {
+static int run_digger(cJSON** json ,std::string_view usb, std::string_view op) {
   std::string badge = generate_random_string(5);
 
   FILE* fp;
@@ -239,7 +239,7 @@ int has_error(cJSON* json) {
   return 0;
 }
 
-int get_playlists(std::vector<finyl_playlist>& pls, std::string usb) {
+int get_playlists(std::vector<finyl_playlist>& pls, std::string_view usb) {
   cJSON* json;
   int status = run_digger(&json, usb, "playlists");
   if (status == -1) return -1;
@@ -258,7 +258,7 @@ int get_playlists(std::vector<finyl_playlist>& pls, std::string usb) {
   return 0;
 }
 
-int get_track(finyl_track& t, std::string usb, int tid) {
+int get_track(finyl_track& t, std::string_view usb, int tid) {
   cJSON* json;
   char op[30];
   snprintf(op, sizeof(op), "track %d", tid);
@@ -291,7 +291,7 @@ int get_track(finyl_track& t, std::string usb, int tid) {
   /* return 0; */
 /* } */
 
-int get_playlist_tracks(std::vector<finyl_track_meta>& tms, std::string usb, int pid) {
+int get_playlist_tracks(std::vector<finyl_track_meta>& tms, std::string_view usb, int pid) {
   cJSON* json;
   char op[30];
   snprintf(op, sizeof(op), "playlist-tracks %d", pid);
