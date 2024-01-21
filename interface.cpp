@@ -53,9 +53,9 @@ int get_pixel(int ioffset, int range, int window_width) {
   return (ioffset / (float)range) * window_width;
 }
 
-float get_scaled_sample(finyl_channel& c, int position) {
-  float y = finyl_get_sample1(c, position) / 32768.0;
-  return y;
+float get_scaled_left_sample(finyl_stem& s, int position) {
+  auto left = finyl_get_left_sample(s, position);
+  return left / 32768.0;
 }
 
 int get_index(int starti, int x, int range) {
@@ -91,8 +91,8 @@ void slide(SDL_Renderer* renderer, SDL_Texture* texture, int xdiff) {
 }
 
 void draw_wave(SDL_Renderer* renderer, finyl_track& t, int x, int i) {
-  if (t.channels.size() == 1) {
-    float sample = get_scaled_sample(t.channels[0], i);
+  if (t.stems_size == 1) {
+    float sample = get_scaled_left_sample(t.stems[0], i);
     int y = wave_height_half - sample*wave_height_half;
     SDL_RenderDrawLine(renderer, x, y, x, wave_height_half);
     return;
@@ -100,7 +100,7 @@ void draw_wave(SDL_Renderer* renderer, finyl_track& t, int x, int i) {
   
   int amount0;
   {
-    float sample = get_scaled_sample(t.channels[0], i);
+    float sample = get_scaled_left_sample(t.stems[0], i);
     amount0 = sample*wave_height_half;
     int y = wave_height_half - amount0;
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); //white
@@ -109,7 +109,7 @@ void draw_wave(SDL_Renderer* renderer, finyl_track& t, int x, int i) {
   }
   
   {
-    float sample = get_scaled_sample(t.channels[1], i);
+    float sample = get_scaled_left_sample(t.stems[1], i);
     int amount1 = sample*wave_height_half;
     SDL_SetRenderDrawColor(renderer, 100, 100, 250, 255);
     if ((amount0 > 0 && amount1 > 0) || (amount0<0 && amount1<0)) {

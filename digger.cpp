@@ -47,7 +47,7 @@ void list_playlist_tracks(int pid) {
   
   printf("\n");
   for (int i = 0; i<tms.size(); i++) {
-    printf("%d %d %d %s\n", tms[i].id, tms[i].bpm, (int)tms[i].channel_filepaths.size(), tms[i].title.data());
+    printf("%d %d %d %s\n", tms[i].id, tms[i].bpm, (int)tms[i].stem_filepaths.size(), tms[i].title.data());
   }
 }
 
@@ -82,7 +82,7 @@ void set_channels_filepaths(finyl_track_meta& tm, std::string_view root) {
     while ((dir = readdir(d)) != NULL) {
       if (match(hash, dir->d_name)) {
         auto f = join_path(root.data(), dir->d_name);
-        tm.channel_filepaths.push_back(std::move(f));
+        tm.stem_filepaths.push_back(std::move(f));
       }
     }
     closedir(d);

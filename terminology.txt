@@ -1,0 +1,2 @@
+channel: same as stereo "channel", one for left one for right
+stem: vocal, inst, drum, whatever

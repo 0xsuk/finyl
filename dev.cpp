@@ -19,8 +19,8 @@ void print_track_meta(finyl_track_meta& tm) {
   printf("bpm is %d\n", tm.bpm);
   printf("title is %s\n", tm.title.c_str());
   printf("filepath is %s\n", tm.filepath.c_str());
-  for (int i = 0; i<tm.channel_filepaths.size(); i++) {
-    printf("%dth channel filepath is %s\n", i, tm.channel_filepaths[i].c_str());
+  for (int i = 0; i<tm.stem_filepaths.size(); i++) {
+    printf("%dth channel filepath is %s\n", i, tm.stem_filepaths[i].c_str());
   }
 }
 
@@ -37,8 +37,39 @@ void print_track(finyl_track& t) {
   printf("\tloop_out: %lf\n", t.loop_out);
   printf("\tindex: %lf\n", t.index);
   printf("\tspeed: %lf\n", t.speed);
-  printf("\tchannels_size: %d\n", (int)t.channels.size());
+  printf("\tstem_size: %d\n", (int)t.stems_size);
   printf("\tbeats_size:%d\n", (int)t.beats.size());
   printf("\tplaying: %d\n", t.playing);
   printf("}\n");
+}
+
+bool is_chunk_same(finyl_chunk& c1, finyl_chunk& c2) {
+  if (c1.size() != c2.size()) return false;
+  for (int i = 0; i<c1.size(); i++) {
+    finyl_sample s1 = c1[i];
+    finyl_sample s2 = c2[i];
+
+    if (s1 != s2) return false;
+  }
+
+  return true;
+}
+
+bool is_stem_same(finyl_stem& s1, finyl_stem& s2) {
+  for (int i = 0; i<s1.size(); i++) {
+    finyl_chunk& c1 = s1[i];
+    finyl_chunk& c2 = s2[i];
+    
+    if (!is_chunk_same(c1, c2)) return false;
+  }
+
+  return true;
+}
+
+void print_is_stem_same(finyl_stem& s1, finyl_stem& s2) {
+  if (is_stem_same(s1, s2)) {
+    printf("stem is same\n");
+  } else {
+    printf("stem is not same\n");
+  }
 }

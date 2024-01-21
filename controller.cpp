@@ -35,7 +35,7 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
     return;
   }
   
-  if (t->meta.channel_filepaths.size() < n) {
+  if (t->meta.stem_filepaths.size() < n) {
     printf("not enough channels\n");
     return;
   }
@@ -43,14 +43,14 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
   std::vector<std::string> filepaths;
   filepaths.resize(max(n, 1));
   if (n > 0) {
-    for (int i = 0; i<min((int)t->meta.channel_filepaths.size(), n); i++) {
-      filepaths[i] = t->meta.channel_filepaths[i];
+    for (int i = 0; i<min((int)t->meta.stem_filepaths.size(), n); i++) {
+      filepaths[i] = t->meta.stem_filepaths[i];
     }
   } else {
     filepaths[0] = t->meta.filepath;
   }
   
-  if (finyl_read_channels_from_files(filepaths, *t) == -1) {
+  if (finyl_read_stems_from_files(filepaths, *t) == -1) {
     return;
   }
   

@@ -15,9 +15,9 @@ finyl_track* ddeck;
 
 finyl_buffer buffer;
 finyl_buffer abuffer;
-finyl_channel_buffers a_channel_buffers;
+finyl_stem_buffers a_stem_buffers;
 finyl_buffer bbuffer;
-finyl_channel_buffers b_channel_buffers;
+finyl_stem_buffers b_stem_buffers;
 
 snd_pcm_uframes_t period_size;
 snd_pcm_uframes_t period_size_2;
@@ -29,6 +29,7 @@ finyl_track_meta::finyl_track_meta(): id(0),
 
 finyl_track::finyl_track(): meta(),
                             length(0),
+                            stems_size(0),
                             playing(false),
                             index(0),
                             speed(1),
@@ -85,27 +86,26 @@ double finyl_get_quantized_index(finyl_track& t, int index) {
   return v;
 }
 
-finyl_sample finyl_get_sample(finyl_track& t, int chan_index) {
-  int position = (int)t.index;
-  if (position >= t.length || position < 0) {
-    return 0;
+std::pair<finyl_sample, finyl_sample> finyl_get_sample(finyl_track& t, int stem_index) {
+  int index = (int)t.index;
+  if (index >= t.length || index < 0) {
+    return {0, 0};
   }
+  int position = index*2; //position is index w.r.t stereo
   int ichunk = position / CHUNK_SIZE;
   int isample = position - (CHUNK_SIZE * ichunk);
 
-  finyl_chunk& chunk = t.channels[chan_index][ichunk];
-  finyl_sample sample = chunk[isample];
-
-  return sample;
+  finyl_chunk& chunk = t.stems[stem_index][ichunk];
+  return {chunk[isample], chunk[isample+1]};
 }
 
-finyl_sample finyl_get_sample1(finyl_channel& c, int position) {
+finyl_sample finyl_get_left_sample(finyl_stem& s, int index) {
+  int position = index*2;
   int ichunk = position / CHUNK_SIZE;
   int isample = position - (CHUNK_SIZE * ichunk);
 
-  finyl_chunk& chunk = c[ichunk];
-  finyl_sample sample = chunk[isample];
-  return sample;
+  finyl_chunk& chunk = s[ichunk];
+  return chunk[isample];
 }
 
 bool file_exist(std::string_view file) {
@@ -116,13 +116,14 @@ bool file_exist(std::string_view file) {
   return true;
 }
 
-static int open_pcm_stream(FILE** fp, std::string_view filename) {
+static int open_pcm(FILE** fp, std::string_view filename) {
   if (!file_exist(filename)) {
     printf("File does not exist: %s\n", filename.data());
     return -1;
   }
   char command[1000];
-  snprintf(command, sizeof(command), "ffmpeg -i \"%s\" -f s16le -ar 44100 -ac 1 -v quiet -", filename.data());
+  //opens interleaved pcm data stream
+  snprintf(command, sizeof(command), "ffmpeg -i \"%s\" -f s16le -ar 44100 -ac 2 -v quiet -", filename.data());
   *fp = popen(command, "r");
   if (fp == nullptr) {
     printf("failed to open stream for %s\n", filename.data());
@@ -132,33 +133,36 @@ static int open_pcm_stream(FILE** fp, std::string_view filename) {
   return 0;
 }
 
-//reads from fp, updates chunks_size, length, channel
-static int read_pcm(FILE* fp, finyl_channel& channel, int& length) {
+//reads from fp, updates chunks_size, length, stem
+static int read_pcm(FILE* fp, finyl_stem& stem, int& length) {
   while (1) {
     finyl_chunk chunk;
     chunk.resize(CHUNK_SIZE);
     size_t count = fread(chunk.data(), sizeof(finyl_sample), CHUNK_SIZE, fp);
     chunk.resize(count);
-    channel.push_back(std::move(chunk));
-    length += count;
+    stem.push_back(std::move(chunk));
+    if (count % 2 != 0) {
+      printf("warning: ffmpeg is expected to output even number of samples\n");
+    }
+    length += count/2;
     if (count < CHUNK_SIZE) {
       return 0;
     }
-    if (channel.size() == MAX_CHUNKS_SIZE) {
+    if (stem.size() == MAX_CHUNKS_SIZE) {
       printf("File is too large\n");
       return 1;
     }
   }
 }
 
-static int read_channel(std::string_view file, finyl_channel& channel, int& length) {
+static int read_stem(std::string_view file, finyl_stem& stem, int& length) {
   FILE* fp;
-  auto status = open_pcm_stream(&fp, file);
+  auto status = open_pcm(&fp, file);
   if (status == -1)  {
     return -1;
   }
   
-  status = read_pcm(fp, channel, length);
+  status = read_pcm(fp, stem, length);
   if (status == 1) {
     return 1;
   }
@@ -166,32 +170,45 @@ static int read_channel(std::string_view file, finyl_channel& channel, int& leng
   return 0;
 }
 
-//each file corresponding to each channel
-int finyl_read_channels_from_files(std::vector<std::string>& files, finyl_track& t) {
+static std::pair<finyl_stem, int> read_stem_from_file(std::string_view file) {
+  int length = 0;
+  finyl_stem stem;
+  int status = read_stem(file, stem, length);
+  if (status == -1 || status == 1) {
+    return {stem, -1};
+  }
+  return {stem, length};
+}
+
+//each file corresponding to each stem
+int finyl_read_stems_from_files(std::vector<std::string>& files, finyl_track& t) {
+  if (files.size() > MAX_STEMS_SIZE) {
+    printf("too many stems. MAX_STEMS_SIZE is %d\n", MAX_STEMS_SIZE);
+    return -1;
+  }
+  
   for (size_t i = 0; i < files.size(); i++) {
-    int length = 0;
-    finyl_channel channel;
-    int status = read_channel(files[i], channel, length);
-    if (status == -1 || status == 1) {
+    printf("reading %dth stem\n", (int)i);
+    auto [stem, length] = read_stem_from_file(files[i]);
+    if (length == -1) {
       return -1;
     }
+
     if (i == 0) {
       t.length = length;
-    } else {
-      if (length != t.length) {
-        printf("all channels have to be the same length\n");
-        return -1;
-      }
+    } else if (length != t.length) {
+      printf("all stems have to be the same length\n");
+      return -1;
     }
-
     
-    t.channels.push_back(std::move(channel));
+    t.stems[i] = std::move(stem);
+    t.stems_size = i+1;
   }
   
   return 0;
 }
-//TODO: one file has amny channels (eg. flac)
-void read_channels_from_file(char* file);
+//TODO: one file has many stems (eg. flac)
+void read_stems_from_file(char* file);
 
 static void gain_filter(finyl_buffer& buf, double gain) {
   for (int i = 0; i<period_size_2;i=i+2) {
@@ -200,7 +217,7 @@ static void gain_filter(finyl_buffer& buf, double gain) {
   }
 }
 
-static void make_channel_buffers(finyl_channel_buffers& channel_buffers, finyl_track& t) {
+static void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) {
   for (int i = 0; i < period_size_2; i=i+2) {
     t.index += t.speed;
 
@@ -212,15 +229,16 @@ static void make_channel_buffers(finyl_channel_buffers& channel_buffers, finyl_t
       t.playing = false;
     }
 
-    for (int c = 0; c<t.channels.size(); c++) {
-      auto& buf = channel_buffers[c];
-      buf[i] = finyl_get_sample(t, c);
-      buf[i+1] = buf[i];
+    for (int c = 0; c<t.stems_size; c++) {
+      auto& buf = stem_buffers[c];
+      auto [left, right] = finyl_get_sample(t, c);
+      buf[i] = left;
+      buf[i+1] = right;
     }
   }
 }
 
-static int32_t clip_sample(int32_t s) {
+static finyl_sample clip_sample(int32_t s) {
   if (s > 32767) {
     s = 32767;
   } else if (s < -32768) {
@@ -254,17 +272,17 @@ static void finyl_handle() {
   std::fill(bbuffer.begin(), bbuffer.end(), 0);
   
   if (adeck != nullptr && adeck->playing) {
-    make_channel_buffers(a_channel_buffers, *adeck);
-    gain_filter(a_channel_buffers[0], a0_gain);
-    gain_filter(a_channel_buffers[1], a1_gain);
-    add_and_clip_two_buffers(abuffer, a_channel_buffers[0], a_channel_buffers[1]);
+    make_stem_buffers(a_stem_buffers, *adeck);
+    gain_filter(a_stem_buffers[0], a0_gain);
+    gain_filter(a_stem_buffers[1], a1_gain);
+    add_and_clip_two_buffers(abuffer, a_stem_buffers[0], a_stem_buffers[1]);
   }
   
   if (bdeck != nullptr && bdeck->playing) {
-    make_channel_buffers(b_channel_buffers, *bdeck);
-    gain_filter(b_channel_buffers[0], b0_gain);
-    gain_filter(b_channel_buffers[1], b1_gain);
-    add_and_clip_two_buffers(bbuffer, b_channel_buffers[0], b_channel_buffers[1]);
+    make_stem_buffers(b_stem_buffers, *bdeck);
+    gain_filter(b_stem_buffers[0], b0_gain);
+    gain_filter(b_stem_buffers[1], b1_gain);
+    add_and_clip_two_buffers(bbuffer, b_stem_buffers[0], b_stem_buffers[1]);
   }
   
   add_and_clip_two_buffers(buffer, abuffer, bbuffer);
@@ -312,9 +330,9 @@ static void resize_buffers() {
   abuffer.resize(period_size_2);
   bbuffer.resize(period_size_2);
   
-  for (size_t i = 0; i<MAX_CHANNELS_SIZE; i++) {
-    a_channel_buffers[i].resize(period_size_2);
-    b_channel_buffers[i].resize(period_size_2);
+  for (size_t i = 0; i<MAX_STEMS_SIZE; i++) {
+    a_stem_buffers[i].resize(period_size_2);
+    b_stem_buffers[i].resize(period_size_2);
   }
 }
 
