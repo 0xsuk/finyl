@@ -93,7 +93,7 @@ extern finyl_track* bdeck;
 extern finyl_track* cdeck;
 extern finyl_track* ddeck;
 
-bool file_exist(std::string file);
+bool file_exist(std::string_view file);
 
 std::pair<finyl_sample, finyl_sample> finyl_get_sample(finyl_track& t, int stem_index);
 finyl_sample finyl_get_left_sample(finyl_stem& s, int index);

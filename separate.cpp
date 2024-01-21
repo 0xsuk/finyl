@@ -10,76 +10,59 @@
 #include "digger.h"
 #include <stdlib.h>
 #include <libgen.h>
+#include <utility>
+#include <string_view>
 
 #define same(x,y) (strcmp(x, y) == 0)
 
-void get_filename(int* dot, int* baselen, char* dst, char* filepath) {
-  char filepath_cpy[strlen(filepath)+1];
-  strcpy(filepath_cpy, filepath);
-  char* base = basename(filepath_cpy);
-  printf("base %s\n", base);
-  *dot = find_char_last(base, '.');
-  ncpy(dst, base, *dot);
+std::string get_filename(std::string filepath_cpy) {
+  std::string base = basename(filepath_cpy.data());
+  printf("base %s\n", base.data());
+  int dot = find_char_last(base.data(), '.');
 
-  *baselen = strlen(base);
+  return base.substr(0, dot);
 }
 
-void gen_channel_filepath(char* dst, char* filepath, char* root, char* stem, char* md5) {
-  char filename[strlen(filepath)+100];
-  int dot;
-  int baselen;
-  get_filename(&dot, &baselen, filename, filepath);
-  int til_filename = strlen(filepath) - baselen;
+std::string gen_channel_filepath(std::string_view filepath, std::string_view root, std::string_view stem, std::string_view md5) {
+
+  auto filename = get_filename(std::string(filepath));
+
+  filename = filename + '-' + std::string(stem) + "-" + std::string(md5) + ".mp3";
   
-  int len = strlen(filename);
-  filename[len] = '-';
-  filename[len+1] = '\0';
-
-  strcat(filename, stem);
-  strcat(filename, "-");
-  strcat(filename, md5);
-  /* strcat(filename, &filepath[strlen(filepath) - baselen + dot]); //add extension */
-  strcat(filename, ".mp3");
-
-  join_path(dst, root, filename);
+  return join_path(root.data(), filename.data());
 }
 
-bool all_channel_files_exist(char* filepath, char* root, char* md5) {
+bool all_channel_files_exist(std::string_view filepath, std::string_view root, std::string_view md5) {
   //TODO vocal no_vocal
   {
-    char dst[1000];
-    gen_channel_filepath(dst, filepath, root, "vocals", md5);
-    printf("dst is %s\n", dst);
-    if (!file_exist(dst)) {
+    auto dst = gen_channel_filepath(filepath, root, "vocals", md5);
+    printf("dst is %s\n", dst.data());
+    if (!file_exist(std::string(dst))) {
       return false;
     }
   }
   {
-    char dst[1000];
-    gen_channel_filepath(dst, filepath, root, "no_vocals", md5);
-    printf("dst is %s\n", dst);
-    if (!file_exist(dst)) {
+    auto dst = gen_channel_filepath(filepath, root, "no_vocals", md5);
+    printf("dst is %s\n", dst.data());
+    if (!file_exist(std::string(dst))) {
       return false;
     }
   }
   return true;
 }
 
-void separate_track(finyl_track_meta* tm) {
+void separate_track(finyl_track_meta& tm) {
   char command[1000];
   char model[] = "hdemucs_mmi";
-  char root[1000];
-  join_path(root, usb, "finyl/separated");
-  char neoroot[1000];
-  join_path(neoroot, root, model);
+  auto root = join_path(usb.data(), "finyl/separated");
+  auto neoroot = join_path(root.data(), model);
   
-  char md5[33];
-  compute_md5(tm->filepath, md5);
-  snprintf(command, sizeof(command), "demucs -n %s --two-stems=vocals \"%s\" -o %s --filename {track}-{stem}-%s.{ext} --mp3", model, tm->filepath, root, md5);
+  auto md5 = compute_md5(tm.filepath);
+  snprintf(command, sizeof(command), "demucs -n %s --two-stems=vocals \"%s\" -o %s --filename {track}-{stem}-%s.{ext} --mp3", model, tm.filepath.data(), root.data(), md5.data());
   printf("\nRunning:\n");
   printf("\t%s\n", command);
   
-  if (all_channel_files_exist(tm->filepath, neoroot, md5)) {
+  if (all_channel_files_exist(tm.filepath, neoroot, md5)) {
     printf("skipping\n");
     return;
   }
@@ -101,28 +84,25 @@ void separate_track(finyl_track_meta* tm) {
 void demucs_track(char* tid) {
   int _tid = atoi(tid);
   finyl_track t;
-  if (get_track(&t, usb, _tid) == -1) {
+  if (get_track(t, usb, _tid) == -1) {
     printf("abort\n");
     return;
   }
 
-  separate_track(&t.meta);
-  finyl_free_in_track(&t);
+  separate_track(t.meta);
 }
 
 void demucs_playlists(char* pid) {
-  finyl_track_meta* tms;
+  std::vector<finyl_track_meta> tms;
   int _pid = atoi(pid);
-  int tms_size = get_playlist_tracks(&tms, usb, _pid);
-  if (tms_size == -1) {
+  int status = get_playlist_tracks(tms, usb, _pid);
+  if (status == -1) {
     return;
   }
   
-  for (int i = 0; i<tms_size; i++) {
-    separate_track(&tms[i]);
+  for (int i = 0; i<tms.size(); i++) {
+    separate_track(tms[i]);
   }
-    
-  finyl_free_track_metas(tms, tms_size);
 }
 
 void print_usage() {

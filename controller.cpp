@@ -309,7 +309,7 @@ void handleKey(char x) {
     printf("a1_gain %lf\n", a1_gain);
     break;
   case 'j':
-    a1_gain = min(a1_gain+0.05, 1.0);
+    a1_gain = min(a1_gain+0.05, 1.5);
     printf("a1_gain %lf\n", a1_gain);
     break;
   case 'M':
@@ -325,7 +325,7 @@ void handleKey(char x) {
     printf("b1_gain %lf\n", b1_gain);
     break;
   case 'k':
-    b1_gain = min(b1_gain+0.05, 1.0);
+    b1_gain = min(b1_gain+0.05, 1.5);
     printf("b1_gain %lf\n", b1_gain);
     break;
 

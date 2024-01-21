@@ -73,3 +73,15 @@ void print_is_stem_same(finyl_stem& s1, finyl_stem& s2) {
     printf("stem is not same\n");
   }
 }
+
+void report(finyl_buffer& buffer) {
+  int clip_count = 0;
+  for (int i = 0; i<buffer.size(); i++) {
+    finyl_sample a = buffer[i];
+    if (a == 32767 || a == -32768) {
+      clip_count++;
+    }
+  }
+
+  printf("cc %d\n", clip_count);
+}

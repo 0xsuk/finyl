@@ -10,4 +10,5 @@ std::string get_finyl_output_path();
 void print_track_meta(finyl_track_meta& tm);
 void print_track(finyl_track& t);
 void print_is_stem_same(finyl_stem& s1, finyl_stem& s2);
+void report(finyl_buffer& buffer);
 #endif
