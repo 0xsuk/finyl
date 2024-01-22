@@ -13,3 +13,4 @@
 *.wav
 /test-interface
 /separate
+/test-json
