@@ -1,16 +1,27 @@
 #include <stdio.h>
 #include "json.h"
 
-int main() {
+void test_tokenizer() {
   auto t = json::tokenizer("/home/null/.finyl-output");
 
   if (!t.file.good()) {
     printf("not good\n");
   }
   
-  for (int i = 0; i< 2; i++) {
-    
-  auto token = t.get();
-  printf("%s %d\n", token.value.data(), token.type);
+  while (true) {
+    auto token = t.get();
+    printf("%s %d\n", token.value.data(), (int)token.type);
+    if (token.type == json::token_type::END) {
+      break;
+    }
+    if (token.type == json::token_type::ERR) {
+      break;
+    }
   }
+  
+}
+
+
+int main() {
+  test_tokenizer();
 }

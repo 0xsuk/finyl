@@ -37,7 +37,8 @@ struct tokenizer {
 
   tokenizer(std::string_view filename);
   token string();
-  void advance();
+  token number(char c);
+  void advance(int);
   char skip();
   token get();
 };
