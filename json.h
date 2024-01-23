@@ -7,10 +7,11 @@
 #include <string>
 #include <memory>
 #include <fstream>
+#include <cmath>
 
 namespace json {
   
-enum class token_type {
+enum class TOKEN {
   CURLY_OPEN,
   CURLY_CLOSE,
   COLON,
@@ -26,9 +27,25 @@ enum class token_type {
   ERR,
 };
 
+enum class VALUE {
+  OBJECT,
+  ARRAY,
+  STRING,
+  NUMBER,
+  TRUE,
+  FALSE,
+  NULL_TYPE,
+};
+
+enum class STATUS {
+  EMPTY,
+  ERR,
+  OK,
+};
+
 struct token {
   std::string value = "";
-  token_type type;
+  TOKEN type;
 };
 
 struct tokenizer {
@@ -44,11 +61,30 @@ struct tokenizer {
 };
 
 struct node;
-using object = std::map<std::string, std::shared_ptr<node>>;
-using list = std::vector<std::shared_ptr<node>>;
+using object = std::map<std::string, std::unique_ptr<node>>;
+using array = std::vector<std::unique_ptr<node>>;
+using values = std::variant<std::monostate, object, array, std::string, float>;
 
 struct node {
-  std::variant<object, std::string> values;
+  values vals;
+  VALUE type;
+
+  template<typename T>
+  node(T&& v, VALUE t);
+  node(VALUE t);
+};
+
+class parser {
+  tokenizer t;
+  
+  std::unique_ptr<node> parse_string(const token& v);
+  std::unique_ptr<node> parse_number(const token& v);
+  std::unique_ptr<node> parse_object();
+  std::unique_ptr<node> parse_array();
+public:
+  parser(std::string_view filename);
+  bool file_good();
+  std::pair<std::unique_ptr<node>, STATUS> parse();
 };
 
 }

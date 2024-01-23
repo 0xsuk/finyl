@@ -28,7 +28,7 @@ tests: $(TESTS)
 test-digger: test-digger.o $(BUT_ENTRY)
 test-controller: test-controller.o $(BUT_ENTRY)
 test-interface: test-interface.o $(BUT_ENTRY)
-test-json:test-json.o json.o
+test-json: test-json.o json.o
 
 clean:
 	rm -f finyl \
