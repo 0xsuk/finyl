@@ -23,20 +23,30 @@ void test_tokenizer() {
   }
 }
 
-void print_node(const std::unique_ptr<json::node>& n);
-void print_object(const json::object& o) {
-  for (const auto& [key, node] : o) {
+void print_node(std::unique_ptr<json::node>& n);
+void print_object(json::object& o) {
+  for (auto& [key, node] : o) {
     print_node(node);
     printf("and key is %s\n", key.data());
   }
 }
 
-void print_node(const std::unique_ptr<json::node>& n) {
-  const auto& v = n->vals;
+void print_node(std::unique_ptr<json::node>& n) {
+  auto& v = n->vals;
 
+  if (std::holds_alternative<std::string>(v)) {
+    printf("string %s\n", std::get<std::string>(v).data());
+    return;
+  }
+  
   if (std::holds_alternative<json::object>(v)) {
     printf("node is object\n");
-    print_object(std::get<json::object>(v));
+    json::object& o = std::get<json::object>(v);
+    if (auto it = o.find("usb"); it != o.end()) {
+      printf("found %s\n", it->first.data());
+      std::unique_ptr<json::node> nn = std::move(it->second);
+    }
+    
   }
 }
 
