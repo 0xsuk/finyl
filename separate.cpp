@@ -33,18 +33,17 @@ std::string gen_channel_filepath(std::string_view filepath, std::string_view roo
 }
 
 bool all_channel_files_exist(std::string_view filepath, std::string_view root, std::string_view md5) {
-  //TODO vocal no_vocal
   {
     auto dst = gen_channel_filepath(filepath, root, "vocals", md5);
     printf("dst is %s\n", dst.data());
-    if (!file_exist(std::string(dst))) {
+    if (!file_exist(dst)) {
       return false;
     }
   }
   {
     auto dst = gen_channel_filepath(filepath, root, "no_vocals", md5);
     printf("dst is %s\n", dst.data());
-    if (!file_exist(std::string(dst))) {
+    if (!file_exist(dst)) {
       return false;
     }
   }

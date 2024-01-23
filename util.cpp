@@ -115,8 +115,7 @@ std::string compute_md5(std::string_view filepath) {
     MD5_Update(&mdContext, data, bytes);
   MD5_Final(c,&mdContext);
 
-  std::string dst;
-  dst.reserve(32);
+  char dst[33];
   for(i = 0; i < MD5_DIGEST_LENGTH; i++) {
     sprintf(&dst[i*2], "%02x", (unsigned int)c[i]);
   }
