@@ -220,7 +220,7 @@ std::unique_ptr<node> parser::parse_object() {
   
   while (true) {
     const token& k = t.get();
-    if (k.type == TOKEN::COLON) {
+    if (k.type == TOKEN::COMMA) {
       continue;
     }
     if (k.type == TOKEN::ERR) {
@@ -232,11 +232,15 @@ std::unique_ptr<node> parser::parse_object() {
     if (k.type == TOKEN::CURLY_CLOSE) {
       break;
     }
-    
-    t.get(); //consume :
-    
+
+    t.get(); // consume :
+
     const token& v = t.get();
     switch (v.type) {
+    case TOKEN::CURLY_OPEN: {
+      o[k.value] = parse_object();
+      break;
+    }
     case TOKEN::STRING: {
       o[k.value] = parse_string(v);
       break;
@@ -276,6 +280,9 @@ std::pair< std::unique_ptr<node>, STATUS > parser::parse() {
 
   if (tok.type == TOKEN::END) {
     return std::make_pair(std::make_unique<node>(VALUE::NULL_TYPE), STATUS::EMPTY);
+  }
+  if (tok.type == TOKEN::ERR) {
+    return std::make_pair(std::make_unique<node>(VALUE::NULL_TYPE), STATUS::ERR);
   }
 
   return std::make_pair(parse_object(), STATUS::OK);

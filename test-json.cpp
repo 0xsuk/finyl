@@ -23,16 +23,31 @@ void test_tokenizer() {
   }
 }
 
-void print_node(std::unique_ptr<json::node>& n);
-void print_object(json::object& o) {
+void print_node(const json::node& n);
+#include <optional>
+//get pointer to existing node;
+template<typename T>
+const T* find_key(const json::node& n, const std::string& key) {
+  auto& v = n.vals;
+  if (std::holds_alternative<json::object>(v)) {
+    const json::object& o = std::get<json::object>(v);
+    if (auto it = o.find(key); it != o.end()) {
+      return &std::get<T>(it->second->vals);
+    }
+  };
+
+  return nullptr;
+}
+
+void print_object(const json::object& o) {
   for (auto& [key, node] : o) {
-    print_node(node);
+    print_node(*node);
     printf("and key is %s\n", key.data());
   }
 }
 
-void print_node(std::unique_ptr<json::node>& n) {
-  auto& v = n->vals;
+void print_node(const json::node& n) {
+  const auto& v = n.vals;
 
   if (std::holds_alternative<std::string>(v)) {
     printf("string %s\n", std::get<std::string>(v).data());
@@ -40,14 +55,23 @@ void print_node(std::unique_ptr<json::node>& n) {
   }
   
   if (std::holds_alternative<json::object>(v)) {
-    printf("node is object\n");
-    json::object& o = std::get<json::object>(v);
-    if (auto it = o.find("usb"); it != o.end()) {
-      printf("found %s\n", it->first.data());
-      std::unique_ptr<json::node> nn = std::move(it->second);
-    }
-    
+    print_object(std::get<json::object>(v));
+    return;
   }
+  
+  // const auto* track = find_key<json::object>(n, "track");
+  // if (track == nullptr) {
+  //   printf("track not found\n");
+  //   return;
+  // }
+  // if (track != nullptr) {
+  //   print_object(*track);
+  // }
+  
+  // if (find_key<std::string>(n, "badge") != nullptr) {
+    // printf("usb\n");
+  // }
+  
 }
 
 void test_parse() {
@@ -58,7 +82,7 @@ void test_parse() {
     return;
   }
   
-  auto [node, status] = p.parse();
+  auto [nodeptr, status] = p.parse();
 
   if (status == json::STATUS::EMPTY) {
     printf("empty file\n");
@@ -69,9 +93,8 @@ void test_parse() {
     return;
   }
   
-  print_node(node);
+  print_node(*nodeptr);
 }
-
 
 int main() {
   // test_tokenizer();
