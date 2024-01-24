@@ -24,54 +24,62 @@ void test_tokenizer() {
 }
 
 void print_node(const json::node& n);
-#include <optional>
-//get pointer to existing node;
-template<typename T>
-const T* find_key(const json::node& n, const std::string& key) {
-  auto& v = n.vals;
-  if (std::holds_alternative<json::object>(v)) {
-    const json::object& o = std::get<json::object>(v);
-    if (auto it = o.find(key); it != o.end()) {
-      return &std::get<T>(it->second->vals);
-    }
-  };
 
-  return nullptr;
-}
-
-void print_object(const json::object& o) {
+void print_object(const json::node& n) {
+  const auto& o = std::get<json::object>(n.vals);
+  
   for (auto& [key, node] : o) {
     print_node(*node);
     printf("and key is %s\n", key.data());
   }
 }
 
-void print_node(const json::node& n) {
-  const auto& v = n.vals;
+void print_array(const json::node& n) {
+  const auto& arr = std::get<json::array>(n.vals);
+  
+  printf("printing array\n\t");
+  for (auto& elem : arr) {
+    print_node(*elem);
+  }
+}
 
-  if (std::holds_alternative<std::string>(v)) {
-    printf("string %s\n", std::get<std::string>(v).data());
-    return;
+void print_string(const json::node& n) {
+  const auto& s = std::get<std::string>(n.vals);
+
+  printf("string is %s\n", s.data());
+}
+
+void print_number(const json::node& n) {
+  const auto& f = std::get<float>(n.vals);
+
+  printf("float is %f\n", f);
+}
+
+void print_node(const json::node& n) {
+
+  switch (n.type) {
+  case json::VALUE::TRUE:
+    printf("true\n");
+    break;
+  case json::VALUE::FALSE:
+    printf("false\n");
+    break;
+  case json::VALUE::ARRAY:
+    print_array(n);
+    break;
+  case json::VALUE::OBJECT:
+    print_object(n);
+    break;
+  case json::VALUE::NUMBER:
+    print_number(n);
+    break;
+  case json::VALUE::NULL_TYPE:
+    printf("null\n");
+    break;
+  case json::VALUE::STRING:
+    print_string(n);
+    break;
   }
-  
-  if (std::holds_alternative<json::object>(v)) {
-    print_object(std::get<json::object>(v));
-    return;
-  }
-  
-  // const auto* track = find_key<json::object>(n, "track");
-  // if (track == nullptr) {
-  //   printf("track not found\n");
-  //   return;
-  // }
-  // if (track != nullptr) {
-  //   print_object(*track);
-  // }
-  
-  // if (find_key<std::string>(n, "badge") != nullptr) {
-    // printf("usb\n");
-  // }
-  
 }
 
 void test_parse() {
