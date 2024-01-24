@@ -30,8 +30,10 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
   finyl_track* before = *dest;
   
   finyl_track* t = new finyl_track;
-  if (get_track(*t, usb, tid) == -1) {
+  if (auto err = get_track(*t, usb, tid)) {
     printf("failed\n");
+    printf("err %s\n", err.message.data());
+    printf("err type %d\n", err.type.value());
     return;
   }
   
@@ -146,7 +148,7 @@ void handle_gain(char* v, double* g) {
   char* endptr;
   int n = strtol(v, &endptr, 10);
   if (endptr == v || *endptr != '\0') return;
-  *g = n / 2046.0;
+  *g = n / 4098.0;
   printf("gain %lf\n", *g);
 }
 
@@ -309,7 +311,7 @@ void handleKey(char x) {
     printf("a1_gain %lf\n", a1_gain);
     break;
   case 'j':
-    a1_gain = min(a1_gain+0.05, 1.5);
+    a1_gain = min(a1_gain+0.05, 1.0);
     printf("a1_gain %lf\n", a1_gain);
     break;
   case 'M':
@@ -325,7 +327,7 @@ void handleKey(char x) {
     printf("b1_gain %lf\n", b1_gain);
     break;
   case 'k':
-    b1_gain = min(b1_gain+0.05, 1.5);
+    b1_gain = min(b1_gain+0.05, 1.0);
     printf("b1_gain %lf\n", b1_gain);
     break;
 

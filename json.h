@@ -87,6 +87,19 @@ public:
   std::pair<std::unique_ptr<node>, STATUS> parse();
 };
 
+
+bool is_string(const node* n);
+const node* get_node(const node& n, const std::string& key);
+
+template <typename T>
+const T* get_if(const node& n, const std::string& key) {
+  if (const node* found = get_node(n, key)) {
+    return std::get_if<T>(&found->vals);
+  }
+
+  return nullptr;
+}
+
 }
 
 #endif

@@ -7,7 +7,6 @@
 #include <openssl/md5.h>
 #include <stdio.h>
 #include <string>
-#include "cJSON.h"
 #include "util.h"
 
 bool is_raspi() {
@@ -139,78 +138,9 @@ int find_char_last(char* str, char c) {
   return (unsigned)(last - str);
 }
 
-std::string cJSON_get_string(cJSON* json, char* key) {
-  return cJSON_GetObjectItem(json, key)->valuestring;
-}
-
-void cJSON_copy(std::string_view dest, cJSON* json, char* key) {
- char* item = cJSON_GetObjectItem(json, key)->valuestring;
-
- dest = item;
-}
-
 //copy only the dest amount of src to dest
 void ncpy(char* dest, char* src, size_t size) {
   strncpy(dest, src, size);
   dest[size] = '\0';;
 }
 
-void cJSON_ncpy(cJSON* json, char* key, char* dest, size_t size) {
-  cJSON* itemj = cJSON_GetObjectItem(json, key);
-  char* item = itemj->valuestring;
-  ncpy(dest, item, size);
-}
-
-void cJSON_cpy(cJSON* json, char* key, char* dest) {
-  cJSON* itemj = cJSON_GetObjectItem(json, key);
-  char* item = itemj->valuestring;
-  strcpy(dest, item);
-}
-
-void cJSON_malloc_cpy(cJSON* json, char* key, char** dest) {
-  cJSON* itemj = cJSON_GetObjectItem(json, key);
-  char* item = itemj->valuestring;
-  int len = strlen(item);
-  *dest = (char*)malloc(sizeof(char)*(len + 1));
-  strcpy(*dest, item);
-}
-
-char* read_file_malloc(std::string_view filename) {
-  FILE* fp = fopen(filename.data(), "rb");
-
-  if (fp == NULL) {
-    printf("failed to read from file = %s\n", filename.data());
-    return NULL;
-  }
-
-  fseek(fp, 0, SEEK_END);
-  long file_size = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-
-  char* buffer = (char*)malloc(file_size + 1);
-  if (buffer == NULL) {
-    printf("failed to allocate memory for buffer in read_file\n");
-    fclose(fp);
-    return NULL;
-  }
-
-  size_t count = fread((void*)buffer, 1, file_size, fp);
-  if (count != file_size) {
-    printf("Error reading a file in read_file_malloc\n");
-    free(buffer);
-    fclose(fp);
-    return NULL;
-  }
-
-  buffer[file_size] = '\0';
-  fclose(fp);
-  return buffer;
-}
-
-cJSON* read_file_malloc_json(std::string_view file) {
-  char* output = read_file_malloc(file);
-  cJSON* json  = cJSON_Parse(output);
-
-  free(output); //TODO safe? probably yes
-  return json;
-}

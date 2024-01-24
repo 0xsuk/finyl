@@ -279,13 +279,31 @@ std::pair< std::unique_ptr<node>, STATUS > parser::parse() {
   const auto& tok = t.get();
 
   if (tok.type == TOKEN::END) {
-    return std::make_pair(std::make_unique<node>(VALUE::NULL_TYPE), STATUS::EMPTY);
+    return std::make_pair(nullptr, STATUS::EMPTY);
   }
   if (tok.type == TOKEN::ERR) {
-    return std::make_pair(std::make_unique<node>(VALUE::NULL_TYPE), STATUS::ERR);
+    return std::make_pair(nullptr, STATUS::ERR);
   }
 
   return std::make_pair(parse_object(), STATUS::OK);
+}
+
+bool is_string(const node* n) {
+  if (n == nullptr) return false;
+
+  return std::holds_alternative<std::string>(n->vals);
+}
+
+const node* get_node(const node& n, const std::string& key) {
+  const auto* o = std::get_if<json::object>(&n.vals);
+  if (o == nullptr) {
+    return nullptr;
+  }
+
+  auto it = o->find(key);
+  if (it == o->end()) return nullptr;
+
+  return it->second.get();
 }
 
 }
