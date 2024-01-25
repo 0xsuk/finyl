@@ -268,7 +268,7 @@ std::unique_ptr<node> parser::parse_object() {
     }
   }
 
-  return std::make_unique<node>(node(std::move(o), VALUE::OBJECT));
+  return std::make_unique<node>(std::move(o), VALUE::OBJECT);
 }
 
 bool parser::file_good() {

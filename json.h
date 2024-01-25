@@ -72,6 +72,8 @@ struct node {
   template<typename T>
   node(T&& v, VALUE t);
   node(VALUE t);
+
+  node(const node&) = delete;
 };
 
 class parser {
