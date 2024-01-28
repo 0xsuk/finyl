@@ -137,10 +137,3 @@ int find_char_last(char* str, char c) {
   }
   return (unsigned)(last - str);
 }
-
-//copy only the dest amount of src to dest
-void ncpy(char* dest, char* src, size_t size) {
-  strncpy(dest, src, size);
-  dest[size] = '\0';;
-}
-

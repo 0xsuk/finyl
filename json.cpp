@@ -265,6 +265,8 @@ std::unique_ptr<node> parser::parse_object() {
       o[k.value] = parse_array();
       break;
     }
+    default:
+      break;
     }
   }
 

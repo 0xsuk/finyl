@@ -180,13 +180,10 @@ error close_command(FILE* fp) {
   }
   status = WEXITSTATUS(status);
   if (status == 1) {
-    //there is a fatal error, and error message is printed in error_out
-    printf("Error:\n");
-    printf("%s\n", error_out);
     return error(std::move(error_out), ERR::COMMAND_FAILED);
   }
 
-  return {};
+  return noerror;
 }
 
 static bool badge_valid(const json::node& n, std::string_view badge)  {
@@ -224,17 +221,6 @@ static std::pair<std::unique_ptr<json::node>, error> run_digger(std::string_view
 }
 
 
-error has_error(const json::node& n) {
-  auto e_str = unmarshal_error(n);
-  if (e_str != "") {
-    printf(" %s\n", e_str.data());
-    
-    return error("crate-digger error: " + e_str, ERR::JSON_FAILED);
-  }
-
-  return noerror;
-}
-
 template<typename T>
 using make_func = void (*)(const json::node&, T&);
 
@@ -244,8 +230,8 @@ static error get_stuff(T& stuff, const std::string_view usb, const std::string& 
   
   if (err) return err;
   
-  if (auto err = has_error(*nodeptr)) {
-    return err;
+  if (auto err_str = unmarshal_error(*nodeptr); err_str != "") {
+    return error(std::move(err_str), ERR::JSON_FAILED);
   }
   
   f(*nodeptr, stuff);

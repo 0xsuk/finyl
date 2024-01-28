@@ -31,9 +31,10 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
   
   finyl_track* t = new finyl_track;
   if (auto err = get_track(*t, usb, tid)) {
-    printf("failed\n");
-    printf("err %s\n", err.message.data());
-    printf("err type %d\n", err.type.value());
+    printf("err:%s\n", err.message.data());
+    if (err.type) {
+      printf("type %d\n", (int)err.type.value());
+    }
     return;
   }
   

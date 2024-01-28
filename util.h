@@ -26,6 +26,4 @@ std::string generate_random_string(size_t size);
 std::string compute_md5(std::string_view filepath);
 
 int find_char_last(char* str, char c);
-
-void ncpy(char* dest, char* src, size_t size);
 #endif

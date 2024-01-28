@@ -135,7 +135,7 @@ static error open_pcm(FILE** fp, const std::string& filename) {
 }
 
 //reads from fp, updates chunks_size, length, stem
-static error read_pcm(FILE* fp, finyl_stem& stem, int& length) {
+static error read_stem_from(FILE* fp, finyl_stem& stem, int& length) {
   while (1) {
     finyl_chunk chunk;
     chunk.resize(CHUNK_SIZE);
@@ -160,7 +160,7 @@ static error read_stem(const std::string& file, finyl_stem& stem, int& length) {
   auto err = open_pcm(&fp, file);
   if (err) return err;
   
-  err = read_pcm(fp, stem, length);
+  err = read_stem_from(fp, stem, length);
   if (err) return err;
   
   return noerror;
