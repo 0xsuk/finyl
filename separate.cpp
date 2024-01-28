@@ -110,7 +110,7 @@ void demucs_playlists(char* pid) {
 void print_usage() {
   printf("usage: ./separate <usb> <operation>\n\n");
   printf("\n");
-  printf("This program generates vocals&inst for all tracks in playlist in rekordbox USB and place them under <usb>/finyl/separated/, where the main finyl program looks for stem files.");
+  printf("This program generates vocals&inst for all tracks in playlist in rekordbox USB and place them under <usb>/finyl/separated/, where the main finyl program looks for stem files.\n");
   printf("operation:\n");
   printf("\tlist-playlists: list playlists\n");
   printf("\tlist-playlist-tracks <id>: list tracks in playlist <id>\n");

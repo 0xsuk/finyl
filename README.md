@@ -30,15 +30,15 @@ It takes 30 seconds per track to separate on my machine that takes 7 seconds to 
 <details>
 <summary>detail</summary>
 
-When user loads a track, say "/rekodboxusb/Contents/UnknownArtist/UnknownAlbum/trackname.wav", in multi-stems mode, finyl looks for matching stems files in /rekordboxusb/finyl/separated/hdemucs_mmi/".  
-Here is the exact stem filepath that format finyl considers a match:  
+When user loads a track, say `/rekodboxusb/Contents/UnknownArtist/UnknownAlbum/trackname.wav`, in multi-stems mode, finyl looks for matching stems files in `/rekordboxusb/finyl/separated/hdemucs_mmi/`.  
+Here is the exact stem filepath format that finyl considers a match:  
 `/<rekordboxusb>/finyl/separated/hdemucs_mmi/<anything>-<stem name>-<md5sum of the original file>.<any extension>`
 
-./separate creates stem files that finyl considers a match.  
-By default, the stem file extension is wav, because it is not compressed, thus fast to read. You can change this to anything ffmpeg can decode, by modifying the ./separate.cpp
+`./separate` creates stem files that finyl considers a match.  
+By default, the stem file extension is wav, because it is not compressed, thus fast to read. You can change this to anything ffmpeg can decode, by modifying the `separate.cpp`
 
 
-In theory, you could use any other audio separation program, or other demucs model. To do that, you just need to replace all occurence of "demucs" or "hdemucs_mmi" to something else in the source. However, in my opinion now, demucs performs better and faster than other programs (tried UVR, spleeter), so not going to provide option for them.
+In theory, you could use any other audio separation program, or other demucs model. To do that, you just need to replace all occurence of `demucs` or `hdemucs_mmi` to something else in the source. However, in my opinion now, demucs performs better and faster than other programs (tried UVR, spleeter), so not going to provide option for them.
 
 
 </details>
