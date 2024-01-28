@@ -1,4 +1,6 @@
 #include "finyl.h"
+#include "error.h"
+#include <thread>
 #include <alsa/asoundlib.h>
 #include <math.h>
 #include <stdbool.h>
@@ -116,25 +118,24 @@ bool file_exist(std::string_view file) {
   return true;
 }
 
-static int open_pcm(FILE** fp, std::string_view filename) {
+static error open_pcm(FILE** fp, const std::string& filename) {
   if (!file_exist(filename)) {
-    printf("File does not exist: %s\n", filename.data());
-    return -1;
+    return error("File does not exist: " + filename, ERR::FILE_DOES_NOT_EXIST);
   }
   char command[1000];
   //opens interleaved pcm data stream
   snprintf(command, sizeof(command), "ffmpeg -i \"%s\" -f s16le -ar 44100 -ac 2 -v quiet -", filename.data());
   *fp = popen(command, "r");
   if (fp == nullptr) {
-    printf("failed to open stream for %s\n", filename.data());
-    return -1;
+    printf(" %s\n", filename.data());
+    return error("failed to open stream for " + filename, ERR::FAILED_TO_OPEN_FILE);
   }
 
-  return 0;
+  return noerror;
 }
 
 //reads from fp, updates chunks_size, length, stem
-static int read_pcm(FILE* fp, finyl_stem& stem, int& length) {
+static error read_pcm(FILE* fp, finyl_stem& stem, int& length) {
   while (1) {
     finyl_chunk chunk;
     chunk.resize(CHUNK_SIZE);
@@ -146,66 +147,67 @@ static int read_pcm(FILE* fp, finyl_stem& stem, int& length) {
     }
     length += count/2;
     if (count < CHUNK_SIZE) {
-      return 0;
+      return noerror;
     }
     if (stem.size() == MAX_CHUNKS_SIZE) {
-      printf("File is too large\n");
-      return 1;
+      return error(ERR::FILE_TOO_LARGE);
     }
   }
 }
 
-static int read_stem(std::string_view file, finyl_stem& stem, int& length) {
+static error read_stem(const std::string& file, finyl_stem& stem, int& length) {
   FILE* fp;
-  auto status = open_pcm(&fp, file);
-  if (status == -1)  {
-    return -1;
-  }
+  auto err = open_pcm(&fp, file);
+  if (err) return err;
   
-  status = read_pcm(fp, stem, length);
-  if (status == 1) {
-    return 1;
-  }
+  err = read_pcm(fp, stem, length);
+  if (err) return err;
   
-  return 0;
-}
-
-static std::pair<finyl_stem, int> read_stem_from_file(std::string_view file) {
-  int length = 0;
-  finyl_stem stem;
-  int status = read_stem(file, stem, length);
-  if (status == -1 || status == 1) {
-    return {stem, -1};
-  }
-  return {stem, length};
+  return noerror;
 }
 
 //each file corresponding to each stem
-int finyl_read_stems_from_files(std::vector<std::string>& files, finyl_track& t) {
+error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_track& t) {
   if (files.size() > MAX_STEMS_SIZE) {
-    printf("too many stems. MAX_STEMS_SIZE is %d\n", MAX_STEMS_SIZE);
-    return -1;
+    return error("too many stems. MAX_STEMS_SIZE is " + std::to_string(MAX_STEMS_SIZE), ERR::TOO_MANY_STEMS);
   }
   
+  std::vector<std::thread> threads;
+  
+  error err;
+  int length = 0;
   for (size_t i = 0; i < files.size(); i++) {
-    printf("reading %dth stem\n", (int)i);
-    auto [stem, length] = read_stem_from_file(files[i]);
-    if (length == -1) {
-      return -1;
-    }
+    threads.push_back(std::thread([i, &files, &t, &err, &length]() {
+      printf("reading %dth stem\n", (int)i);
+      finyl_stem stem;
+      int len = 0;
+      auto _err = read_stem(files[i], stem, len);
+      if (_err) {
+        err = _err;
+        return;
+      }
 
-    if (i == 0) {
-      t.length = length;
-    } else if (length != t.length) {
-      printf("all stems have to be the same length\n");
-      return -1;
-    }
-    
-    t.stems[i] = std::move(stem);
-    t.stems_size = i+1;
+      if (len == 0) {
+        err = error("read_stem has read empty file?");
+        return;
+      }
+      else if (length == 0) length = len; //initialize length
+      else if (length != len)  {
+        err = error(ERR::STEMS_DIFFERENT_SIZE);
+        return;
+      }
+      t.stems[i] = std::move(stem);
+    }));
   }
   
-  return 0;
+  for (auto& t: threads) {
+    t.join();
+  }
+  
+  t.stems_size = files.size();
+  t.length = length;
+  
+  return err;
 }
 //TODO: one file has many stems (eg. flac)
 void read_stems_from_file(char* file);

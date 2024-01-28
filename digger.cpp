@@ -153,7 +153,7 @@ static std::string unmarshal_error(const json::node& n) {
   return *ret;
 }
 
-static error<DIG_ERR> run_command(FILE** fp, std::string_view badge, std::string_view usb, std::string_view op) {
+static error run_command(FILE** fp, std::string_view badge, std::string_view usb, std::string_view op) {
   char exec[128] = "";
   if (is_raspi()) {
     strcat(exec, "./finyl-digger");
@@ -165,25 +165,25 @@ static error<DIG_ERR> run_command(FILE** fp, std::string_view badge, std::string
   
   *fp = popen(command, "r");
   if (fp == nullptr) {
-    return error(std::string("failed to open stream for usb=") + usb.data() + "op=" + op.data(), DIG_ERR::CANT_OPEN_COMMAND);
+    return error(std::string("failed to open stream for usb=") + usb.data() + "op=" + op.data(), ERR::CANT_OPEN_COMMAND);
   }
 
   return {};
 }
 
-error<DIG_ERR> close_command(FILE* fp) {
+error close_command(FILE* fp) {
   char error_out[10000];
   fread(error_out, 1, sizeof(error_out), fp);
   int status = pclose(fp);
   if (status == -1) {
-    return error("failed to close the command stream", DIG_ERR::CANT_CLOSE_COMMAND);
+    return error("failed to close the command stream", ERR::CANT_CLOSE_COMMAND);
   }
   status = WEXITSTATUS(status);
   if (status == 1) {
     //there is a fatal error, and error message is printed in error_out
     printf("Error:\n");
     printf("%s\n", error_out);
-    return error(std::move(error_out), DIG_ERR::COMMAND_FAILED);
+    return error(std::move(error_out), ERR::COMMAND_FAILED);
   }
 
   return {};
@@ -198,7 +198,7 @@ static bool badge_valid(const json::node& n, std::string_view badge)  {
 }
 
 //1 for not valid badge. -1 for command error
-static std::pair<std::unique_ptr<json::node>, error<DIG_ERR>> run_digger(std::string_view usb, std::string_view op) {
+static std::pair<std::unique_ptr<json::node>, error> run_digger(std::string_view usb, std::string_view op) {
   std::string badge = generate_random_string(5);
 
   {
@@ -214,22 +214,22 @@ static std::pair<std::unique_ptr<json::node>, error<DIG_ERR>> run_digger(std::st
   auto p = json::parser(get_finyl_output_path());
   
   auto [n, err] = p.parse();
-  if (err != json::STATUS::OK) return {nullptr, DIG_ERR::JSON_FAILED};
+  if (err != json::STATUS::OK) return {nullptr, ERR::JSON_FAILED};
 
   if (!badge_valid(*n, badge)) {
-    return {nullptr, DIG_ERR::BADGE_NOT_VALID};
+    return {nullptr, ERR::BADGE_NOT_VALID};
   }
 
   return {std::move(n), noerror};
 }
 
 
-error<DIG_ERR> has_error(const json::node& n) {
+error has_error(const json::node& n) {
   auto e_str = unmarshal_error(n);
   if (e_str != "") {
     printf(" %s\n", e_str.data());
     
-    return error("crate-digger error: " + e_str, DIG_ERR::JSON_FAILED);
+    return error("crate-digger error: " + e_str, ERR::JSON_FAILED);
   }
 
   return noerror;
@@ -239,7 +239,7 @@ template<typename T>
 using make_func = void (*)(const json::node&, T&);
 
 template<typename T>
-static error<DIG_ERR> get_stuff(T& stuff, const std::string_view usb, const std::string& op, make_func<T> f) {
+static error get_stuff(T& stuff, const std::string_view usb, const std::string& op, make_func<T> f) {
   const auto [nodeptr, err] = run_digger(usb, op);
   
   if (err) return err;
@@ -252,17 +252,17 @@ static error<DIG_ERR> get_stuff(T& stuff, const std::string_view usb, const std:
   return noerror;
 }
 
-error<DIG_ERR> get_playlists(std::vector<finyl_playlist>& pls, std::string_view usb) {
+error get_playlists(std::vector<finyl_playlist>& pls, std::string_view usb) {
   return get_stuff(pls, usb, "playlists", &make_playlists);
 }
 
-error<DIG_ERR> get_track(finyl_track& t, std::string_view usb, int tid) {
+error get_track(finyl_track& t, std::string_view usb, int tid) {
   char op[30];
   snprintf(op, sizeof(op), "track %d", tid);
   return get_stuff(t, usb, op, &make_track);
 }
 
-error<DIG_ERR> get_playlist_tracks(std::vector<finyl_track_meta>& tms, std::string_view usb, int pid) {
+error get_playlist_tracks(std::vector<finyl_track_meta>& tms, std::string_view usb, int pid) {
   char op[30];
   snprintf(op, sizeof(op), "playlist-tracks %d", pid);
   if (auto err = get_stuff(tms, usb, op, &make_playlist_tracks)) return err;

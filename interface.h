@@ -4,20 +4,31 @@
 #include "finyl.h"
 #include <SDL2/SDL.h>
 
-extern int wave_range;
-extern bool render_adeck;
-extern bool render_bdeck;
+struct Interface {
+  int win_width = 1000;
+  int win_height = 500;
+  int wave_range = 1000000;
+  int wave_height = 100;
+  int wave_height_half = 50;
+  int wave_iteration_margin = 100;
+  bool render_adeck = false;
+  bool render_bdeck = false;
 
-void set_wave_range(int _wave_range);
+  SDL_Renderer* renderer = nullptr;
+  SDL_Texture* tx_awave = nullptr;
+  SDL_Texture* tx_bwave = nullptr;
+  SDL_Texture* tx_asg = nullptr; //static grid for A
+  SDL_Texture* tx_bsg = nullptr; //for B
+};
 
-int get_window_size();
-
-void renderWaveform(SDL_Renderer *renderer, finyl_sample* pcmData, int numSamples);
+extern Interface interface;
 
 void add_track_to_free(finyl_track* t);
 
 void free_tracks();
 
-int interface();
+void set_wave_range(Interface& itf, int wave_range);
+
+int run_interface();
 
 #endif

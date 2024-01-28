@@ -52,7 +52,7 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
     filepaths[0] = t->meta.filepath;
   }
   
-  if (finyl_read_stems_from_files(filepaths, *t) == -1) {
+  if (auto err = finyl_read_stems_from_files(filepaths, *t)) {
     return;
   }
   
@@ -60,9 +60,9 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
 
   *dest = t;
   if (deck == finyl_a) {
-    render_adeck = true;
+    interface.render_adeck = true;
   } else if (deck == finyl_b) {
-    render_bdeck = true;
+    interface.render_bdeck = true;
   }
 
   if (before != nullptr) {
@@ -273,7 +273,7 @@ void* serial(void* args) {
 }
 
 void* _interface(void*) {
-  interface();
+  run_interface();
   return NULL;
 }
 
@@ -477,11 +477,11 @@ void handleKey(char x) {
     bdeck->index -= 3000;
     break;
   case '7': {
-    set_wave_range(wave_range*2);
+    set_wave_range(interface, interface.wave_range*2);
     break;
   }
   case '\'': {
-    set_wave_range(wave_range/2);
+    set_wave_range(interface, interface.wave_range/2);
     break;
   }
   }

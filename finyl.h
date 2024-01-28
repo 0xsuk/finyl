@@ -1,7 +1,7 @@
 #ifndef FINYL_H
 #define FINYL_H
 #include <alsa/asoundlib.h>
-#include "stdbool.h"
+#include "error.h"
 #include <vector>
 #include <string>
 #include <array>
@@ -101,7 +101,7 @@ finyl_sample finyl_get_left_sample(finyl_stem& s, int index);
 int finyl_get_quantized_beat_index(finyl_track& t, int index);
 int finyl_get_quantized_time(finyl_track& t, int index);
 double finyl_get_quantized_index(finyl_track& t, int index);
-int finyl_read_stems_from_files(std::vector<std::string>& files, finyl_track& t);
+error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_track& t);
 
 void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size);
 
