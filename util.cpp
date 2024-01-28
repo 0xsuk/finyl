@@ -137,3 +137,10 @@ int find_char_last(char* str, char c) {
   }
   return (unsigned)(last - str);
 }
+
+void print_err(const error& err) {
+  printf("err ");
+  if (err.type) printf("type = %d", (int)err.type.value());
+  printf(":%s\n", err.message.data());
+
+}

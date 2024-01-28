@@ -1,7 +1,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include <stdlib.h>
+#include "error.h"
 #include <string>
 #include <memory>
 
@@ -26,4 +26,7 @@ std::string generate_random_string(size_t size);
 std::string compute_md5(std::string_view filepath);
 
 int find_char_last(char* str, char c);
+
+void print_err(const error& err);
+
 #endif

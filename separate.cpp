@@ -1,6 +1,5 @@
 //LIMITATIONS:
 //demucs
-//mp3 only
 //two-stems vocals
 
 
@@ -15,6 +14,8 @@
 
 #define same(x,y) (strcmp(x, y) == 0)
 
+std::string ext = "wav";
+
 std::string get_filename(std::string filepath_cpy) {
   std::string base = basename(filepath_cpy.data());
   printf("base %s\n", base.data());
@@ -27,7 +28,7 @@ std::string gen_channel_filepath(std::string_view filepath, std::string_view roo
 
   auto filename = get_filename(std::string(filepath));
 
-  filename = filename + '-' + std::string(stem) + "-" + std::string(md5) + ".mp3";
+  filename = filename + '-' + std::string(stem) + "-" + std::string(md5) + "." + ext;
   
   return join_path(root.data(), filename.data());
 }
@@ -57,7 +58,7 @@ void separate_track(finyl_track_meta& tm) {
   auto neoroot = join_path(root.data(), model);
   
   auto md5 = compute_md5(tm.filepath);
-  snprintf(command, sizeof(command), "demucs -n %s --two-stems=vocals \"%s\" -o %s --filename {track}-{stem}-%s.{ext} --mp3", model, tm.filepath.data(), root.data(), md5.data());
+  snprintf(command, sizeof(command), "demucs -n %s --two-stems=vocals \"%s\" -o %s --filename {track}-{stem}-%s.{ext} --%s", model, tm.filepath.data(), root.data(), md5.data(), ext.data());
   printf("\nRunning:\n");
   printf("\t%s\n", command);
   
@@ -75,7 +76,8 @@ void separate_track(finyl_track_meta& tm) {
   while (fgets(buffer, sizeof(buffer), fp) != NULL) {
     printf("%s", buffer);
   }
-  if (close_command(fp) == -1) {
+  if (auto err = close_command(fp)) {
+    print_err(err);
     return;
   }
 }
@@ -83,8 +85,8 @@ void separate_track(finyl_track_meta& tm) {
 void demucs_track(char* tid) {
   int _tid = atoi(tid);
   finyl_track t;
-  if (get_track(t, usb, _tid) == -1) {
-    printf("abort\n");
+  if (auto err = get_track(t, usb, _tid)) {
+    print_err(err);
     return;
   }
 
@@ -94,8 +96,9 @@ void demucs_track(char* tid) {
 void demucs_playlists(char* pid) {
   std::vector<finyl_track_meta> tms;
   int _pid = atoi(pid);
-  int status = get_playlist_tracks(tms, usb, _pid);
-  if (status == -1) {
+  auto err = get_playlist_tracks(tms, usb, _pid);
+  if (err) {
+    print_err(err);
     return;
   }
   
@@ -106,6 +109,8 @@ void demucs_playlists(char* pid) {
 
 void print_usage() {
   printf("usage: ./separate <usb> <operation>\n\n");
+  printf("\n");
+  printf("This program generates vocals&inst for all tracks in playlist in rekordbox USB and place them under <usb>/finyl/separated/, where the main finyl program looks for stem files.");
   printf("operation:\n");
   printf("\tlist-playlists: list playlists\n");
   printf("\tlist-playlist-tracks <id>: list tracks in playlist <id>\n");
