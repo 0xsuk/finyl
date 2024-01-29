@@ -112,18 +112,22 @@ static error open_pcm(FILE** fp, const std::string& filename) {
   return noerror;
 }
 
-//reads from fp, updates chunks_size, length, stem
 static error read_stem_from(FILE* fp, finyl_stem& stem) {
-  int size = 2097152 * 32; //4mb * 32 = 128mb; basically 10 minutes song
-  stem.resize(size);
-  size_t count = fread(stem.data(), sizeof(finyl_sample), size, fp);
-  stem.resize(count);
-  stem.shrink_to_fit();
-  if (count % 2 != 0) {
-    printf("warning: ffmpeg is expected to output even number of samples\n");
-  }
-  if (count >= size) {
-    printf("warning: file is too large, trimmed\n");
+  int count = 20971520; //40mb*;
+  int max = 4; //160mb;
+  for (int i = 1; i<=max; i++) {
+    int read_acc = count*(i-1);
+    stem.resize(read_acc + count);
+    size_t read = fread(&stem[read_acc], sizeof(finyl_sample), count, fp);
+    if (read < count) { // finish
+      stem.resize(read_acc + read);
+      stem.shrink_to_fit();
+      break;
+    }
+    if (i == max && read >= count) { //overflow, trim
+      printf("WARNING: file too large, trimmed\n");
+      break;
+    }
   }
   
   return noerror;

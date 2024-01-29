@@ -58,7 +58,7 @@ void separate_track(finyl_track_meta& tm) {
   auto neoroot = join_path(root.data(), model);
   
   auto md5 = compute_md5(tm.filepath);
-  snprintf(command, sizeof(command), "demucs -n %s --two-stems=vocals \"%s\" -o %s --filename {track}-{stem}-%s.{ext} --%s", model, tm.filepath.data(), root.data(), md5.data(), ext.data());
+  snprintf(command, sizeof(command), "demucs -n %s --two-stems=vocals \"%s\" -o %s --filename {track}-{stem}-%s.{ext}", model, tm.filepath.data(), root.data(), md5.data());
   printf("\nRunning:\n");
   printf("\t%s\n", command);
   

@@ -6,11 +6,6 @@
 #include <string>
 #include <array>
 
-#ifndef MAX_CHUNKS_SIZE
-#define MAX_CHUNKS_SIZE 32
-#endif
-#define CHUNK_SIZE 2097152 //(2048 * 1024);
-
 #ifndef MAX_STEMS_SIZE //number of stems
 #define MAX_STEMS_SIZE 5
 #endif
