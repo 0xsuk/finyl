@@ -88,28 +88,6 @@ double finyl_get_quantized_index(finyl_track& t, int index) {
   return v;
 }
 
-std::pair<finyl_sample, finyl_sample> finyl_get_sample(finyl_track& t, int stem_index) {
-  int index = (int)t.index;
-  if (index >= t.length || index < 0) {
-    return {0, 0};
-  }
-  int position = index*2; //position is index w.r.t stereo
-  int ichunk = position / CHUNK_SIZE;
-  int isample = position - (CHUNK_SIZE * ichunk);
-
-  finyl_chunk& chunk = t.stems[stem_index][ichunk];
-  return {chunk[isample], chunk[isample+1]};
-}
-
-finyl_sample finyl_get_left_sample(finyl_stem& s, int index) {
-  int position = index*2;
-  int ichunk = position / CHUNK_SIZE;
-  int isample = position - (CHUNK_SIZE * ichunk);
-
-  finyl_chunk& chunk = s[ichunk];
-  return chunk[isample];
-}
-
 bool file_exist(std::string_view file) {
   if (access(file.data(), F_OK) == -1) {
     return false;
@@ -135,32 +113,28 @@ static error open_pcm(FILE** fp, const std::string& filename) {
 }
 
 //reads from fp, updates chunks_size, length, stem
-static error read_stem_from(FILE* fp, finyl_stem& stem, int& length) {
-  while (1) {
-    finyl_chunk chunk;
-    chunk.resize(CHUNK_SIZE);
-    size_t count = fread(chunk.data(), sizeof(finyl_sample), CHUNK_SIZE, fp);
-    chunk.resize(count);
-    stem.push_back(std::move(chunk));
-    if (count % 2 != 0) {
-      printf("warning: ffmpeg is expected to output even number of samples\n");
-    }
-    length += count/2;
-    if (count < CHUNK_SIZE) {
-      return noerror;
-    }
-    if (stem.size() == MAX_CHUNKS_SIZE) {
-      return error(ERR::FILE_TOO_LARGE);
-    }
+static error read_stem_from(FILE* fp, finyl_stem& stem) {
+  int size = 2097152 * 32; //4mb * 32 = 128mb; basically 10 minutes song
+  stem.resize(size);
+  size_t count = fread(stem.data(), sizeof(finyl_sample), size, fp);
+  stem.resize(count);
+  stem.shrink_to_fit();
+  if (count % 2 != 0) {
+    printf("warning: ffmpeg is expected to output even number of samples\n");
   }
+  if (count >= size) {
+    printf("warning: file is too large, trimmed\n");
+  }
+  
+  return noerror;
 }
 
-static error read_stem(const std::string& file, finyl_stem& stem, int& length) {
+error read_stem(const std::string& file, finyl_stem& stem) {
   FILE* fp;
   auto err = open_pcm(&fp, file);
   if (err) return err;
   
-  err = read_stem_from(fp, stem, length);
+  err = read_stem_from(fp, stem);
   if (err) return err;
   
   return noerror;
@@ -180,19 +154,18 @@ error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_t
     threads.push_back(std::thread([i, &files, &t, &err, &length]() {
       printf("reading %dth stem\n", (int)i);
       finyl_stem stem;
-      int len = 0;
-      auto _err = read_stem(files[i], stem, len);
+      auto _err = read_stem(files[i], stem);
       if (_err) {
         err = _err;
         return;
       }
 
-      if (len == 0) {
+      if (stem.size() == 0) {
         err = error("read_stem has read empty file?");
         return;
       }
-      else if (length == 0) length = len; //initialize length
-      else if (length != len)  {
+      else if (length == 0) length = stem.size(); //initialize length
+      else if (length != stem.size())  {
         err = error(ERR::STEMS_DIFFERENT_SIZE);
         return;
       }
@@ -233,9 +206,9 @@ static void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) 
 
     for (int c = 0; c<t.stems_size; c++) {
       auto& buf = stem_buffers[c];
-      auto [left, right] = finyl_get_sample(t, c);
-      buf[i] = left;
-      buf[i+1] = right;
+      int stereo_index = ((int)t.index) * 2;
+      buf[i] = t.stems[c][stereo_index];
+      buf[i+1] = t.stems[c][stereo_index+1];
     }
   }
 }

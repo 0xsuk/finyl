@@ -43,7 +43,7 @@ int get_pixel(int ioffset, int range, int window_width) {
 }
 
 float get_scaled_left_sample(finyl_stem& s, int position) {
-  auto left = finyl_get_left_sample(s, position);
+  auto left = s[position*2];
   return left / 32768.0;
 }
 

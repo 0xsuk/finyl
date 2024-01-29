@@ -43,24 +43,12 @@ void print_track(finyl_track& t) {
   printf("}\n");
 }
 
-bool is_chunk_same(finyl_chunk& c1, finyl_chunk& c2) {
-  if (c1.size() != c2.size()) return false;
-  for (int i = 0; i<c1.size(); i++) {
-    finyl_sample s1 = c1[i];
-    finyl_sample s2 = c2[i];
-
+bool is_stem_same(finyl_stem& st1, finyl_stem& st2) {
+  for (int i = 0; i<st1.size(); i++) {
+    auto s1 = st1[i];
+    auto s2 = st2[i];
     if (s1 != s2) return false;
-  }
-
-  return true;
-}
-
-bool is_stem_same(finyl_stem& s1, finyl_stem& s2) {
-  for (int i = 0; i<s1.size(); i++) {
-    finyl_chunk& c1 = s1[i];
-    finyl_chunk& c2 = s2[i];
     
-    if (!is_chunk_same(c1, c2)) return false;
   }
 
   return true;

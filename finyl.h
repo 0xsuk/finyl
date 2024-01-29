@@ -16,8 +16,8 @@
 #endif
 
 using finyl_sample = signed short;
-using finyl_chunk = std::vector<finyl_sample>;
-using finyl_stem = std::vector<finyl_chunk>;
+// using finyl_chunk = std::vector<finyl_sample>;
+using finyl_stem = std::vector<finyl_sample>;
 using finyl_buffer = std::vector<finyl_sample>;
 using finyl_stem_buffers = std::array<finyl_buffer, MAX_STEMS_SIZE>;
 
@@ -95,14 +95,11 @@ extern finyl_track* ddeck;
 
 bool file_exist(std::string_view file);
 
-std::pair<finyl_sample, finyl_sample> finyl_get_sample(finyl_track& t, int stem_index);
-finyl_sample finyl_get_left_sample(finyl_stem& s, int index);
-
 int finyl_get_quantized_beat_index(finyl_track& t, int index);
 int finyl_get_quantized_time(finyl_track& t, int index);
 double finyl_get_quantized_index(finyl_track& t, int index);
 error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_track& t);
-
+error read_stem(const std::string& file, finyl_stem& stem);
 void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size);
 
 void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, snd_pcm_t* handle, snd_pcm_uframes_t buffer_size, snd_pcm_uframes_t period_size);
