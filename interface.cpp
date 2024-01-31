@@ -28,8 +28,8 @@ int get_window_size(Interface& itf) {
   }
 
   int screenNum = DefaultScreen(disp);
-  itf.win_width = DisplayWidth(disp, screenNum);
-  itf.win_height = DisplayHeight(disp, screenNum);
+  itf.win_width = DisplayWidth(disp, screenNum)/2;
+  itf.win_height = DisplayHeight(disp, screenNum)/2;
 
   printf("Screen Width: %d\n", itf.win_width);
   printf("Screen Height: %d\n", itf.win_height);
@@ -286,7 +286,6 @@ int run_interface() {
   SDL_SetTextureBlendMode(interface.tx_bsg, SDL_BLENDMODE_BLEND);
   
   SDL_Event event;
-  int fps = 100;
   int desired_delta = 1000 / fps;
   while (finyl_running) {
     int start_msec = SDL_GetTicks();

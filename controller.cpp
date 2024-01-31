@@ -504,13 +504,6 @@ void* key_input(void* args) {
 }
 
 void* controller(void* args) {
-  printf("deck initializing\n");
-  
-  load_track(&adeck, 1, finyl_a);
-  load_track(&bdeck, 1, finyl_b);
-  
-  printf("deck initialized\n");
-  
   pthread_t k;
   pthread_create(&k, NULL, key_input, NULL);
   pthread_t s;
