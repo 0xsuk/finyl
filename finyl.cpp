@@ -16,15 +16,17 @@
 std::string usb;
 std::string device;
 std::string finyl_output_path;
+int fps = 30;
 snd_pcm_uframes_t period_size;
 snd_pcm_uframes_t period_size_2;
-void init_globals(const std::string& _usb, const std::string& _device, snd_pcm_uframes_t _period_size) {
+void init_globals(const std::string& _usb, const std::string& _device, snd_pcm_uframes_t _period_size, int _fps) {
   std::string home = getenv("HOME");
   finyl_output_path = home + "/.finyl-output";
   usb = _usb;
   device = _device;
   period_size = _period_size;
   period_size_2 = period_size*2;
+  fps = _fps;
 }
 
 bool finyl_running = true;

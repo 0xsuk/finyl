@@ -155,11 +155,7 @@ static std::string unmarshal_error(const json::node& n) {
 
 static error run_command(FILE** fp, std::string_view badge, std::string_view usb, std::string_view op) {
   char exec[128] = "";
-  if (is_raspi()) {
-    strcat(exec, "./finyl-digger");
-  } else {
-    strcat(exec, "java -jar crate-digger/target/finyl-1.0-SNAPSHOT.jar");
-  }
+  strcat(exec, "java -jar crate-digger/target/finyl-1.0-SNAPSHOT.jar");
   char command[1000];
   snprintf(command, sizeof(command), "%s %s %s %s", exec, badge.data(), usb.data(), op.data());
   

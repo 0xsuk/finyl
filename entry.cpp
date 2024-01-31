@@ -9,7 +9,7 @@
 
 int main(int argc, char **argv) {
   if (argc < 2) {
-    printf("usage ./finyl <path to rekordbox usb: example /media/null/22BC-F655/ > [<soundcard name (default is \"default\")> <period_size (default is 1024)>]\n inside [] are optional\n");
+    printf("usage ./finyl <path to rekordbox usb: example /media/null/22BC-F655/ > [<soundcard name (default is \"default\")> <period_size (default is 1024)> <fps (default 30)]\n inside [] are optional\n");
     return 0;
   }
   std::string usb = argv[1];
@@ -23,8 +23,11 @@ int main(int argc, char **argv) {
   if (argc >= 4) {
     period_size = std::stoi(argv[3]);
   }
+  if (argc >=5) {
+    fps = std::stoi(argv[4]);
+  }
   
-  init_globals(usb, device, period_size);
+  init_globals(usb, device, period_size, fps);
   finyl_setup_alsa(&handle, &buffer_size, &period_size);
   printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
   
