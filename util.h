@@ -25,8 +25,8 @@ std::string generate_random_string(size_t size);
 
 std::string compute_md5(std::string_view filepath);
 
-int find_char_last(char* str, char c);
-
+int find_char_last(const char* str, char c);
+bool is_wav(const char* filename);
 void print_err(const error& err);
 
 #endif

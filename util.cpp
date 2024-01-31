@@ -125,9 +125,9 @@ std::string compute_md5(std::string_view filepath) {
   return dst;
 }
 
-int find_char_last(char* str, char c) {
-	char *p = str;
-	char* last = NULL;
+int find_char_last(const char* str, char c) {
+	const char *p = str;
+	const char* last = NULL;
 	while((p = strchr(p, c))){
 		last = p;
 		p++;
@@ -136,6 +136,11 @@ int find_char_last(char* str, char c) {
     return -1;
   }
   return (unsigned)(last - str);
+}
+
+bool is_wav(const char* filename) {
+  int dot = find_char_last(filename, '.');
+  return strncmp(&filename[dot+1], "wav", 3) == 0;
 }
 
 void print_err(const error& err) {

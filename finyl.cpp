@@ -1,5 +1,7 @@
 #include "finyl.h"
 #include "error.h"
+#include "util.h"
+#include "dev.h"
 #include <thread>
 #include <alsa/asoundlib.h>
 #include <math.h>
@@ -7,6 +9,23 @@
 #include <sys/wait.h>
 #include <string_view>
 #include <memory>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+
+std::string usb;
+std::string device;
+std::string finyl_output_path;
+snd_pcm_uframes_t period_size;
+snd_pcm_uframes_t period_size_2;
+void init_globals(const std::string& _usb, const std::string& _device, snd_pcm_uframes_t _period_size) {
+  std::string home = getenv("HOME");
+  finyl_output_path = home + "/.finyl-output";
+  usb = _usb;
+  device = _device;
+  period_size = _period_size;
+  period_size_2 = period_size*2;
+}
 
 bool finyl_running = true;
 
@@ -21,8 +40,6 @@ finyl_stem_buffers a_stem_buffers;
 finyl_buffer bbuffer;
 finyl_stem_buffers b_stem_buffers;
 
-snd_pcm_uframes_t period_size;
-snd_pcm_uframes_t period_size_2;
 
 finyl_track_meta::finyl_track_meta(): id(0),
                                       bpm(0),
@@ -30,7 +47,7 @@ finyl_track_meta::finyl_track_meta(): id(0),
                                       filesize(0) {};
 
 finyl_track::finyl_track(): meta(),
-                            length(0),
+                            msize(0),
                             stems_size(0),
                             playing(false),
                             index(0),
@@ -38,6 +55,8 @@ finyl_track::finyl_track(): meta(),
                             loop_active(false),
                             loop_in(-1),
                             loop_out(-1) {};
+
+
 
 
 int finyl_get_quantized_beat_index(finyl_track& t, int index) {
@@ -112,20 +131,17 @@ static error open_pcm(FILE** fp, const std::string& filename) {
   return noerror;
 }
 
-static error read_stem_from(FILE* fp, finyl_stem& stem) {
-  int count = 20971520; //40mb*;
-  int max = 4; //160mb;
-  for (int i = 1; i<=max; i++) {
-    int read_acc = count*(i-1);
-    stem.resize(read_acc + count);
-    size_t read = fread(&stem[read_acc], sizeof(finyl_sample), count, fp);
-    if (read < count) { // finish
-      stem.resize(read_acc + read);
-      stem.shrink_to_fit();
+static error read_stem_from(FILE* fp, finyl_cstem& stem) {
+  while (true) {
+    finyl_sample* chunk = new finyl_sample[CHUNK_SIZE];
+    size_t read = fread(chunk, sizeof(finyl_sample), CHUNK_SIZE, fp);
+    stem.push_chunk(chunk);
+    stem.add_ssize(read);
+    if (read < CHUNK_SIZE) {
       break;
     }
-    if (i == max && read >= count) { //overflow, trim
-      printf("WARNING: file too large, trimmed\n");
+    if (stem.chunks_size() == MAX_CHUNKS_SIZE) {
+      printf("WARNING: file too large\n");
       break;
     }
   }
@@ -133,14 +149,76 @@ static error read_stem_from(FILE* fp, finyl_stem& stem) {
   return noerror;
 }
 
-error read_stem(const std::string& file, finyl_stem& stem) {
+static int wav_valid(char* addr) {
+  if (addr == MAP_FAILED) {
+    return -1;
+  }
+  
+  short* nchannels = (short*)(addr+22);
+  int* sample_rate = (int*)(addr+24);
+  short* bitdepth = (short*)(addr+34);
+  
+  if (*bitdepth != 16 || *nchannels != 2 || *sample_rate != 44100) {
+    return -1;
+  }
+  
+  //find data chunk
+  int data_offset = 36;
+  char* data = (char*)(addr+data_offset);
+  while (true) {
+    if (data_offset > 10000) {
+      return -1;
+    }
+    if (strncmp(data, "data", 4) == 0) break;
+    data_offset++;
+    data = (char*)(addr+data_offset);
+  }
+  
+  return data_offset;
+}
+
+static bool try_mmap(const std::string& file, std::unique_ptr<finyl_stem>& stem) {
+  int fd = open(file.data(), O_RDONLY);
+  struct stat sb;
+  if (fstat(fd, &sb) == -1) {
+    close(fd);
+    return false;
+  }
+  char* addr = (char*)mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+  close(fd);
+  
+  int data_offset = wav_valid(addr);
+  if (data_offset == -1) {
+    if (munmap(addr, sb.st_size) != 0) {
+      printf("failed to munmap\n");
+    }
+    return false;
+  }
+
+  int* ssize = (int*)(addr+data_offset+4);
+  finyl_sample* data = (finyl_sample*)(addr+data_offset+8);
+
+  auto mstem = std::make_unique<finyl_mstem>(data, *ssize);
+  stem.reset(mstem.release());
+  return true;
+}
+
+error read_stem(const std::string& file, std::unique_ptr<finyl_stem>& stem) {
+  //For wav file, its much faster to use mmap
+  if (is_wav(file.data()) && try_mmap(file, stem)) {
+    return noerror;
+  }
+  
   FILE* fp;
   auto err = open_pcm(&fp, file);
   if (err) return err;
   
-  err = read_stem_from(fp, stem);
-  if (err) return err;
-  
+  auto cstem = std::make_unique<finyl_cstem>();
+  err = read_stem_from(fp, *cstem);
+  if (err)  return err;
+
+  stem.reset(cstem.release());
+    
   return noerror;
 }
 
@@ -153,27 +231,27 @@ error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_t
   std::vector<std::thread> threads;
   
   error err;
-  int length = 0;
+  int msize = 0;
   for (size_t i = 0; i < files.size(); i++) {
-    threads.push_back(std::thread([i, &files, &t, &err, &length]() {
+    threads.push_back(std::thread([i, &files, &t, &err, &msize]() {
       printf("reading %dth stem\n", (int)i);
-      finyl_stem stem;
+      std::unique_ptr<finyl_stem> stem;
       auto _err = read_stem(files[i], stem);
       if (_err) {
         err = _err;
         return;
       }
 
-      if (stem.size() == 0) {
+      if (stem->ssize() == 0) {
         err = error("read_stem has read empty file?");
         return;
       }
-      else if (length == 0) length = stem.size(); //initialize length
-      else if (length != stem.size())  {
+      else if (msize == 0) msize = stem->msize(); //initialize length
+      else if (msize != stem->msize())  {
         err = error(ERR::STEMS_DIFFERENT_SIZE);
         return;
       }
-      t.stems[i] = std::move(stem);
+      t.stems[i].reset(stem.release());
     }));
   }
   
@@ -182,7 +260,7 @@ error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_t
   }
   
   t.stems_size = files.size();
-  t.length = length;
+  t.msize = msize;
   
   return err;
 }
@@ -204,15 +282,14 @@ static void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) 
       t.index = t.loop_in + t.index - t.loop_out;
     }
     
-    if (t.index >= t.length) {
+    if (t.index >= t.msize) {
       t.playing = false;
     }
 
     for (int c = 0; c<t.stems_size; c++) {
       auto& buf = stem_buffers[c];
-      int stereo_index = ((int)t.index) * 2;
-      buf[i] = t.stems[c][stereo_index];
-      buf[i+1] = t.stems[c][stereo_index+1];
+      auto& s = t.stems[c];
+      s->get_samples(buf[i], buf[i+1], (int)t.index);
     }
   }
 }
@@ -267,9 +344,6 @@ static void finyl_handle() {
   add_and_clip_two_buffers(buffer, abuffer, bbuffer);
 }
 
-/* char* device = "hw:CARD=PCH,DEV=0";            /\* playback device *\/ */
-char* device = "default";
-
 static void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
   snd_pcm_hw_params_t* hw_params;
   snd_pcm_hw_params_malloc(&hw_params);
@@ -296,7 +370,7 @@ static void cleanup_alsa(snd_pcm_t* handle) {
 
 void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
   int err;
-  if ((err = snd_pcm_open(handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+  if ((err = snd_pcm_open(handle, device.data(), SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
     printf("Playback open error!: %s\n", snd_strerror(err));
     exit(1);
   }
@@ -322,10 +396,8 @@ static void init_decks(finyl_track* a, finyl_track* b, finyl_track* c, finyl_tra
   ddeck = d;
 }
 
-void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, snd_pcm_t* handle, snd_pcm_uframes_t buffer_size, snd_pcm_uframes_t _period_size) {
+void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, snd_pcm_t* handle) {
   int err = 0;
-  period_size = _period_size;
-  period_size_2 = 2*period_size;
   init_decks(a, b, c, d);
   resize_buffers();
   
@@ -347,4 +419,3 @@ void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, s
   
   cleanup_alsa(handle);
 }
-

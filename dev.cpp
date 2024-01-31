@@ -1,18 +1,5 @@
 #include "dev.h"
 
-#ifndef USB
-#define USB "/media/null/22BC-F655/"
-#endif
-#define STR_IMPL(x) #x
-#define STR(x) STR_IMPL(x)
-std::string usb = STR(USB);
-
-std::string get_finyl_output_path() {
-  std::string home = getenv("HOME");
-  std::string s = home + "/.finyl-output";
-  return s;
-}
-
 void print_track_meta(finyl_track_meta& tm) {
   printf("id is %d\n", tm.id);
   printf("key is %d\n", tm.musickeyid);
@@ -31,7 +18,7 @@ void print_track(finyl_track& t) {
   printf("\tfilename: %s\n", t.meta.filename.c_str());
   printf("\tbpm: %d\n", t.meta.bpm);
   printf("\teffective bpm: %lf\n", t.meta.bpm * t.speed);
-  printf("\tlength: %d\n", t.length);
+  printf("\tmsize: %d\n", t.msize);
   printf("\tloop_active: %d\n", t.loop_active);
   printf("\tloop_in: %lf\n", t.loop_in);
   printf("\tloop_out: %lf\n", t.loop_out);
@@ -44,7 +31,7 @@ void print_track(finyl_track& t) {
 }
 
 bool is_stem_same(finyl_stem& st1, finyl_stem& st2) {
-  for (int i = 0; i<st1.size(); i++) {
+  for (int i = 0; i<st1.ssize(); i++) {
     auto s1 = st1[i];
     auto s2 = st2[i];
     if (s1 != s2) return false;

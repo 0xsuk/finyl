@@ -29,7 +29,7 @@ void slide_right(finyl_track* t) {
 void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, int n) {
   finyl_track* before = *dest;
   
-  finyl_track* t = new finyl_track;
+  auto t = std::make_unique<finyl_track>();
   if (auto err = get_track(*t, usb, tid)) {
     printf("err:%s\n", err.message.data());
     if (err.type) {
@@ -59,7 +59,7 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
   
   printf("%s\n", t->meta.filename.data());
 
-  *dest = t;
+  *dest = t.release();
   if (deck == finyl_a) {
     interface.render_adeck = true;
   } else if (deck == finyl_b) {

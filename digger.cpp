@@ -174,7 +174,7 @@ static error run_command(FILE** fp, std::string_view badge, std::string_view usb
 error close_command(FILE* fp) {
   char error_out[10000];
   fread(error_out, 1, sizeof(error_out), fp);
-  int status = pclose(fp);
+  int status = pclose(fp); //TODO: takes 300,000 micsec (0.3 sec)
   if (status == -1) {
     return error("failed to close the command stream", ERR::CANT_CLOSE_COMMAND);
   }
@@ -182,7 +182,6 @@ error close_command(FILE* fp) {
   if (status == 1) {
     return error(std::move(error_out), ERR::COMMAND_FAILED);
   }
-
   return noerror;
 }
 
@@ -202,13 +201,12 @@ static std::pair<std::unique_ptr<json::node>, error> run_digger(std::string_view
     FILE* fp;
     auto err = run_command(&fp, badge, usb, op);
     if (err.has) return {nullptr, err};
-  
     if (auto err = close_command(fp); err.has) {
       return {nullptr, err};
     }
   }
   
-  auto p = json::parser(get_finyl_output_path());
+  auto p = json::parser(finyl_output_path);
   
   auto [n, err] = p.parse();
   if (err != json::STATUS::OK) return {nullptr, ERR::JSON_FAILED};

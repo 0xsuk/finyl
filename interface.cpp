@@ -42,8 +42,8 @@ int get_pixel(int ioffset, int range, int window_width) {
   return (ioffset / (float)range) * window_width;
 }
 
-float get_scaled_left_sample(finyl_stem& s, int position) {
-  auto left = s[position*2];
+float get_scaled_left_sample(finyl_stem& s, int mindex) {
+  auto left = s[mindex*2];
   return left / 32768.0;
 }
 
@@ -79,9 +79,9 @@ void slide(Interface& itf, SDL_Texture* texture, int xdiff) {
   }
 }
 
-void draw_wave(Interface& itf, finyl_track& t, int x, int i) {
+void draw_wave(Interface& itf, finyl_track& t, int x, int mindex) {
   if (t.stems_size == 1) {
-    float sample = get_scaled_left_sample(t.stems[0], i);
+    float sample = get_scaled_left_sample(*t.stems[0], mindex);
     int y = itf.wave_height_half - sample*itf.wave_height_half;
     SDL_RenderDrawLine(itf.renderer, x, y, x, itf.wave_height_half);
     return;
@@ -89,7 +89,7 @@ void draw_wave(Interface& itf, finyl_track& t, int x, int i) {
   
   int amount0;
   {
-    float sample = get_scaled_left_sample(t.stems[0], i);
+    float sample = get_scaled_left_sample(*t.stems[0], mindex);
     amount0 = sample*itf.wave_height_half;
     int y = itf.wave_height_half - amount0;
     SDL_SetRenderDrawColor(itf.renderer, 255, 255, 255, 255); //white
@@ -98,7 +98,7 @@ void draw_wave(Interface& itf, finyl_track& t, int x, int i) {
   }
   
   {
-    float sample = get_scaled_left_sample(t.stems[1], i);
+    float sample = get_scaled_left_sample(*t.stems[1], mindex);
     int amount1 = sample*itf.wave_height_half;
     SDL_SetRenderDrawColor(itf.renderer, 100, 100, 250, 255);
     if ((amount0 > 0 && amount1 > 0) || (amount0<0 && amount1<0)) {
@@ -133,7 +133,7 @@ void draw_waveform(Interface& itf, SDL_Texture* texture, finyl_track& t, int sta
     
     int pcmi = i+starti;
     
-    bool has_pcm = pcmi>=0 && pcmi < t.length;
+    bool has_pcm = pcmi>=0 && pcmi < t.msize;
     if (!has_pcm) {
       SDL_RenderDrawLine(itf.renderer, x, itf.wave_height_half, x, itf.wave_height_half);
       continue;

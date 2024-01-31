@@ -18,7 +18,6 @@ std::string ext = "wav";
 
 std::string get_filename(std::string filepath_cpy) {
   std::string base = basename(filepath_cpy.data());
-  printf("base %s\n", base.data());
   int dot = find_char_last(base.data(), '.');
 
   return base.substr(0, dot);

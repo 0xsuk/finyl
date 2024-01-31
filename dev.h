@@ -2,10 +2,9 @@
 #define DEV_H
 
 #include "finyl.h"
-
-extern std::string usb;
-
-std::string get_finyl_output_path();
+#include <chrono>
+#define NOW std::chrono::system_clock::now()
+#define DURATION(a, start) printf("%s took %ld micro\n", a, std::chrono::duration_cast<std::chrono::microseconds>(NOW-start).count())
 
 void print_track_meta(finyl_track_meta& tm);
 void print_track(finyl_track& t);

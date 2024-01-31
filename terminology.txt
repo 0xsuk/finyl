@@ -1,2 +1,6 @@
 channel: same as stereo "channel", one for left one for right
 stem: vocal, inst, drum, whatever
+
+pcm array: [left0, right0, left1, right1]
+mindex: index w.r.t. mono. mindex=1 is left1;
+sindex: index w.r.t. stereo. sindex=1 is right0;
