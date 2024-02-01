@@ -20,19 +20,16 @@ void set_wave_range(Interface& itf, int wave_range) {
   printf("wave_iteration_margin %d\n", itf.wave_iteration_margin);
 }
 
-int get_window_size(Interface& itf) {
+int get_window_size(int& width, int& height) {
   Display* disp = XOpenDisplay(NULL);
   if (disp == NULL) {
     fprintf(stderr, "Unable to connect to display\n");
-    return 1;
+    return -1;
   }
 
   int screenNum = DefaultScreen(disp);
-  itf.win_width = DisplayWidth(disp, screenNum)/2;
-  itf.win_height = DisplayHeight(disp, screenNum)/2;
-
-  printf("Screen Width: %d\n", itf.win_width);
-  printf("Screen Height: %d\n", itf.win_height);
+  width = DisplayWidth(disp, screenNum)/2;
+  height = DisplayHeight(disp, screenNum)/2;
 
   XCloseDisplay(disp);
   return 0;
@@ -257,9 +254,14 @@ int previ_adeck = 0;
 int previ_bdeck = 0;
 
 int run_interface() {
-  if (get_window_size(interface) == 1) {
-    return 1;
-  }
+  // int width;
+  // int height;
+  // if (get_window_size(width, height) == -1) {
+  //   return 1;
+  // }
+  
+  interface.win_width = 500;
+  interface.win_height = 500;
   
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     printf("SDL initialization failed: %s\n", SDL_GetError());
