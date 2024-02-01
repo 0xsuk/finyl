@@ -4,6 +4,7 @@
 #include "error.h"
 #include <vector>
 #include <memory>
+#include <sys/mman.h>
 #include <string>
 #include <array>
 
@@ -70,10 +71,12 @@ public:
 struct finyl_mstem: public finyl_stem {
 private:
   finyl_sample* data;
+  int file_size;
   
 public:
-  finyl_mstem(finyl_sample* _data, size_t _ssize) {
+  finyl_mstem(finyl_sample* _data, int _filesize, size_t _ssize) {
     data = _data;
+    file_size = _filesize;
     msize_ = _ssize/2;
     ssize_ = _ssize;
   }
@@ -91,7 +94,7 @@ public:
 
   ~finyl_mstem() {
     if (data != nullptr) {
-      delete[] data;
+      munmap(data, file_size);
       data = nullptr;
     }
   }

@@ -200,7 +200,7 @@ static bool try_mmap(const std::string& file, std::unique_ptr<finyl_stem>& stem)
   int* ssize = (int*)(addr+data_offset+4);
   finyl_sample* data = (finyl_sample*)(addr+data_offset+8);
 
-  auto mstem = std::make_unique<finyl_mstem>(data, *ssize);
+  auto mstem = std::make_unique<finyl_mstem>(data, sb.st_size, *ssize);
   stem.reset(mstem.release());
   return true;
 }
