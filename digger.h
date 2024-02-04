@@ -16,8 +16,6 @@ error get_playlists(std::vector<finyl_playlist>& pls, std::string_view usb);
 
 error get_track(finyl_track& t, std::string_view usb, int tid);
 
-error get_track(finyl_track& t, std::string_view usb, int tid);
-
 error get_playlist_tracks(std::vector<finyl_track_meta>& tms, std::string_view usb, int pid);
 
 

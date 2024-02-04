@@ -1,13 +1,19 @@
 // This is a generated file! Please edit source .ksy file and use kaitai-struct-compiler to rebuild
 
 #include "rekordbox_pdb.h"
-
-
+#include "exceptions.h"
 
 rekordbox_pdb_t::rekordbox_pdb_t(kaitai::kstream* p__io, kaitai::kstruct* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = this;
-    _read();
+    m_tables = 0;
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::_read() {
@@ -17,26 +23,40 @@ void rekordbox_pdb_t::_read() {
     m_next_unused_page = m__io->read_u4le();
     m__unnamed4 = m__io->read_u4le();
     m_sequence = m__io->read_u4le();
-    m__unnamed6 = m__io->ensure_fixed_contents(std::string("\x00\x00\x00\x00", 4));
-    int l_tables = num_tables();
+    m_gap = m__io->read_bytes(4);
+    if (!(gap() == std::string("\x00\x00\x00\x00", 4))) {
+        throw kaitai::validation_not_equal_error<std::string>(std::string("\x00\x00\x00\x00", 4), gap(), _io(), std::string("/seq/6"));
+    }
     m_tables = new std::vector<table_t*>();
-    m_tables->reserve(l_tables);
+    const int l_tables = num_tables();
     for (int i = 0; i < l_tables; i++) {
         m_tables->push_back(new table_t(m__io, this, m__root));
     }
 }
 
 rekordbox_pdb_t::~rekordbox_pdb_t() {
-    for (std::vector<table_t*>::iterator it = m_tables->begin(); it != m_tables->end(); ++it) {
-        delete *it;
+    _clean_up();
+}
+
+void rekordbox_pdb_t::_clean_up() {
+    if (m_tables) {
+        for (std::vector<table_t*>::iterator it = m_tables->begin(); it != m_tables->end(); ++it) {
+            delete *it;
+        }
+        delete m_tables; m_tables = 0;
     }
-    delete m_tables;
 }
 
 rekordbox_pdb_t::device_sql_string_t::device_sql_string_t(kaitai::kstream* p__io, kaitai::kstruct* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
-    _read();
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::device_sql_string_t::_read() {
@@ -47,7 +67,7 @@ void rekordbox_pdb_t::device_sql_string_t::_read() {
         break;
     }
     case 144: {
-        m_body = new device_sql_long_utf16be_t(m__io, this, m__root);
+        m_body = new device_sql_long_utf16le_t(m__io, this, m__root);
         break;
     }
     default: {
@@ -58,14 +78,55 @@ void rekordbox_pdb_t::device_sql_string_t::_read() {
 }
 
 rekordbox_pdb_t::device_sql_string_t::~device_sql_string_t() {
-    delete m_body;
+    _clean_up();
+}
+
+void rekordbox_pdb_t::device_sql_string_t::_clean_up() {
+    if (m_body) {
+        delete m_body; m_body = 0;
+    }
+}
+
+rekordbox_pdb_t::history_playlist_row_t::history_playlist_row_t(kaitai::kstream* p__io, rekordbox_pdb_t::row_ref_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
+    m__parent = p__parent;
+    m__root = p__root;
+    m_name = 0;
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
+}
+
+void rekordbox_pdb_t::history_playlist_row_t::_read() {
+    m_id = m__io->read_u4le();
+    m_name = new device_sql_string_t(m__io, this, m__root);
+}
+
+rekordbox_pdb_t::history_playlist_row_t::~history_playlist_row_t() {
+    _clean_up();
+}
+
+void rekordbox_pdb_t::history_playlist_row_t::_clean_up() {
+    if (m_name) {
+        delete m_name; m_name = 0;
+    }
 }
 
 rekordbox_pdb_t::playlist_tree_row_t::playlist_tree_row_t(kaitai::kstream* p__io, rekordbox_pdb_t::row_ref_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
+    m_name = 0;
     f_is_folder = false;
-    _read();
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::playlist_tree_row_t::_read() {
@@ -78,7 +139,13 @@ void rekordbox_pdb_t::playlist_tree_row_t::_read() {
 }
 
 rekordbox_pdb_t::playlist_tree_row_t::~playlist_tree_row_t() {
-    delete m_name;
+    _clean_up();
+}
+
+void rekordbox_pdb_t::playlist_tree_row_t::_clean_up() {
+    if (m_name) {
+        delete m_name; m_name = 0;
+    }
 }
 
 bool rekordbox_pdb_t::playlist_tree_row_t::is_folder() {
@@ -92,7 +159,14 @@ bool rekordbox_pdb_t::playlist_tree_row_t::is_folder() {
 rekordbox_pdb_t::color_row_t::color_row_t(kaitai::kstream* p__io, rekordbox_pdb_t::row_ref_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
-    _read();
+    m_name = 0;
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::color_row_t::_read() {
@@ -103,34 +177,44 @@ void rekordbox_pdb_t::color_row_t::_read() {
 }
 
 rekordbox_pdb_t::color_row_t::~color_row_t() {
-    delete m_name;
+    _clean_up();
 }
 
-rekordbox_pdb_t::device_sql_short_ascii_t::device_sql_short_ascii_t(uint8_t p_mangled_length, kaitai::kstream* p__io, rekordbox_pdb_t::device_sql_string_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
+void rekordbox_pdb_t::color_row_t::_clean_up() {
+    if (m_name) {
+        delete m_name; m_name = 0;
+    }
+}
+
+rekordbox_pdb_t::device_sql_short_ascii_t::device_sql_short_ascii_t(uint8_t p_length_and_kind, kaitai::kstream* p__io, rekordbox_pdb_t::device_sql_string_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
-    m_mangled_length = p_mangled_length;
+    m_length_and_kind = p_length_and_kind;
     f_length = false;
-    _read();
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::device_sql_short_ascii_t::_read() {
-    n_text = true;
-    if ( ((kaitai::kstream::mod(mangled_length(), 2) > 0) && (length() >= 0)) ) {
-        n_text = false;
-        m_text = kaitai::kstream::bytes_to_str(m__io->read_bytes(length()), std::string("ascii"));
-    }
+    m_text = kaitai::kstream::bytes_to_str(m__io->read_bytes((length() - 1)), "ascii");
 }
 
 rekordbox_pdb_t::device_sql_short_ascii_t::~device_sql_short_ascii_t() {
-    if (!n_text) {
-    }
+    _clean_up();
+}
+
+void rekordbox_pdb_t::device_sql_short_ascii_t::_clean_up() {
 }
 
 int32_t rekordbox_pdb_t::device_sql_short_ascii_t::length() {
     if (f_length)
         return m_length;
-    m_length = (((mangled_length() - 1) / 2) - 1);
+    m_length = (length_and_kind() >> 1);
     f_length = true;
     return m_length;
 }
@@ -138,8 +222,15 @@ int32_t rekordbox_pdb_t::device_sql_short_ascii_t::length() {
 rekordbox_pdb_t::album_row_t::album_row_t(kaitai::kstream* p__io, rekordbox_pdb_t::row_ref_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
+    m_name = 0;
     f_name = false;
-    _read();
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::album_row_t::_read() {
@@ -154,8 +245,14 @@ void rekordbox_pdb_t::album_row_t::_read() {
 }
 
 rekordbox_pdb_t::album_row_t::~album_row_t() {
+    _clean_up();
+}
+
+void rekordbox_pdb_t::album_row_t::_clean_up() {
     if (f_name) {
-        delete m_name;
+        if (m_name) {
+            delete m_name; m_name = 0;
+        }
     }
 }
 
@@ -173,16 +270,27 @@ rekordbox_pdb_t::device_sql_string_t* rekordbox_pdb_t::album_row_t::name() {
 rekordbox_pdb_t::page_t::page_t(kaitai::kstream* p__io, rekordbox_pdb_t::page_ref_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
+    m_next_page = 0;
+    m_row_groups = 0;
     f_num_rows = false;
     f_num_groups = false;
     f_row_groups = false;
     f_heap_pos = false;
     f_is_data_page = false;
-    _read();
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::page_t::_read() {
-    m__unnamed0 = m__io->ensure_fixed_contents(std::string("\x00\x00\x00\x00", 4));
+    m_gap = m__io->read_bytes(4);
+    if (!(gap() == std::string("\x00\x00\x00\x00", 4))) {
+        throw kaitai::validation_not_equal_error<std::string>(std::string("\x00\x00\x00\x00", 4), gap(), _io(), std::string("/types/page/seq/0"));
+    }
     m_page_index = m__io->read_u4le();
     m_type = static_cast<rekordbox_pdb_t::page_type_t>(m__io->read_u4le());
     m_next_page = new page_ref_t(m__io, this, m__root);
@@ -206,14 +314,22 @@ void rekordbox_pdb_t::page_t::_read() {
 }
 
 rekordbox_pdb_t::page_t::~page_t() {
-    delete m_next_page;
+    _clean_up();
+}
+
+void rekordbox_pdb_t::page_t::_clean_up() {
+    if (m_next_page) {
+        delete m_next_page; m_next_page = 0;
+    }
     if (!n_heap) {
     }
     if (f_row_groups && !n_row_groups) {
-        for (std::vector<row_group_t*>::iterator it = m_row_groups->begin(); it != m_row_groups->end(); ++it) {
-            delete *it;
+        if (m_row_groups) {
+            for (std::vector<row_group_t*>::iterator it = m_row_groups->begin(); it != m_row_groups->end(); ++it) {
+                delete *it;
+            }
+            delete m_row_groups; m_row_groups = 0;
         }
-        delete m_row_groups;
     }
 }
 
@@ -239,14 +355,13 @@ std::vector<rekordbox_pdb_t::row_group_t*>* rekordbox_pdb_t::page_t::row_groups(
     n_row_groups = true;
     if (is_data_page()) {
         n_row_groups = false;
-        int l_row_groups = num_groups();
         m_row_groups = new std::vector<row_group_t*>();
-        m_row_groups->reserve(l_row_groups);
+        const int l_row_groups = num_groups();
         for (int i = 0; i < l_row_groups; i++) {
             m_row_groups->push_back(new row_group_t(i, m__io, this, m__root));
         }
+        f_row_groups = true;
     }
-    f_row_groups = true;
     return m_row_groups;
 }
 
@@ -270,23 +385,36 @@ rekordbox_pdb_t::row_group_t::row_group_t(uint16_t p_group_index, kaitai::kstrea
     m__parent = p__parent;
     m__root = p__root;
     m_group_index = p_group_index;
+    m_rows = 0;
     f_base = false;
     f_row_present_flags = false;
     f_rows = false;
-    _read();
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::row_group_t::_read() {
 }
 
 rekordbox_pdb_t::row_group_t::~row_group_t() {
+    _clean_up();
+}
+
+void rekordbox_pdb_t::row_group_t::_clean_up() {
     if (f_row_present_flags) {
     }
     if (f_rows) {
-        for (std::vector<row_ref_t*>::iterator it = m_rows->begin(); it != m_rows->end(); ++it) {
-            delete *it;
+        if (m_rows) {
+            for (std::vector<row_ref_t*>::iterator it = m_rows->begin(); it != m_rows->end(); ++it) {
+                delete *it;
+            }
+            delete m_rows; m_rows = 0;
         }
-        delete m_rows;
     }
 }
 
@@ -312,9 +440,8 @@ uint16_t rekordbox_pdb_t::row_group_t::row_present_flags() {
 std::vector<rekordbox_pdb_t::row_ref_t*>* rekordbox_pdb_t::row_group_t::rows() {
     if (f_rows)
         return m_rows;
-    int l_rows = ((group_index() < (_parent()->num_groups() - 1)) ? (16) : ((kaitai::kstream::mod((_parent()->num_rows() - 1), 16) + 1)));
     m_rows = new std::vector<row_ref_t*>();
-    m_rows->reserve(l_rows);
+    const int l_rows = ((group_index() < (_parent()->num_groups() - 1)) ? (16) : ((kaitai::kstream::mod((_parent()->num_rows() - 1), 16) + 1)));
     for (int i = 0; i < l_rows; i++) {
         m_rows->push_back(new row_ref_t(i, m__io, this, m__root));
     }
@@ -325,7 +452,14 @@ std::vector<rekordbox_pdb_t::row_ref_t*>* rekordbox_pdb_t::row_group_t::rows() {
 rekordbox_pdb_t::genre_row_t::genre_row_t(kaitai::kstream* p__io, rekordbox_pdb_t::row_ref_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
-    _read();
+    m_name = 0;
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::genre_row_t::_read() {
@@ -334,13 +468,51 @@ void rekordbox_pdb_t::genre_row_t::_read() {
 }
 
 rekordbox_pdb_t::genre_row_t::~genre_row_t() {
-    delete m_name;
+    _clean_up();
+}
+
+void rekordbox_pdb_t::genre_row_t::_clean_up() {
+    if (m_name) {
+        delete m_name; m_name = 0;
+    }
+}
+
+rekordbox_pdb_t::history_entry_row_t::history_entry_row_t(kaitai::kstream* p__io, rekordbox_pdb_t::row_ref_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
+    m__parent = p__parent;
+    m__root = p__root;
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
+}
+
+void rekordbox_pdb_t::history_entry_row_t::_read() {
+    m_track_id = m__io->read_u4le();
+    m_playlist_id = m__io->read_u4le();
+    m_entry_index = m__io->read_u4le();
+}
+
+rekordbox_pdb_t::history_entry_row_t::~history_entry_row_t() {
+    _clean_up();
+}
+
+void rekordbox_pdb_t::history_entry_row_t::_clean_up() {
 }
 
 rekordbox_pdb_t::artwork_row_t::artwork_row_t(kaitai::kstream* p__io, rekordbox_pdb_t::row_ref_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
-    _read();
+    m_path = 0;
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::artwork_row_t::_read() {
@@ -349,29 +521,53 @@ void rekordbox_pdb_t::artwork_row_t::_read() {
 }
 
 rekordbox_pdb_t::artwork_row_t::~artwork_row_t() {
-    delete m_path;
+    _clean_up();
+}
+
+void rekordbox_pdb_t::artwork_row_t::_clean_up() {
+    if (m_path) {
+        delete m_path; m_path = 0;
+    }
 }
 
 rekordbox_pdb_t::device_sql_long_ascii_t::device_sql_long_ascii_t(kaitai::kstream* p__io, rekordbox_pdb_t::device_sql_string_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
-    _read();
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::device_sql_long_ascii_t::_read() {
     m_length = m__io->read_u2le();
-    m_text = kaitai::kstream::bytes_to_str(m__io->read_bytes(length()), std::string("ascii"));
+    m__unnamed1 = m__io->read_u1();
+    m_text = kaitai::kstream::bytes_to_str(m__io->read_bytes((length() - 4)), "ascii");
 }
 
 rekordbox_pdb_t::device_sql_long_ascii_t::~device_sql_long_ascii_t() {
+    _clean_up();
+}
+
+void rekordbox_pdb_t::device_sql_long_ascii_t::_clean_up() {
 }
 
 rekordbox_pdb_t::artist_row_t::artist_row_t(kaitai::kstream* p__io, rekordbox_pdb_t::row_ref_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
+    m_name = 0;
     f_ofs_name_far = false;
     f_name = false;
-    _read();
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::artist_row_t::_read() {
@@ -383,10 +579,16 @@ void rekordbox_pdb_t::artist_row_t::_read() {
 }
 
 rekordbox_pdb_t::artist_row_t::~artist_row_t() {
+    _clean_up();
+}
+
+void rekordbox_pdb_t::artist_row_t::_clean_up() {
     if (f_ofs_name_far && !n_ofs_name_far) {
     }
     if (f_name) {
-        delete m_name;
+        if (m_name) {
+            delete m_name; m_name = 0;
+        }
     }
 }
 
@@ -400,8 +602,8 @@ uint16_t rekordbox_pdb_t::artist_row_t::ofs_name_far() {
         m__io->seek((_parent()->row_base() + 10));
         m_ofs_name_far = m__io->read_u2le();
         m__io->seek(_pos);
+        f_ofs_name_far = true;
     }
-    f_ofs_name_far = true;
     return m_ofs_name_far;
 }
 
@@ -419,8 +621,16 @@ rekordbox_pdb_t::device_sql_string_t* rekordbox_pdb_t::artist_row_t::name() {
 rekordbox_pdb_t::page_ref_t::page_ref_t(kaitai::kstream* p__io, kaitai::kstruct* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
+    m_body = 0;
+    m__io__raw_body = 0;
     f_body = false;
-    _read();
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::page_ref_t::_read() {
@@ -428,9 +638,17 @@ void rekordbox_pdb_t::page_ref_t::_read() {
 }
 
 rekordbox_pdb_t::page_ref_t::~page_ref_t() {
+    _clean_up();
+}
+
+void rekordbox_pdb_t::page_ref_t::_clean_up() {
     if (f_body) {
-        delete m__io__raw_body;
-        delete m_body;
+        if (m__io__raw_body) {
+            delete m__io__raw_body; m__io__raw_body = 0;
+        }
+        if (m_body) {
+            delete m_body; m_body = 0;
+        }
     }
 }
 
@@ -448,23 +666,31 @@ rekordbox_pdb_t::page_t* rekordbox_pdb_t::page_ref_t::body() {
     return m_body;
 }
 
-rekordbox_pdb_t::device_sql_long_utf16be_t::device_sql_long_utf16be_t(kaitai::kstream* p__io, rekordbox_pdb_t::device_sql_string_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
-    m__parent = p__parent;
-    m__root = p__root;
-    _read();
-}
-
-void rekordbox_pdb_t::device_sql_long_utf16be_t::_read() {
-    m_length = m__io->read_u2le();
-    m_text = kaitai::kstream::bytes_to_str(m__io->read_bytes((length() - 4)), std::string("utf-16be"));
-}
-
-rekordbox_pdb_t::device_sql_long_utf16be_t::~device_sql_long_utf16be_t() {
-}
-
 rekordbox_pdb_t::track_row_t::track_row_t(kaitai::kstream* p__io, rekordbox_pdb_t::row_ref_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
+    m_ofs_strings = 0;
+    m_unknown_string_8 = 0;
+    m_unknown_string_6 = 0;
+    m_analyze_date = 0;
+    m_file_path = 0;
+    m_autoload_hotcues = 0;
+    m_date_added = 0;
+    m_unknown_string_3 = 0;
+    m_texter = 0;
+    m_kuvo_public = 0;
+    m_mix_name = 0;
+    m_unknown_string_5 = 0;
+    m_unknown_string_4 = 0;
+    m_message = 0;
+    m_unknown_string_2 = 0;
+    m_isrc = 0;
+    m_unknown_string_7 = 0;
+    m_filename = 0;
+    m_analyze_path = 0;
+    m_comment = 0;
+    m_release_date = 0;
+    m_title = 0;
     f_unknown_string_8 = false;
     f_unknown_string_6 = false;
     f_analyze_date = false;
@@ -479,14 +705,20 @@ rekordbox_pdb_t::track_row_t::track_row_t(kaitai::kstream* p__io, rekordbox_pdb_
     f_unknown_string_4 = false;
     f_message = false;
     f_unknown_string_2 = false;
-    f_unknown_string_1 = false;
+    f_isrc = false;
     f_unknown_string_7 = false;
     f_filename = false;
     f_analyze_path = false;
     f_comment = false;
     f_release_date = false;
     f_title = false;
-    _read();
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::track_row_t::_read() {
@@ -521,78 +753,125 @@ void rekordbox_pdb_t::track_row_t::_read() {
     m_rating = m__io->read_u1();
     m__unnamed29 = m__io->read_u2le();
     m__unnamed30 = m__io->read_u2le();
-    int l_ofs_strings = 21;
     m_ofs_strings = new std::vector<uint16_t>();
-    m_ofs_strings->reserve(l_ofs_strings);
+    const int l_ofs_strings = 21;
     for (int i = 0; i < l_ofs_strings; i++) {
         m_ofs_strings->push_back(m__io->read_u2le());
     }
 }
 
 rekordbox_pdb_t::track_row_t::~track_row_t() {
-    delete m_ofs_strings;
+    _clean_up();
+}
+
+void rekordbox_pdb_t::track_row_t::_clean_up() {
+    if (m_ofs_strings) {
+        delete m_ofs_strings; m_ofs_strings = 0;
+    }
     if (f_unknown_string_8) {
-        delete m_unknown_string_8;
+        if (m_unknown_string_8) {
+            delete m_unknown_string_8; m_unknown_string_8 = 0;
+        }
     }
     if (f_unknown_string_6) {
-        delete m_unknown_string_6;
+        if (m_unknown_string_6) {
+            delete m_unknown_string_6; m_unknown_string_6 = 0;
+        }
     }
     if (f_analyze_date) {
-        delete m_analyze_date;
+        if (m_analyze_date) {
+            delete m_analyze_date; m_analyze_date = 0;
+        }
     }
     if (f_file_path) {
-        delete m_file_path;
+        if (m_file_path) {
+            delete m_file_path; m_file_path = 0;
+        }
     }
     if (f_autoload_hotcues) {
-        delete m_autoload_hotcues;
+        if (m_autoload_hotcues) {
+            delete m_autoload_hotcues; m_autoload_hotcues = 0;
+        }
     }
     if (f_date_added) {
-        delete m_date_added;
+        if (m_date_added) {
+            delete m_date_added; m_date_added = 0;
+        }
     }
     if (f_unknown_string_3) {
-        delete m_unknown_string_3;
+        if (m_unknown_string_3) {
+            delete m_unknown_string_3; m_unknown_string_3 = 0;
+        }
     }
     if (f_texter) {
-        delete m_texter;
+        if (m_texter) {
+            delete m_texter; m_texter = 0;
+        }
     }
     if (f_kuvo_public) {
-        delete m_kuvo_public;
+        if (m_kuvo_public) {
+            delete m_kuvo_public; m_kuvo_public = 0;
+        }
     }
     if (f_mix_name) {
-        delete m_mix_name;
+        if (m_mix_name) {
+            delete m_mix_name; m_mix_name = 0;
+        }
     }
     if (f_unknown_string_5) {
-        delete m_unknown_string_5;
+        if (m_unknown_string_5) {
+            delete m_unknown_string_5; m_unknown_string_5 = 0;
+        }
     }
     if (f_unknown_string_4) {
-        delete m_unknown_string_4;
+        if (m_unknown_string_4) {
+            delete m_unknown_string_4; m_unknown_string_4 = 0;
+        }
     }
     if (f_message) {
-        delete m_message;
+        if (m_message) {
+            delete m_message; m_message = 0;
+        }
     }
     if (f_unknown_string_2) {
-        delete m_unknown_string_2;
+        if (m_unknown_string_2) {
+            delete m_unknown_string_2; m_unknown_string_2 = 0;
+        }
     }
-    if (f_unknown_string_1) {
-        delete m_unknown_string_1;
+    if (f_isrc) {
+        if (m_isrc) {
+            delete m_isrc; m_isrc = 0;
+        }
     }
     if (f_unknown_string_7) {
-        delete m_unknown_string_7;
+        if (m_unknown_string_7) {
+            delete m_unknown_string_7; m_unknown_string_7 = 0;
+        }
     }
     if (f_filename) {
-        delete m_filename;
+        if (m_filename) {
+            delete m_filename; m_filename = 0;
+        }
     }
     if (f_analyze_path) {
-        delete m_analyze_path;
+        if (m_analyze_path) {
+            delete m_analyze_path; m_analyze_path = 0;
+        }
     }
     if (f_comment) {
-        delete m_comment;
+        if (m_comment) {
+            delete m_comment; m_comment = 0;
+        }
     }
     if (f_release_date) {
-        delete m_release_date;
+        if (m_release_date) {
+            delete m_release_date; m_release_date = 0;
+        }
     }
     if (f_title) {
-        delete m_title;
+        if (m_title) {
+            delete m_title; m_title = 0;
+        }
     }
 }
 
@@ -750,15 +1029,15 @@ rekordbox_pdb_t::device_sql_string_t* rekordbox_pdb_t::track_row_t::unknown_stri
     return m_unknown_string_2;
 }
 
-rekordbox_pdb_t::device_sql_string_t* rekordbox_pdb_t::track_row_t::unknown_string_1() {
-    if (f_unknown_string_1)
-        return m_unknown_string_1;
+rekordbox_pdb_t::device_sql_string_t* rekordbox_pdb_t::track_row_t::isrc() {
+    if (f_isrc)
+        return m_isrc;
     std::streampos _pos = m__io->pos();
     m__io->seek((_parent()->row_base() + ofs_strings()->at(0)));
-    m_unknown_string_1 = new device_sql_string_t(m__io, this, m__root);
+    m_isrc = new device_sql_string_t(m__io, this, m__root);
     m__io->seek(_pos);
-    f_unknown_string_1 = true;
-    return m_unknown_string_1;
+    f_isrc = true;
+    return m_isrc;
 }
 
 rekordbox_pdb_t::device_sql_string_t* rekordbox_pdb_t::track_row_t::unknown_string_7() {
@@ -830,7 +1109,14 @@ rekordbox_pdb_t::device_sql_string_t* rekordbox_pdb_t::track_row_t::title() {
 rekordbox_pdb_t::key_row_t::key_row_t(kaitai::kstream* p__io, rekordbox_pdb_t::row_ref_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
-    _read();
+    m_name = 0;
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::key_row_t::_read() {
@@ -840,13 +1126,25 @@ void rekordbox_pdb_t::key_row_t::_read() {
 }
 
 rekordbox_pdb_t::key_row_t::~key_row_t() {
-    delete m_name;
+    _clean_up();
+}
+
+void rekordbox_pdb_t::key_row_t::_clean_up() {
+    if (m_name) {
+        delete m_name; m_name = 0;
+    }
 }
 
 rekordbox_pdb_t::playlist_entry_row_t::playlist_entry_row_t(kaitai::kstream* p__io, rekordbox_pdb_t::row_ref_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
-    _read();
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::playlist_entry_row_t::_read() {
@@ -856,12 +1154,23 @@ void rekordbox_pdb_t::playlist_entry_row_t::_read() {
 }
 
 rekordbox_pdb_t::playlist_entry_row_t::~playlist_entry_row_t() {
+    _clean_up();
+}
+
+void rekordbox_pdb_t::playlist_entry_row_t::_clean_up() {
 }
 
 rekordbox_pdb_t::label_row_t::label_row_t(kaitai::kstream* p__io, rekordbox_pdb_t::row_ref_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
-    _read();
+    m_name = 0;
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::label_row_t::_read() {
@@ -870,13 +1179,52 @@ void rekordbox_pdb_t::label_row_t::_read() {
 }
 
 rekordbox_pdb_t::label_row_t::~label_row_t() {
-    delete m_name;
+    _clean_up();
+}
+
+void rekordbox_pdb_t::label_row_t::_clean_up() {
+    if (m_name) {
+        delete m_name; m_name = 0;
+    }
+}
+
+rekordbox_pdb_t::device_sql_long_utf16le_t::device_sql_long_utf16le_t(kaitai::kstream* p__io, rekordbox_pdb_t::device_sql_string_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
+    m__parent = p__parent;
+    m__root = p__root;
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
+}
+
+void rekordbox_pdb_t::device_sql_long_utf16le_t::_read() {
+    m_length = m__io->read_u2le();
+    m__unnamed1 = m__io->read_u1();
+    m_text = kaitai::kstream::bytes_to_str(m__io->read_bytes((length() - 4)), "utf-16le");
+}
+
+rekordbox_pdb_t::device_sql_long_utf16le_t::~device_sql_long_utf16le_t() {
+    _clean_up();
+}
+
+void rekordbox_pdb_t::device_sql_long_utf16le_t::_clean_up() {
 }
 
 rekordbox_pdb_t::table_t::table_t(kaitai::kstream* p__io, rekordbox_pdb_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
     m__parent = p__parent;
     m__root = p__root;
-    _read();
+    m_first_page = 0;
+    m_last_page = 0;
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::table_t::_read() {
@@ -887,8 +1235,16 @@ void rekordbox_pdb_t::table_t::_read() {
 }
 
 rekordbox_pdb_t::table_t::~table_t() {
-    delete m_first_page;
-    delete m_last_page;
+    _clean_up();
+}
+
+void rekordbox_pdb_t::table_t::_clean_up() {
+    if (m_first_page) {
+        delete m_first_page; m_first_page = 0;
+    }
+    if (m_last_page) {
+        delete m_last_page; m_last_page = 0;
+    }
 }
 
 rekordbox_pdb_t::row_ref_t::row_ref_t(uint16_t p_row_index, kaitai::kstream* p__io, rekordbox_pdb_t::row_group_t* p__parent, rekordbox_pdb_t* p__root) : kaitai::kstruct(p__io) {
@@ -899,17 +1255,29 @@ rekordbox_pdb_t::row_ref_t::row_ref_t(uint16_t p_row_index, kaitai::kstream* p__
     f_row_base = false;
     f_present = false;
     f_body = false;
-    _read();
+
+    try {
+        _read();
+    } catch(...) {
+        _clean_up();
+        throw;
+    }
 }
 
 void rekordbox_pdb_t::row_ref_t::_read() {
 }
 
 rekordbox_pdb_t::row_ref_t::~row_ref_t() {
+    _clean_up();
+}
+
+void rekordbox_pdb_t::row_ref_t::_clean_up() {
     if (f_ofs_row) {
     }
     if (f_body && !n_body) {
-        delete m_body;
+        if (m_body) {
+            delete m_body; m_body = 0;
+        }
     }
 }
 
@@ -950,59 +1318,69 @@ kaitai::kstruct* rekordbox_pdb_t::row_ref_t::body() {
         m__io->seek(row_base());
         n_body = true;
         switch (_parent()->_parent()->type()) {
-        case PAGE_TYPE_KEYS: {
-            n_body = false;
-            m_body = new key_row_t(m__io, this, m__root);
-            break;
-        }
-        case PAGE_TYPE_GENRES: {
-            n_body = false;
-            m_body = new genre_row_t(m__io, this, m__root);
-            break;
-        }
-        case PAGE_TYPE_PLAYLIST_ENTRIES: {
-            n_body = false;
-            m_body = new playlist_entry_row_t(m__io, this, m__root);
-            break;
-        }
-        case PAGE_TYPE_TRACKS: {
-            n_body = false;
-            m_body = new track_row_t(m__io, this, m__root);
-            break;
-        }
-        case PAGE_TYPE_PLAYLIST_TREE: {
+        case rekordbox_pdb_t::PAGE_TYPE_PLAYLIST_TREE: {
             n_body = false;
             m_body = new playlist_tree_row_t(m__io, this, m__root);
             break;
         }
-        case PAGE_TYPE_LABELS: {
+        case rekordbox_pdb_t::PAGE_TYPE_KEYS: {
             n_body = false;
-            m_body = new label_row_t(m__io, this, m__root);
+            m_body = new key_row_t(m__io, this, m__root);
             break;
         }
-        case PAGE_TYPE_ALBUMS: {
-            n_body = false;
-            m_body = new album_row_t(m__io, this, m__root);
-            break;
-        }
-        case PAGE_TYPE_COLORS: {
-            n_body = false;
-            m_body = new color_row_t(m__io, this, m__root);
-            break;
-        }
-        case PAGE_TYPE_ARTISTS: {
+        case rekordbox_pdb_t::PAGE_TYPE_ARTISTS: {
             n_body = false;
             m_body = new artist_row_t(m__io, this, m__root);
             break;
         }
-        case PAGE_TYPE_ARTWORK: {
+        case rekordbox_pdb_t::PAGE_TYPE_ALBUMS: {
+            n_body = false;
+            m_body = new album_row_t(m__io, this, m__root);
+            break;
+        }
+        case rekordbox_pdb_t::PAGE_TYPE_GENRES: {
+            n_body = false;
+            m_body = new genre_row_t(m__io, this, m__root);
+            break;
+        }
+        case rekordbox_pdb_t::PAGE_TYPE_HISTORY_PLAYLISTS: {
+            n_body = false;
+            m_body = new history_playlist_row_t(m__io, this, m__root);
+            break;
+        }
+        case rekordbox_pdb_t::PAGE_TYPE_ARTWORK: {
             n_body = false;
             m_body = new artwork_row_t(m__io, this, m__root);
             break;
         }
+        case rekordbox_pdb_t::PAGE_TYPE_PLAYLIST_ENTRIES: {
+            n_body = false;
+            m_body = new playlist_entry_row_t(m__io, this, m__root);
+            break;
+        }
+        case rekordbox_pdb_t::PAGE_TYPE_LABELS: {
+            n_body = false;
+            m_body = new label_row_t(m__io, this, m__root);
+            break;
+        }
+        case rekordbox_pdb_t::PAGE_TYPE_TRACKS: {
+            n_body = false;
+            m_body = new track_row_t(m__io, this, m__root);
+            break;
+        }
+        case rekordbox_pdb_t::PAGE_TYPE_HISTORY_ENTRIES: {
+            n_body = false;
+            m_body = new history_entry_row_t(m__io, this, m__root);
+            break;
+        }
+        case rekordbox_pdb_t::PAGE_TYPE_COLORS: {
+            n_body = false;
+            m_body = new color_row_t(m__io, this, m__root);
+            break;
+        }
         }
         m__io->seek(_pos);
+        f_body = true;
     }
-    f_body = true;
     return m_body;
 }
