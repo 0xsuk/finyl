@@ -5,13 +5,11 @@
 #include <map>
 #include "finyl.h"
 
-namespace rekordbox {
-
 struct TrackRow {
   std::string title;
   std::string filename;
   std::string relativeFilepath;
-  std::string anlzFilepath;
+  std::string anlzRelativeFilepath;
   int tempo;
   int musickey;
   int genre;
@@ -28,16 +26,20 @@ struct Usb {
   std::map<int, std::string> playlistNamesMap;
   std::map<int, TrackRow> tracksMap;
 
-  Usb() = default;
-  Usb(Usb&&) = default;
-  Usb& operator=(Usb&&) = default;
+  Usb(const std::string& _root) {
+    root = _root;
+  }
 };
-void printTrackName(const Usb& usb, int tid);
-void printPlaylistTracks(const Usb& usb, int playlist_id);
-void unplug(Usb& usb);
-int plug(Usb& usb);
-error getPlaylistTracks(std::vector<finyl_track_meta>& tms, const Usb& usb, int playlistid);
 
-}
+extern std::vector<Usb> usbs;
+
+void printPlaylists(const Usb& usb);
+void printPlaylistTracks(const Usb& usb, int playlistid);
+void unplug(Usb& usb);
+int plug(const std::string& root);
+void getPlaylistTrackMetas(std::vector<finyl_track_meta>& tms, const Usb& usb, int playlistid);
+void getTrackMeta1(finyl_track_meta& tm, const Usb& usb, int trackId);
+void getTrackMeta(finyl_track_meta& tm, const Usb& usb, int trackId);
+void getTrack(Usb& usb, finyl_track& t, int trackId);
 
 #endif

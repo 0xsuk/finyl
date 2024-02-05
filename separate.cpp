@@ -6,7 +6,7 @@
 #include "finyl.h"
 #include "util.h"
 #include "dev.h"
-#include "digger.h"
+#include "rekordbox.h"
 #include <stdlib.h>
 #include <libgen.h>
 #include <utility>
@@ -50,18 +50,18 @@ bool all_channel_files_exist(std::string_view filepath, std::string_view root, s
   return true;
 }
 
-void separate_track(finyl_track_meta& tm) {
+void separate_track(const Usb& usb, std::string_view filepath) {
   char command[1000];
   char model[] = "hdemucs_mmi";
-  auto root = join_path(usb.data(), "finyl/separated");
+  auto root = join_path(usb.root.data(), "finyl/separated");
   auto neoroot = join_path(root.data(), model);
   
-  auto md5 = compute_md5(tm.filepath);
-  snprintf(command, sizeof(command), "demucs -n %s --two-stems=vocals \"%s\" -o %s --filename {track}-{stem}-%s.{ext}", model, tm.filepath.data(), root.data(), md5.data());
+  auto md5 = compute_md5(filepath);
+  snprintf(command, sizeof(command), "demucs -n %s --two-stems=vocals \"%s\" -o %s --filename {track}-{stem}-%s.{ext}", model, filepath.data(), root.data(), md5.data());
   printf("\nRunning:\n");
   printf("\t%s\n", command);
   
-  if (all_channel_files_exist(tm.filepath, neoroot, md5)) {
+  if (all_channel_files_exist(filepath, neoroot, md5)) {
     printf("skipping\n");
     return;
   }
@@ -81,28 +81,20 @@ void separate_track(finyl_track_meta& tm) {
   }
 }
 
-void demucs_track(char* tid) {
+void demucs_track(const Usb& usb, char* tid) {
   int _tid = atoi(tid);
-  finyl_track t;
-  if (auto err = get_track(t, usb, _tid)) {
-    print_err(err);
-    return;
-  }
-
-  separate_track(t.meta);
+  finyl_track_meta tm;
+  getTrackMeta1(tm, usb, _tid);
+  separate_track(usb, tm.filepath);
 }
 
-void demucs_playlists(char* pid) {
+void demucs_playlists(const Usb& usb, char* pid) {
   std::vector<finyl_track_meta> tms;
   int _pid = atoi(pid);
-  auto err = get_playlist_tracks(tms, usb, _pid);
-  if (err) {
-    print_err(err);
-    return;
-  }
+  getPlaylistTrackMetas(tms, usb, _pid);
   
   for (int i = 0; i<tms.size(); i++) {
-    separate_track(tms[i]);
+    separate_track(usb, tms[i].filepath);
   }
 }
 
@@ -122,13 +114,14 @@ int main(int argc, char **argv) {
     print_usage();
     return 0;
   }
-  
-  usb = argv[1];
+
+  plug(argv[1]);
+  Usb& usb = usbs[0];
   
   char* op = argv[2];
 
   if (same(op, "list-playlists")) {
-    list_playlists();
+    printPlaylists(usb);
   } else if (same(op, "list-playlist-tracks")) {
     if (argc < 4) {
       print_usage();
@@ -136,14 +129,14 @@ int main(int argc, char **argv) {
     }
 
     int id = atoi(argv[3]);
-    list_playlist_tracks(id);
+    printPlaylistTracks(usb, id);
   } else if (same(op, "demucs-playlist")) {
     if (argc < 4) {
       print_usage();
       return 0;
     }
     char* id = argv[3];
-    demucs_playlists(id);
+    demucs_playlists(usb, id);
   } else if (same(op, "demucs-track")) {
     if (argc < 4) {
       print_usage();
@@ -151,7 +144,7 @@ int main(int argc, char **argv) {
     }
 
     char* id = argv[3];
-    demucs_track(id);
+    demucs_track(usb, id);
   } else {
     print_usage();
   }

@@ -149,3 +149,17 @@ void print_err(const error& err) {
   printf(":%s\n", err.message.data());
 
 }
+
+error close_command(FILE* fp) {
+  char error_out[10000];
+  fread(error_out, 1, sizeof(error_out), fp);
+  int status = pclose(fp); //TODO: takes 300,000 micsec (0.3 sec)
+  if (status == -1) {
+    return error("failed to close the command stream", ERR::CANT_CLOSE_COMMAND);
+  }
+  status = WEXITSTATUS(status);
+  if (status == 1) {
+    return error(std::move(error_out), ERR::COMMAND_FAILED);
+  }
+  return noerror;
+}

@@ -3,9 +3,9 @@ CPPFLAGS = -Wall -Wno-unused-result -Wno-write-strings -Wno-sign-compare -Wno-de
 LDFLAGS = -lasound -lm -lSDL2 -lX11 -lcrypto -lstdc++
 
 ENTRY = entry.o
-BUT_ENTRY = finyl.o controller.o digger.o dev.o interface.o util.o action.o json.o rekordbox.o  kaitaistream.o rekordbox_pdb.o
+BUT_ENTRY = finyl.o controller.o dev.o interface.o util.o action.o json.o rekordbox.o  kaitaistream.o rekordbox_pdb.o rekordbox_anlz.o
 OBJS = $(ENTRY) $(BUT_ENTRY)
-TESTS = test-digger test-controller test-interface test-json
+TESTS = test-controller test-interface test-json
 TEST_OBJS = $(addsuffix .o,$(TESTS))
 
 %.o: %.c
@@ -25,7 +25,6 @@ listdevice: listdevice.o
 separate: $(BUT_ENTRY) separate.o
 
 tests: $(TESTS)
-test-digger: test-digger.o $(BUT_ENTRY)
 test-controller: test-controller.o $(BUT_ENTRY)
 test-interface: test-interface.o $(BUT_ENTRY)
 test-json: test-json.o json.o

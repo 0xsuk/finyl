@@ -4,12 +4,12 @@
 #include <termios.h>
 #include "finyl.h"
 #include "util.h"
-#include "digger.h"
 #include "dev.h"
 #include "interface.h"
 #include <pthread.h>
 #include <memory>
 #include "action.h"
+#include "rekordbox.h"
 
 void slide_right(finyl_track* t) {
   double backup = t->speed;
@@ -30,18 +30,16 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
   finyl_track* before = *dest;
   
   auto t = std::make_unique<finyl_track>();
-  if (auto err = get_track(*t, usb, tid)) {
-    printf("err:%s\n", err.message.data());
-    if (err.type) {
-      printf("type %d\n", (int)err.type.value());
-    }
-    return;
-  }
+  getTrackMeta(t->meta, usbs[0], tid);
+  getTrack(usbs[0], *t, tid);
+  
+  printf("file: %s\n", t->meta.filename.data());
   
   if (t->meta.stem_filepaths.size() < n) {
     printf("not enough channels\n");
     return;
   }
+  
   
   std::vector<std::string> filepaths;
   filepaths.resize(max(n, 1));
@@ -54,6 +52,7 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
   }
   
   if (auto err = finyl_read_stems_from_files(filepaths, *t)) {
+    print_err(err);
     return;
   }
   
@@ -371,14 +370,14 @@ void handleKey(char x) {
     break;
   }
   case 'L':
-    list_playlists();
+    // list_playlists();
     break;
   case 'l': {
     int pid;
     printf("pid:");
     scanf("%d", &pid);
     printf("listing...\n");
-    list_playlist_tracks(pid);
+    printPlaylistTracks(usbs[0], pid);
     break;
   }
   case '4':
@@ -400,14 +399,14 @@ void handleKey(char x) {
     load_track_nchannels(&bdeck, tid, finyl_b, 2);
     break;
   }
-  // case '9': {
-  //   int tid;
-  //   printf("tid:");
-  //   scanf("%d", &tid);
-  //   printf("loading...%d\n", tid);
-  //   load_track(&adeck, tid, finyl_a);
-  //   break;
-  // }
+  case 'I': {
+    int tid;
+    printf("tid:");
+    scanf("%d", &tid);
+    printf("loading...%d\n", tid);
+    load_track(&adeck, tid, finyl_a);
+    break;
+  }
   // case '0': {
   //   int tid;
   //   printf("tid:");

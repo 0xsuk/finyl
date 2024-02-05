@@ -3,8 +3,10 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "finyl.h"
+#include "rekordbox.h"
 #include "dev.h"
 #include "controller.h"
+
 
 
 int main(int argc, char **argv) {
@@ -12,11 +14,12 @@ int main(int argc, char **argv) {
     printf("usage ./finyl <path to rekordbox usb: example /media/null/22BC-F655/ > [<soundcard name (default is \"default\")> <period_size (default is 1024)> <fps (default 30)]\n inside [] are optional\n");
     return 0;
   }
-  std::string usb = argv[1];
-  std::string device = "default";
+  std::string usbroot = argv[1];
+  plug(usbroot);
+  device = "default";
   snd_pcm_t* handle;
   snd_pcm_uframes_t buffer_size = 1024 * 2;
-  snd_pcm_uframes_t period_size = 1024;
+  period_size = 1024;
   if (argc >= 3) {
     device = argv[2];
   }
@@ -27,8 +30,8 @@ int main(int argc, char **argv) {
     fps = std::stoi(argv[4]);
   }
   
-  init_globals(usb, device, period_size, fps);
   finyl_setup_alsa(&handle, &buffer_size, &period_size);
+  period_size_2 = period_size*2;
   printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
   
   pthread_t c;

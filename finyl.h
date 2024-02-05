@@ -176,9 +176,10 @@ enum finyl_stem_target{
   finyl_4,
 };
 
-extern std::string usb;
-extern std::string finyl_output_path;
+extern std::string device;
 extern int fps;
+extern snd_pcm_uframes_t period_size;
+extern snd_pcm_uframes_t period_size_2;
 
 extern bool finyl_running;
 
@@ -188,7 +189,6 @@ extern finyl_track* cdeck;
 extern finyl_track* ddeck;
 
 bool file_exist(std::string_view file);
-void init_globals(const std::string& _usb, const std::string& _device, snd_pcm_uframes_t _period_size, int _fps);
 int finyl_get_quantized_beat_index(finyl_track& t, int index);
 int finyl_get_quantized_time(finyl_track& t, int index);
 double finyl_get_quantized_index(finyl_track& t, int index);

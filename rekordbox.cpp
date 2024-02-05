@@ -1,16 +1,15 @@
+#include <dirent.h>
 #include <stdio.h>
 #include "rekordbox_pdb.h"
+#include "rekordbox_anlz.h"
 #include <fstream>
 #include <string>
-#include <map>
-#include <array>
 #include <algorithm>
 #include "util.h"
+#include "dev.h"
 #include "rekordbox.h"
 
-namespace rekordbox {
-
-std::vector<std::string> usbRoots;
+std::vector<Usb> usbs;
 
 template<typename Base, typename T>
 inline bool instanceof (const T* ptr) {
@@ -107,7 +106,7 @@ void dostuff(Usb& usb, rekordbox_pdb_t::page_type_t* tableOrder, int tableOrderI
               usb.tracksMap[t->id()] = TrackRow{.title=getText(t->title()),
                                              .filename=getText(t->filename()),
                                              .relativeFilepath=getText(t->file_path()),
-                                             .anlzFilepath=getText(t->analyze_path()),
+                                             .anlzRelativeFilepath=getText(t->analyze_path()),
                                              .tempo=(int)t->tempo(),
                                              .musickey=(int)t->key_id(),
                                              .genre=(int)t->genre_id(),
@@ -150,20 +149,24 @@ rekordbox_pdb_t::page_type_t tableOrder[totalTables] = {
 
 
 void unplug(Usb& usb) {
-  auto it = std::find(usbRoots.begin(), usbRoots.end(), usb.root);
-  if (it != usbRoots.end()) {
-    usbRoots.erase(it);
+  for (auto it = usbs.begin(); it!=usbs.end();it++) {
+    if (usb.root == it->root) {
+      printf("unplugged %s\n", it->root.data());
+      usbs.erase(it);
+    }
   }
 }
 
 
-int plug(Usb& usb) {
-  auto it = std::find(usbRoots.begin(), usbRoots.end(), usb.root);
-  if (it != usbRoots.end()) {
-    return 0;
+int plug(const std::string& root) {
+  for (auto& u: usbs) {
+    if (u.root == root) {
+      printf("already plugged\n");
+      return 0;
+    }
   }
   
-  usbRoots.push_back(usb.root);
+  Usb usb(root);
   
   std::string filepath = join_path(usb.root.data(), "/PIONEER/rekordbox/export.pdb");
   std::ifstream ifs(filepath, std::ifstream::binary);
@@ -182,29 +185,228 @@ int plug(Usb& usb) {
       dostuff(usb, tableOrder, tableOrderIndex, table);
     }
   }
-  
+
+  usbs.push_back(std::move(usb));
   return 0;
 }
 
-error getPlaylistTracks(std::vector<finyl_track_meta>& tms, const Usb& usb, int playlistid) {
+bool match(std::string_view hash, char* filename) {
+  int dot = find_char_last(filename, '.');
+  if (dot == -1) {
+    return false;
+  }
+  char f[dot+1];
+  strncpy(f, filename, dot);
+  f[dot] = '\0';
+
+  int hyphen = find_char_last(f, '-');
+  if (hyphen == -1) {
+    return false;
+  }
+  
+  if (dot - hyphen == 33) {
+    if (strncmp(hash.data(), &filename[hyphen+1], 32) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void set_channels_filepaths(finyl_track_meta& tm, std::string_view root) {
+  std::string hash = compute_md5(tm.filepath);
+  std::string model_dir = join_path(root.data(), "finyl/separated/hdemucs_mmi");
+  
+  DIR* d = opendir(model_dir.data());
+  struct dirent* dir;
+  if (d) {
+    while ((dir = readdir(d)) != NULL) {
+      if (match(hash, dir->d_name)) {
+        auto f = join_path(model_dir.data(), dir->d_name);
+        tm.stem_filepaths.push_back(std::move(f));
+      }
+    }
+    closedir(d);
+  }
+}
+
+//execpt stemfiles
+void getTrackMeta1(finyl_track_meta& tm, const Usb& usb, int trackId) {
+  const auto& trackRow = usb.tracksMap.find(trackId)->second;
+  tm.id = trackId;
+  tm.bpm = trackRow.tempo;
+  tm.title = trackRow.title;
+  tm.filename = trackRow.filename;
+  tm.filepath = join_path(usb.root.data(), trackRow.relativeFilepath.data());
+  tm.musickeyid = trackRow.musickey;
+}
+
+//include stemfiles
+void getTrackMeta(finyl_track_meta& tm, const Usb& usb, int trackId) {
+  getTrackMeta1(tm, usb, trackId);
+  set_channels_filepaths(tm, usb.root);
+}
+
+void getPlaylistTrackMetas(std::vector<finyl_track_meta>& tms, const Usb& usb, int playlistid) {
   auto playlist = usb.playlistTrackMap.find(playlistid);
-  if (playlist == usb.playlistTrackMap.end()) return noerror;
+  if (playlist == usb.playlistTrackMap.end()) return;
   const auto& map = playlist->second;
   
   tms.resize(map.size());
   int i = 0;
   for (auto& t: map) {
     int trackId = t.second;
-    const auto& trackRow = usb.tracksMap.find(trackId)->second;
-    tms[i].id = trackId;
-    tms[i].bpm = trackRow.tempo;
-    tms[i].title = trackRow.title;
-    tms[i].filename = trackRow.filename;
-    tms[i].filepath = trackRow.relativeFilepath;
-    tms[i].musickeyid = trackRow.musickey;
+    getTrackMeta1(tms[i], usb, trackId);
     i++;
   }
-  return noerror;
 }
 
+static void readBeatGrids(finyl_track& t, rekordbox_anlz_t::beat_grid_tag_t* beatGridTag) {
+  for (std::vector<rekordbox_anlz_t::beat_grid_beat_t*>::iterator
+         beat = beatGridTag->beats()->begin();
+       beat != beatGridTag->beats()->end();
+       ++beat) {
+    
+    t.beats.push_back(finyl_beat{
+        .time=static_cast<int>((*beat)->time()),
+        .number=(*beat)->beat_number()
+        });
+    // int time = static_cast<int>((*beat)->time()) - timingOffset;
+    // // Ensure no offset times are less than 1
+    // if (time < 1) {
+    //   time = 1;
+    // }
+    // beats << mixxx::audio::FramePos(sampleRateKhz * static_cast<double>(time));
+  }
+}
+
+static void readCueTags(finyl_track& t, rekordbox_anlz_t::cue_tag_t* cuesTag) {
+  for (std::vector<rekordbox_anlz_t::cue_entry_t*>::iterator
+         cueEntry = cuesTag->cues()->begin();
+       cueEntry != cuesTag->cues()->end();
+       ++cueEntry) {
+    int time = static_cast<int>((*cueEntry)->time());
+    auto type = cuesTag->type();
+    printf("CUE time is %d\n", time);
+    // rekordbox_anlz_t::CUE_LIST_TYPE_MEMORY_CUES
+    // rekordbox_anlz_t::CUE_ENTRY_TYPE_LOOP
+    //rekordbox_anlz_t::CUE_LIST_TYPE_HOT_CUES
+    // Ensure no offset times are less than 1
+    
+  }
+}
+
+static void readCueTags2(finyl_track& t, rekordbox_anlz_t::cue_extended_tag_t* cuesExtendedTag) {
+  for (std::vector<rekordbox_anlz_t::cue_extended_entry_t*>::iterator
+         cueExtendedEntry = cuesExtendedTag->cues()->begin();
+       cueExtendedEntry != cuesExtendedTag->cues()->end();
+       ++cueExtendedEntry) {
+    int time = static_cast<int>((*cueExtendedEntry)->time());
+    auto type = cuesExtendedTag->type();
+    printf("CUE2 time is %d\n", time);
+    // rekordbox_anlz_t::CUE_LIST_TYPE_MEMORY_CUES
+    // rekordbox_anlz_t::CUE_ENTRY_TYPE_LOOP
+    // rekordbox_anlz_t::CUE_LIST_TYPE_HOT_CUES
+  }
+}
+
+// void unknownFunc() {
+//   std::sort(memoryCuesAndLoops.begin(),
+//             memoryCuesAndLoops.end(),
+//             [](const memory_cue_loop_t& a, const memory_cue_loop_t& b)
+//             -> bool { return a.startPosition < b.startPosition; });
+
+//   bool mainCueFound = false;
+
+//   // Add memory cues and loops
+//   for (int memoryCueOrLoopIndex = 0;
+//        memoryCueOrLoopIndex < memoryCuesAndLoops.size();
+//        memoryCueOrLoopIndex++) {
+//     memory_cue_loop_t memoryCueOrLoop = memoryCuesAndLoops[memoryCueOrLoopIndex];
+
+//     if (!mainCueFound && !memoryCueOrLoop.endPosition.isValid()) {
+//       // Set first chronological memory cue as Mixxx MainCue
+//       track->setMainCuePosition(memoryCueOrLoop.startPosition);
+//       CuePointer pMainCue = track->findCueByType(mixxx::CueType::MainCue);
+//       pMainCue->setLabel(memoryCueOrLoop.comment);
+//       pMainCue->setColor(*memoryCueOrLoop.color);
+//       mainCueFound = true;
+//     } else {
+//       // Mixxx v2.4 will feature multiple loops, so these saved here will be usable
+//       // For 2.3, Mixxx treats them as hotcues and the first one will be loaded as the single loop Mixxx supports
+//       lastHotCueIndex++;
+//       setHotCue(
+//                 track,
+//                 memoryCueOrLoop.startPosition,
+//                 memoryCueOrLoop.endPosition,
+//                 lastHotCueIndex,
+//                 memoryCueOrLoop.comment,
+//                 memoryCueOrLoop.color);
+//     }
+//   }
+  
+// }
+
+static void readAnlz(finyl_track& t, const std::string& anlzPath) {
+  std::ifstream ifs(anlzPath, std::ifstream::binary);
+  kaitai::kstream ks(&ifs);
+
+  auto anlz = rekordbox_anlz_t(&ks);
+  
+  for (std::vector<rekordbox_anlz_t::tagged_section_t*>::iterator section = anlz.sections()->begin(); section != anlz.sections()->end(); ++section) {
+    switch ((*section)->fourcc()) {
+    case rekordbox_anlz_t::SECTION_TAGS_BEAT_GRID: {
+      printf("beatgrid\n");
+      // if (!ignoreCues) {
+        // break;
+      // }
+
+      readBeatGrids(t, static_cast<rekordbox_anlz_t::beat_grid_tag_t*>((*section)->body()));
+    } break;
+    case rekordbox_anlz_t::SECTION_TAGS_CUES: {
+      // if (ignoreCues) {
+      //   break;
+      // }
+
+      readCueTags(t, static_cast<rekordbox_anlz_t::cue_tag_t*>((*section)->body()));
+    } break;
+    case rekordbox_anlz_t::SECTION_TAGS_CUES_2: {
+      // if (ignoreCues) {
+      //   break;
+      // }
+
+      readCueTags2(t, static_cast<rekordbox_anlz_t::cue_extended_tag_t*>((*section)->body()));
+    } break;
+    default:
+      break;
+    }
+  }
+
+  // if (memoryCuesAndLoops.size() > 0) {
+  //   unkownFunc();
+  // }
+}
+
+void getTrack(Usb& usb, finyl_track& t, int trackId) {
+  for (auto& tr: usb.tracksMap) {
+    if (tr.first == trackId) {
+      std::string full = join_path(usb.root.data(), tr.second.anlzRelativeFilepath.data());
+      readAnlz(t, full);
+      return;
+    }
+  }
+}
+
+void printPlaylists(const Usb& usb) {
+  for (auto it = usb.playlistNamesMap.begin(); it != usb.playlistNamesMap.end(); it++) {
+    printf("%d: %s\n", it->first, it->second.data());
+  }
+}
+
+void printPlaylistTracks(const Usb& usb, int playlistid) {
+  std::vector<finyl_track_meta> tms;
+  getPlaylistTrackMetas(tms, usb, playlistid);
+
+  for (auto& tm: tms) {
+    printf("%d:(%d) %s\n", tm.id, tm.bpm, tm.title.data());
+  }
 }
