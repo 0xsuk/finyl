@@ -74,11 +74,11 @@ private:
   int file_size;
   
 public:
-  finyl_mstem(finyl_sample* _data, int _filesize, size_t _ssize) {
+  finyl_mstem(finyl_sample* _data, int _filesize, size_t data_size) {
     data = _data;
     file_size = _filesize;
-    msize_ = _ssize/2;
-    ssize_ = _ssize;
+    ssize_ = data_size/2; //short
+    msize_ = ssize_/2;
   }
   finyl_mstem(finyl_mstem&&) = default;
 
