@@ -128,19 +128,19 @@ static bool is_y(char* v) {
 
 void handle_toggle_playing(char* v, finyl_track* t) {
   if (is_y(v)) {
-    toggle_playing(t);
+    toggle_playing(*t);
   }
 }
 
 void handle_loop_in(char* v, finyl_track* t) {
   if (is_y(v)) {
-    loop_in_now(t);
+    loop_in_now(*t);
   }
 }
 
 void handle_loop_out(char* v, finyl_track* t) {
   if (is_y(v)) {
-    loop_out_now(t);
+    loop_out_now(*t);
   }
 }
 
@@ -161,49 +161,50 @@ void handle_what(char* s) {
   auto _v = trim_value(s, i);
   char* v = _v.get();
 
-  if (match(s, "pot0", i)) {
-    printf("pot0\n");
-    handle_gain(v, &a0_gain);
+  if (adeck != NULL) {
+    if (match(s, "pot0", i)) {
+      printf("pot0\n");
+      handle_gain(v, &a0_gain);
+    }
+    else if (match(s, "pot1", i)) {
+      printf("pot1\n");
+      handle_gain(v, &a1_gain);
+    }
+    else if (match(s, "button1", i)) {
+      printf("button1\n");
+      handle_toggle_playing(v, adeck);
+    }
+    else if (match(s, "button4", i)) {
+      printf("button4\n");
+      handle_loop_in(v, adeck);
+    }
+    else if (match(s, "button5", i)) {
+      printf("button5\n");
+      handle_loop_out(v, adeck);
+    }
   }
-  else if (match(s, "pot1", i)) {
-    printf("pot1\n");
-    handle_gain(v, &a1_gain);
-  }
-  else if (match(s, "pot2", i)) {
-    printf("pot2\n");
-    handle_gain(v, &b0_gain);
-  }
-  else if (match(s, "pot3", i)) {
-    printf("pot3\n");
-    handle_gain(v, &b1_gain);
-  }
-  else if (match(s, "button0", i)) {
-    printf("button0\n");
-    handle_toggle_playing(v, bdeck);
-  }
-  else if (match(s, "button1", i)) {
-    printf("button1\n");
-    handle_toggle_playing(v, adeck);
-  }
-  else if (match(s, "button2", i)) { //bdeck
-    printf("button2\n");
-    handle_loop_in(v, bdeck);
-  }
-  else if(match(s, "button3", i)) {
-    printf("button3\n");
-    handle_loop_out(v, bdeck);
-  }
-  else if (match(s, "button4", i)) {
-    printf("button4\n");
-    handle_loop_in(v, adeck);
-  }
-  else if (match(s, "button5", i)) {
-    printf("button5\n");
-    handle_loop_out(v, adeck);
-  }
-  else {
-    printf("unknown:");
-    printf("%s\n", s);
+  
+  if (bdeck != NULL) {
+    if (match(s, "pot2", i)) {
+      printf("pot2\n");
+      handle_gain(v, &b0_gain);
+    }
+    else if (match(s, "pot3", i)) {
+      printf("pot3\n");
+      handle_gain(v, &b1_gain);
+    }
+    else if (match(s, "button0", i)) {
+      printf("button0\n");
+      handle_toggle_playing(v, bdeck);
+    }
+    else if (match(s, "button2", i)) { //bdeck
+      printf("button2\n");
+      handle_loop_in(v, bdeck);
+    }
+    else if(match(s, "button3", i)) {
+      printf("button3\n");
+      handle_loop_out(v, bdeck);
+    }
   }
 }
 
@@ -283,94 +284,167 @@ void start_interface() {
 }
 
 void handleKey(char x) {
-  switch (x) {
-  case 'h':
-    bdeck->playing = !bdeck->playing;
-    printf("bdeck is playing:%d\n", bdeck->playing);
-    break;
-  case 'g':
-    adeck->playing = !adeck->playing;
-    printf("adeck is playing:%d\n", adeck->playing);
-    break;
-  case 'G':
-    adeck->speed = 1;
-    break;
-  case 'H':
-    bdeck->speed = 1;
-    break;
-  case 'N':
-    a0_gain = 0;
-    printf("a0_gain %lf\n", a0_gain);
-    break;
-  case 'J':
-    a0_gain = 1;
-    printf("a0_gain %lf\n", a0_gain);
-    break;
-  case 'n':
-    a1_gain = max(a1_gain-0.05, 0.0);
-    printf("a1_gain %lf\n", a1_gain);
-    break;
-  case 'j':
-    a1_gain = min(a1_gain+0.05, 1.0);
-    printf("a1_gain %lf\n", a1_gain);
-    break;
-  case 'M':
-    b0_gain = 0;
-    printf("b0_gain %lf\n", b0_gain);
-    break;
-  case 'K':
-    b0_gain = 1;
-    printf("b0_gain %lf\n", b0_gain);
-    break;
-  case 'm':
-    b1_gain = max(b1_gain-0.05, 0.0);
-    printf("b1_gain %lf\n", b1_gain);
-    break;
-  case 'k':
-    b1_gain = min(b1_gain+0.05, 1.0);
-    printf("b1_gain %lf\n", b1_gain);
-    break;
+  if (adeck != NULL) {
+    switch (x) {
+    case 'g':
+      adeck->playing = !adeck->playing;
+      printf("adeck is playing:%d\n", adeck->playing);
+      return;
+    case 'G':
+      adeck->speed = 1;
+      return;
+    case 'N':
+      a0_gain = 0;
+      printf("a0_gain %lf\n", a0_gain);
+      return;
+    case 'J':
+      a0_gain = 1;
+      printf("a0_gain %lf\n", a0_gain);
+      return;
+    case 'n':
+      a1_gain = max(a1_gain-0.05, 0.0);
+      printf("a1_gain %lf\n", a1_gain);
+      return;
+    case 'j':
+      a1_gain = min(a1_gain+0.05, 1.0);
+      printf("a1_gain %lf\n", a1_gain);
+      return;
+    case 'c':
+      if (adeck->cues.size() > 0) {
+        adeck->index = adeck->cues[0].time * 44.1;
+        printf("jumped to %lf\n", adeck->index);
+      }
+      return;
+    case 'a':
+      adeck->speed = adeck->speed + 0.01;
+      return;
+    case 's':
+      adeck->speed = adeck->speed - 0.01;
+      return;
+    case 't': {
+      cue(*adeck);
+      printf("adeck->index %lf\n", adeck->index);
+      return;
+    }
+    case '1':
+      /* mark loop in */
+      loop_in_now(*adeck);
+      return;
+    case '!':
+      loop_deactivate(*adeck);
+      return;
+    case '2': {
+      loop_out_now(*adeck);
+      return;
+    }
+    case 'v':
+      adeck->index += 300;
+      return;
+    case 'V':
+      adeck->index -= 300;
+      return;
+    case '5':
+      adeck->index += 3000;
+      return;
+    case '%':
+      adeck->index -= 3000;
+      return;
 
-  case 'c':
-    if (adeck->cues.size() > 0) {
-      adeck->index = adeck->cues[0].time * 44.1;
-      printf("jumped to %lf\n", adeck->index);
     }
-    break;
-  case 'C':
-    if (bdeck->cues.size() > 0) {
-      bdeck->index = bdeck->cues[0].time * 44.1;
-      printf("jumped to %lf\n", bdeck->index);
+  }
+  
+  if (bdeck != NULL) {
+    switch (x) {
+    case 'h':
+      bdeck->playing = !bdeck->playing;
+      printf("bdeck is playing:%d\n", bdeck->playing);
+      return;
+    case 'H':
+      bdeck->speed = 1;
+      return;
+    case 'M':
+      b0_gain = 0;
+      printf("b0_gain %lf\n", b0_gain);
+      return;
+    case 'K':
+      b0_gain = 1;
+      printf("b0_gain %lf\n", b0_gain);
+      return;
+    case 'm':
+      b1_gain = max(b1_gain-0.05, 0.0);
+      printf("b1_gain %lf\n", b1_gain);
+      return;
+    case 'k':
+      b1_gain = min(b1_gain+0.05, 1.0);
+      printf("b1_gain %lf\n", b1_gain);
+      return;
+    case 'C':
+      if (bdeck->cues.size() > 0) {
+        bdeck->index = bdeck->cues[0].time * 44.1;
+        printf("jumped to %lf\n", bdeck->index);
+      }
+      return;
+    case 'A':
+      bdeck->speed = bdeck->speed + 0.01;
+      return;
+    case 'S':
+      bdeck->speed = bdeck->speed - 0.01;
+      return;
+    case 'y': {
+      cue(*bdeck);
+      printf("bdeck->index %lf\n", bdeck->index);
+      return;
     }
-    break;
-  case 'p':
-    print_track(*adeck);
-    print_track(*bdeck);
-    break;
-  case 'a':
-    adeck->speed = adeck->speed + 0.01;
-    break;
-  case 's':
-    adeck->speed = adeck->speed - 0.01;
-    break;
-  case 'A':
-    bdeck->speed = bdeck->speed + 0.01;
-    break;
-  case 'S':
-    bdeck->speed = bdeck->speed - 0.01;
-    break;
-  case 't': {
-    adeck->index = finyl_get_quantized_index(*adeck, adeck->index);
-    printf("adeck->index %lf\n", adeck->index);
-    break;
+    case '9':
+      loop_in_now(*bdeck);
+      return;
+    case '{':
+      loop_deactivate(*bdeck);
+      return;
+    case '0': {
+      loop_out_now(*bdeck);
+      return;
+    }
+    case 'b':
+      bdeck->index += 300;
+      return;
+    case 'B':
+      bdeck->index -= 300;
+      return;
+    case '6':
+      bdeck->index += 3000;
+      return;
+    case '&':
+      bdeck->index -= 3000;
+      return;
+
+    }
   }
-  case 'y': {
-    bdeck->index = finyl_get_quantized_index(*bdeck, bdeck->index);
-    printf("bdeck->index %lf\n", bdeck->index);
-    break;
+  
+  if (adeck != NULL && bdeck != NULL) {
+    switch (x) {
+    case 'p':
+      print_track(*adeck);
+      print_track(*bdeck);
+      return;
+    case 'q': {
+      bdeck->speed = adeck->speed * ((double)adeck->meta.bpm / bdeck->meta.bpm);
+      printf("synced bdeck->speed: %lf\n", bdeck->speed);
+      return;
+    }
+    case 'Q': {
+      adeck->speed = bdeck->speed * ((double)bdeck->meta.bpm / adeck->meta.bpm);
+      printf("synced adeck->speed: %lf\n", adeck->speed);
+      return;
+    }
+
+    }
+    
   }
+  
+  switch (x) {
   case 'L':
-    // list_playlists();
+    printPlaylists(usbs[0]);
     break;
   case 'l': {
     int pid;
@@ -407,37 +481,12 @@ void handleKey(char x) {
     load_track(&adeck, tid, finyl_a);
     break;
   }
-  // case '0': {
-  //   int tid;
-  //   printf("tid:");
-  //   scanf("%d", &tid);
-  //   printf("loading...%d\n", tid);
-  //   load_track(&bdeck, tid, finyl_b);
-  //   break;
-  // }
-  case 'q': {
-    bdeck->speed = adeck->speed * ((double)adeck->meta.bpm / bdeck->meta.bpm);
-    printf("synced bdeck->speed: %lf\n", bdeck->speed);
-    break;
-  }
-  case 'Q': {
-    adeck->speed = bdeck->speed * ((double)bdeck->meta.bpm / adeck->meta.bpm);
-    printf("synced adeck->speed: %lf\n", adeck->speed);
-    break;
-  }
-  case '1':
-    /* mark loop in */
-    loop_in_now(adeck);
-    break;
-  case '2': {
-    loop_out_now(adeck);
-    break;
-  }
-  case '9':
-    loop_in_now(bdeck);
-    break;
-  case '0': {
-    loop_out_now(bdeck);
+  case 'O': {
+    int tid;
+    printf("tid:");
+    scanf("%d", &tid);
+    printf("loading...%d\n", tid);
+    load_track(&bdeck, tid, finyl_b);
     break;
   }
   case '3':{
@@ -452,30 +501,6 @@ void handleKey(char x) {
     memory_usage();
     break;
   }
-  case 'v':
-    adeck->index += 300;
-    break;
-  case 'b':
-    bdeck->index += 300;
-    break;
-  case 'V':
-    adeck->index -= 300;
-    break;
-  case 'B':
-    bdeck->index -= 300;
-    break;
-  case '5':
-    adeck->index += 3000;
-    break;
-  case '6':
-    bdeck->index += 3000;
-    break;
-  case '%':
-    adeck->index -= 3000;
-    break;
-  case '&':
-    bdeck->index -= 3000;
-    break;
   case '7': {
     set_wave_range(interface, interface.wave_range*2);
     break;
