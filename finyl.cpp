@@ -283,8 +283,13 @@ static void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) 
 
     for (int c = 0; c<t.stems_size; c++) {
       auto& buf = stem_buffers[c];
-      auto& s = t.stems[c];
-      s->get_samples(buf[i], buf[i+1], (int)t.index);
+      if (t.playing == false) {
+        buf[i] = 0;
+        buf[i+1] = 0;
+      } else {
+        auto& s = t.stems[c];
+        s->get_samples(buf[i], buf[i+1], (int)t.index);
+      }
     }
   }
 }
