@@ -1,0 +1,4 @@
+use crate_pdb.ksy(taken from crate-digger) to generate rekordbox_pdb.cpp and .h, because pdb.ksy from mixxx is outdated(endianness is wrong)
+change std::string("utf16be") to "utf16be"
+
+use mixxx_anlz.ksy(taken from mixxx) to generate rekordbox_anlz.cpp and .h because anlz.ksy from crate-digger is only for java.
