@@ -1,6 +1,7 @@
 #include "finyl.h"
 #include "error.h"
 #include "util.h"
+#include "dsp.h"
 #include "dev.h"
 #include <thread>
 #include <alsa/asoundlib.h>
@@ -320,6 +321,8 @@ double a0_filter = 0.2;
 double a1_filter = 1.0;
 double b0_filter = 0.2;
 double b1_filter = 1.0;
+Delay a_delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5};
+Delay b_delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5};
 
 static void finyl_handle() {
   
@@ -333,13 +336,14 @@ static void finyl_handle() {
     gain_filter(a_stem_buffers[1], a1_gain);
     add_and_clip_two_buffers(abuffer, a_stem_buffers[0], a_stem_buffers[1]);
   }
-  
+  delay(abuffer, a_delay);
   if (bdeck != nullptr && bdeck->playing) {
     make_stem_buffers(b_stem_buffers, *bdeck);
     gain_filter(b_stem_buffers[0], b0_gain);
     gain_filter(b_stem_buffers[1], b1_gain);
     add_and_clip_two_buffers(bbuffer, b_stem_buffers[0], b_stem_buffers[1]);
   }
+  delay(bbuffer, b_delay);
   
   add_and_clip_two_buffers(buffer, abuffer, bbuffer);
 }

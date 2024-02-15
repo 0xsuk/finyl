@@ -19,11 +19,6 @@ using finyl_sample = signed short;
 using finyl_buffer = std::vector<finyl_sample>;
 using finyl_stem_buffers = std::array<finyl_buffer, MAX_STEMS_SIZE>;
 
-extern double a0_gain;
-extern double a1_gain;
-extern double b0_gain;
-extern double b1_gain;
-
 struct finyl_cue{
   int type;
   int time;
@@ -176,24 +171,12 @@ enum finyl_stem_target{
   finyl_4,
 };
 
-extern std::string device;
-extern int fps;
-extern snd_pcm_uframes_t period_size;
-extern snd_pcm_uframes_t period_size_2;
-
-extern bool finyl_running;
-
-extern finyl_track* adeck; //pointer to track, is a d
-extern finyl_track* bdeck;
-extern finyl_track* cdeck;
-extern finyl_track* ddeck;
-
 bool file_exist(std::string_view file);
 int finyl_get_quantized_beat_index(finyl_track& t, int index);
 int finyl_get_quantized_time(finyl_track& t, int index);
 double finyl_get_quantized_index(finyl_track& t, int index);
 error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_track& t);
-error read_stem(const std::string& file, finyl_stem& stem);
+error read_stem(const std::string& file, std::unique_ptr<finyl_stem>& stem);
 void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size);
 
 void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, snd_pcm_t* handle);

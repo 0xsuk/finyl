@@ -6,7 +6,7 @@
 #include "rekordbox.h"
 #include "dev.h"
 #include "controller.h"
-
+#include "extern.h"
 
 
 int main(int argc, char **argv) {

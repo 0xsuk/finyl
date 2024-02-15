@@ -10,6 +10,7 @@
 #include <memory>
 #include "action.h"
 #include "rekordbox.h"
+#include "extern.h"
 
 void slide_right(finyl_track* t) {
   double backup = t->speed;
@@ -286,6 +287,19 @@ void start_interface() {
 void handleKey(char x) {
   if (adeck != NULL) {
     switch (x) {
+    case 'z':
+      if (a_delay.on) {
+        a_delay.on = false;
+        printf("delay off\n");
+      } else {
+        //bpm beats is 44100*60 samples
+        //1 beat is 44100*60/bpm samples 
+        double bpm = (adeck->meta.bpm/100)*adeck->speed;
+        a_delay.setMsize((44100*60)/bpm*2);
+        a_delay.on = true;
+        printf("delay on: %lf %lf\n", a_delay.drymix, a_delay.feedback);
+      }
+      break;
     case 'g':
       adeck->playing = !adeck->playing;
       printf("adeck is playing:%d\n", adeck->playing);
@@ -355,6 +369,20 @@ void handleKey(char x) {
   
   if (bdeck != NULL) {
     switch (x) {
+    case 'x':
+      if (b_delay.on) {
+        b_delay.on = false;
+        printf("delay off\n");
+      } else {
+        //bpm beats is 44100*60 samples
+        //1 beat is 44100*60/bpm samples 
+        double bpm = (bdeck->meta.bpm/100)*bdeck->speed;
+        b_delay.setMsize((44100*60)/bpm*2);
+        b_delay.on = true;
+        printf("delay on: %lf %lf\n", b_delay.drymix, b_delay.feedback);
+      }
+      break;
+
     case 'h':
       bdeck->playing = !bdeck->playing;
       printf("bdeck is playing:%d\n", bdeck->playing);

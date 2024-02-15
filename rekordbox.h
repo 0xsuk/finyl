@@ -31,8 +31,6 @@ struct Usb {
   }
 };
 
-extern std::vector<Usb> usbs;
-
 void printPlaylists(const Usb& usb);
 void printPlaylistTracks(const Usb& usb, int playlistid);
 void unplug(Usb& usb);

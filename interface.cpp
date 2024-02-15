@@ -3,6 +3,7 @@
 #include "finyl.h"
 #include "interface.h"
 #include <X11/Xlib.h>
+#include "extern.h"
 
 Interface interface;
 

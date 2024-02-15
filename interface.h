@@ -21,8 +21,6 @@ struct Interface {
   SDL_Texture* tx_bsg = nullptr; //for B
 };
 
-extern Interface interface;
-
 void add_track_to_free(finyl_track* t);
 
 void free_tracks();
