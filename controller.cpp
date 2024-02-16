@@ -471,6 +471,9 @@ void handleKey(char x) {
   }
   
   switch (x) {
+  case 'X':
+    finyl_running = false;
+    break;
   case 'L':
     printPlaylists(usbs[0]);
     break;

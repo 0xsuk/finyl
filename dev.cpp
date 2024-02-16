@@ -1,4 +1,7 @@
 #include "dev.h"
+#include <fstream>
+
+std::vector<double> TIMES;
 
 void print_track_meta(finyl_track_meta& tm) {
   printf("id is %d\n", tm.id);
@@ -59,4 +62,14 @@ void report(finyl_buffer& buffer) {
   }
 
   printf("cc %d\n", clip_count);
+}
+
+void profile() {
+  std::ofstream file("profile");
+  
+  for (auto time: TIMES) {
+    file << time << "\n";
+  }
+
+  
 }
