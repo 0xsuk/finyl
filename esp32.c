@@ -1,12 +1,14 @@
 const int pots_size = 4;
-int pots[pots_size] = {32, 33, 35, 34};
-int pot_threshold = 20;
+int pots[pots_size] = {32, 35, 33, 34};
+int pot_threshold = 100;
 int pots_sprev[pots_size] = {0};
 
-const int buttons_size = 6;
-int buttons[buttons_size] = {0, 13, 23, 4, 14, 12};
-bool buttons_sprev[buttons_size] = {false};
-bool buttons_s[buttons_size] = {false};
+const int buttons_size = 11;
+byte buttons[buttons_size] = {2, 5, 12, 13, 14, 15, 25, 26, 0, 4, 27};
+const int DEBOUNCE_DELAY = 50;
+bool lastSteadyStates[buttons_size] = {false};
+bool lastFlickerableStates[buttons_size] = {false};
+long lastDebouceTimes[buttons_size] = {0};
 
 template <typename T>
 void print(T v) {
@@ -20,11 +22,26 @@ void println(T v) {
 }
 
 void read_buttons() {
+  long now = millis();
   for (int i = 0; i<buttons_size; i++) {
-    if (digitalRead(buttons[i]) == HIGH) {
-      buttons_s[i] = false;
-    } else {
-      buttons_s[i] = true;
+    int currentState = digitalRead(buttons[i]);
+    if (currentState != lastFlickerableStates[i]) {
+      lastDebouceTimes[i] = now;
+      lastFlickerableStates[i] = currentState;
+    }
+    
+    if ((now - lastDebouceTimes[i]) > DEBOUNCE_DELAY) {
+      if (lastSteadyStates[i] == HIGH && currentState == LOW) {
+        print("button");
+        print(i);
+        println(":on");
+      } else if (lastSteadyStates[i] == LOW && currentState == HIGH) {
+        print("button");
+        print(i);
+        println(":off");
+      }
+
+      lastSteadyStates[i] = currentState;
     }
   }
 }
@@ -54,30 +71,6 @@ void read_potmeters() {
   }
 }
 
-void send() {
-  bool some = false;
-  for (int i = 0; i<buttons_size; i++) {
-    if (buttons_sprev[i] != buttons_s[i]) {
-      if (buttons_s[i]) {
-        print("button");
-        print(i);
-        println(":y");
-        buttons_sprev[i] = true;
-        some = true;
-      } else {
-        print("button");
-        print(i);
-        println(":n");
-        buttons_sprev[i] = false;
-      }
-    }
-  }
-
-  if (some) {
-    delay(50);
-  }
-}
-
 void setup() {
   Serial.begin(9600);
   for (int i = 0; i<buttons_size; i++) {
@@ -100,5 +93,4 @@ void loop() {
   
   read_buttons();
   read_potmeters();
-  send();
 }

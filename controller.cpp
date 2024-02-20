@@ -12,6 +12,8 @@
 #include "rekordbox.h"
 #include "extern.h"
 
+bool quantize = false;
+
 void slide_right(finyl_track* t) {
   double backup = t->speed;
   double y = 0;
@@ -120,37 +122,69 @@ static std::unique_ptr<char[]> trim_value(char* s, int i) {
   return v;
 }
 
-static bool is_y(char* v) {
-  if (strcmp(v, "y") == 0) {
+static bool is_on(char* v) {
+  if (strcmp(v, "on") == 0) {
     return true;
   }
   return false;
 }
 
+void handle_delay_on(char* v, Delay& d, finyl_track& deck) {
+  if (is_on(v)) {
+    if (d.on) {
+      d.on = false;
+      printf("off\n");
+    } else {
+      double bpm = (deck.meta.bpm/100.0)*deck.speed;
+      d.setMsize((44100*60)/bpm*0.75);
+      d.on = true;
+      printf("on\n");
+    }
+  }
+}
+
 void handle_toggle_playing(char* v, finyl_track* t) {
-  if (is_y(v)) {
+  if (is_on(v)) {
     toggle_playing(*t);
   }
 }
 
 void handle_loop_in(char* v, finyl_track* t) {
-  if (is_y(v)) {
+  if (is_on(v)) {
     loop_in_now(*t);
   }
 }
 
 void handle_loop_out(char* v, finyl_track* t) {
-  if (is_y(v)) {
+  if (is_on(v)) {
     loop_out_now(*t);
   }
 }
 
-void handle_gain(char* v, double* g) {
+void handle_vi(char* v, double * vo, double* i, bool flip=false) { //vocal - inst
   char* endptr;
   int n = strtol(v, &endptr, 10);
   if (endptr == v || *endptr != '\0') return;
-  *g = n / 4098.0;
-  printf("gain %lf\n", *g);
+  if (flip) {
+    n = abs(n-4095);
+  }
+  if (n < 2046) {
+    *vo = 1.0;
+    *i = n / 2046.0;
+  } else {
+    *i = 1.0;
+    *vo = abs(n-4095.0) / 2046.0;
+  }
+}
+
+void handle_gain(char* v, double* g, bool flip=false) {
+  char* endptr;
+  int n = strtol(v, &endptr, 10);
+  if (endptr == v || *endptr != '\0') return;
+  if (flip) {
+    n = abs(n-4095);
+  }
+  *g = n / 4095.0;
 }
 
 void handle_what(char* s) {
@@ -162,49 +196,51 @@ void handle_what(char* s) {
   auto _v = trim_value(s, i);
   char* v = _v.get();
 
+  if (match(s, "pot1", i)) {
+    handle_gain(v, &a_gain, true);
+  } else if (match(s, "pot0", i)) {
+    handle_gain(v, &b_gain, true);
+  } else if (match(s, "pot2", i)) {
+    handle_vi(v, &a0_gain, &a1_gain);
+  } else if (match(s, "pot3", i)) {
+    handle_vi(v, &b0_gain, &b1_gain);
+  }
   if (adeck != NULL) {
-    if (match(s, "pot0", i)) {
-      printf("pot0\n");
-      handle_gain(v, &a0_gain);
-    }
-    else if (match(s, "pot1", i)) {
-      printf("pot1\n");
-      handle_gain(v, &a1_gain);
-    }
-    else if (match(s, "button1", i)) {
-      printf("button1\n");
+    if (match(s, "button3", i)) {
       handle_toggle_playing(v, adeck);
     }
     else if (match(s, "button4", i)) {
-      printf("button4\n");
       handle_loop_in(v, adeck);
     }
-    else if (match(s, "button5", i)) {
-      printf("button5\n");
+    else if (match(s, "button10", i)) {
       handle_loop_out(v, adeck);
+    } else if (match(s, "button8", i)) {
+      handle_delay_on(v, a_delay, *adeck);
     }
   }
   
   if (bdeck != NULL) {
-    if (match(s, "pot2", i)) {
-      printf("pot2\n");
-      handle_gain(v, &b0_gain);
-    }
-    else if (match(s, "pot3", i)) {
-      printf("pot3\n");
-      handle_gain(v, &b1_gain);
-    }
-    else if (match(s, "button0", i)) {
-      printf("button0\n");
+    if (match(s, "button2", i)) {
       handle_toggle_playing(v, bdeck);
     }
-    else if (match(s, "button2", i)) { //bdeck
-      printf("button2\n");
+    else if (match(s, "button5", i)) { //bdeck
       handle_loop_in(v, bdeck);
     }
-    else if(match(s, "button3", i)) {
-      printf("button3\n");
+    else if(match(s, "button6", i)) {
       handle_loop_out(v, bdeck);
+    } else if (match(s, "button9", i)) {
+      handle_delay_on(v, b_delay, *bdeck);
+    }
+  }
+
+  if (adeck != NULL && bdeck!= NULL) {
+    if (match(s, "button7", i)) {
+      adeck->speed = bdeck->speed * ((double)bdeck->meta.bpm / adeck->meta.bpm);
+      printf("synced adeck->speed: %lf\n", adeck->speed);
+    }
+    if (match(s, "button1", i)) {
+      bdeck->speed = adeck->speed * ((double)adeck->meta.bpm / bdeck->meta.bpm);
+      printf("synced bdeck->speed: %lf\n", bdeck->speed);
     }
   }
 }
@@ -294,7 +330,7 @@ void handleKey(char x) {
       } else {
         //bpm beats is 44100*60 samples
         //1 beat is 44100*60/bpm samples 
-        double bpm = (adeck->meta.bpm/100)*adeck->speed;
+        double bpm = (adeck->meta.bpm/100.0)*adeck->speed;
         a_delay.setMsize((44100*60)/bpm*2);
         a_delay.on = true;
         printf("delay on: %lf %lf\n", a_delay.drymix, a_delay.feedback);

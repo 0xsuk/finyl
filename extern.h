@@ -20,8 +20,10 @@ extern finyl_track* cdeck;
 extern finyl_track* ddeck;
 
 
+extern double a_gain;
 extern double a0_gain;
 extern double a1_gain;
+extern double b_gain;
 extern double b0_gain;
 extern double b1_gain;
 extern Delay a_delay;

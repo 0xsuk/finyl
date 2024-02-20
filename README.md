@@ -10,7 +10,7 @@ make
 (c++20 compiler needed)  
 
 Depends on...  
-in debian: libasound2-dev (alsa), ffmpeg (cli), libsdl2-dev, libx11-dev, libssl-dev, java  
+in debian: libasound2-dev (alsa), ffmpeg (cli), libsdl2-dev, libx11-dev, libssl-dev,  
 
 ## usage
 ./finyl <path to rekordbox usb: example /media/null/22BC-F655/ >
@@ -22,6 +22,7 @@ A song usually consists of vocal, and instrument. The idea of multi-stems mixing
 
 separate.cpp is a utility just for that. It generates stem files from the original files in rekordbox USB.
 ```
+pip install demucs
 make separate
 ./separate # and follow the printed usage
 ```

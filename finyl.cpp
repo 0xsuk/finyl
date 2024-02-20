@@ -335,6 +335,7 @@ static void finyl_handle() {
     gain_filter(a_stem_buffers[0], a0_gain);
     gain_filter(a_stem_buffers[1], a1_gain);
     add_and_clip_two_buffers(abuffer, a_stem_buffers[0], a_stem_buffers[1]);
+    gain_filter(abuffer, a_gain);
   }
   delay(abuffer, a_delay);
   if (bdeck != nullptr && bdeck->playing) {
@@ -342,6 +343,7 @@ static void finyl_handle() {
     gain_filter(b_stem_buffers[0], b0_gain);
     gain_filter(b_stem_buffers[1], b1_gain);
     add_and_clip_two_buffers(bbuffer, b_stem_buffers[0], b_stem_buffers[1]);
+    gain_filter(bbuffer, b_gain);
   }
   delay(bbuffer, b_delay);
   
