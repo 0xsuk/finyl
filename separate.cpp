@@ -6,6 +6,7 @@
 #include "finyl.h"
 #include "util.h"
 #include "dev.h"
+#include "extern.h"
 #include "rekordbox.h"
 #include <stdlib.h>
 #include <libgen.h>
