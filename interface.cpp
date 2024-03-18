@@ -128,9 +128,6 @@ void draw_waveform(Interface& itf, SDL_Texture* texture, finyl_track& t, int sta
     beati++;
   }
 
-  //cue iterator
-  auto cue = t.cues.begin();
-  
   for (int i = idraw_offset; i < idraw_offset_end; i=i+itf.wave_iteration_margin) {
     int x = get_pixel(i, itf.wave_range, itf.win_width);
     int pcmi = i+starti;
@@ -159,16 +156,14 @@ void draw_waveform(Interface& itf, SDL_Texture* texture, finyl_track& t, int sta
     }
     
     //cue
-    // if (cue!=t.cues.end()) {
-    //   auto cuei = cue->time*44.1;
-    //   if (prev_pcmi < cuei < pcmi) {
-    //     printf("BINGO\n");
-    //     SDL_SetRenderDrawColor(itf.renderer, 255, 71, 0, 255);
-    //     SDL_RenderDrawLine(itf.renderer, x, 0, x, 10);
-    //     SDL_SetRenderDrawColor(itf.renderer, 100, 100, 250, 255);
-    //     cue++;
-    //   }
-    // }
+    for (auto cue = t.cues.begin(); cue!=t.cues.end(); cue++) {
+      auto cuei = cue->time*44.1;
+      if (prev_pcmi < cuei  && cuei < pcmi) {
+        SDL_SetRenderDrawColor(itf.renderer, 255, 71, 0, 255);
+        SDL_RenderDrawLine(itf.renderer, x, 0, x, 10);
+        SDL_SetRenderDrawColor(itf.renderer, 100, 100, 250, 255);
+      }
+    }
     
     draw_wave(itf, t, x, pcmi);
     
