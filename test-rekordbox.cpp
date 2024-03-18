@@ -1,14 +1,11 @@
 #include "rekordbox.h"
+#include "extern.h"
 #include "dev.h"
-std::string root = "/media/null/71CD-A534/";
+std::string root = "/run/media/null/71CD-A534/";
 
 void test_getPlaylistsTrack() {
-  rekordbox::Usb usb;
-  usb.root = root;
-  
-  rekordbox::plug(usb);
   std::vector<finyl_track_meta> tms;
-  rekordbox::getPlaylistTracks(tms, usb, 14);
+  getPlaylistTrackMetas(tms, usbs[0], 14);
 
   for (auto& tm: tms) {
     print_track_meta(tm);
@@ -18,9 +15,16 @@ void test_getPlaylistsTrack() {
 void test_getTrack() {
   finyl_track t;
 
-  rekordbox::getTrack(t, "/media/null/71CD-A534/PIONEER/USBANLZ/P074/00012A52/ANLZ0000.DAT");
+  readAnlz(usbs[0], t, 42);
+
+  printf("cues size:%d\n", (int)t.cues.size());
+
+  for (auto c: t.cues) {
+    printf("cues: %d\n", c.time);
+  }
 }
 
 int main() {
+  plug(root);
   test_getTrack();
 }

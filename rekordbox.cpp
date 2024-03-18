@@ -285,13 +285,35 @@ static void readCueTags(finyl_track& t, rekordbox_anlz_t::cue_tag_t* cuesTag) {
        cueEntry != cuesTag->cues()->end();
        ++cueEntry) {
     int time = static_cast<int>((*cueEntry)->time());
-    auto type = cuesTag->type();
-    printf("CUE time is %d\n", time);
+
+    switch (cuesTag->type()) {
+    case rekordbox_anlz_t::CUE_LIST_TYPE_MEMORY_CUES: {
+      // switch ((*cueEntry)->type()) {
+      // case rekordbox_anlz_t::CUE_ENTRY_TYPE_MEMORY_CUE: {
+      // } break;
+      // case rekordbox_anlz_t::CUE_ENTRY_TYPE_LOOP: {
+      // } break;
+      // } break;
+      t.cues.push_back(finyl_cue{
+          .type=0,
+          .time=time
+        });
+    }
+    case rekordbox_anlz_t::CUE_LIST_TYPE_HOT_CUES: {
+      
+    } break;
+    }
     // rekordbox_anlz_t::CUE_LIST_TYPE_MEMORY_CUES
     // rekordbox_anlz_t::CUE_ENTRY_TYPE_LOOP
     //rekordbox_anlz_t::CUE_LIST_TYPE_HOT_CUES
     // Ensure no offset times are less than 1
     
+  }
+
+  if (t.cues.size() > 1) {
+    // 1000 milisec = 44100 samples
+    // time milisec = 44100 / 1000 * time samples
+    t.loop_in = 44.1 * (double)t.cues[0].time;
   }
 }
 
@@ -386,7 +408,7 @@ static void readAnlz(finyl_track& t, const std::string& anlzPath) {
   // }
 }
 
-void getTrack(Usb& usb, finyl_track& t, int trackId) {
+void readAnlz(Usb& usb, finyl_track& t, int trackId) {
   for (auto& tr: usb.tracksMap) {
     if (tr.first == trackId) {
       std::string full = join_path(usb.root.data(), tr.second.anlzRelativeFilepath.data());

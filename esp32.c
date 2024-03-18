@@ -8,7 +8,9 @@ byte buttons[buttons_size] = {2, 5, 12, 13, 14, 15, 25, 26, 0, 4, 27};
 const int DEBOUNCE_DELAY = 50;
 bool lastSteadyStates[buttons_size] = {false};
 bool lastFlickerableStates[buttons_size] = {false};
-long lastDebouceTimes[buttons_size] = {0};
+long lastFlickTimes[buttons_size] = {0};
+long lastOnTimes[buttons_size] = {0};
+const int ON_DELAY = 50; //press more than twice within 50 millisec is ignored
 
 template <typename T>
 void print(T v) {
@@ -25,23 +27,27 @@ void read_buttons() {
   long now = millis();
   for (int i = 0; i<buttons_size; i++) {
     int currentState = digitalRead(buttons[i]);
-    if (currentState != lastFlickerableStates[i]) {
-      lastDebouceTimes[i] = now;
-      lastFlickerableStates[i] = currentState;
-    }
     
-    if ((now - lastDebouceTimes[i]) > DEBOUNCE_DELAY) {
-      if (lastSteadyStates[i] == HIGH && currentState == LOW) {
+    if (currentState == LOW && lastSteadyStates[i] == HIGH) { //pressed
+      if ((now - lastOnTimes[i]) > ON_DELAY) {
         print("button");
         print(i);
         println(":on");
-      } else if (lastSteadyStates[i] == LOW && currentState == HIGH) {
+        lastOnTimes[i] = now;
+        lastSteadyStates[i] = currentState;
+      }
+    } else if (currentState == HIGH && lastSteadyStates[i] == LOW) { //released
+      if ((now - lastFlickTimes[i]) > DEBOUNCE_DELAY) {
         print("button");
         print(i);
         println(":off");
+        lastSteadyStates[i] = currentState;
       }
+    }
 
-      lastSteadyStates[i] = currentState;
+    if (currentState != lastFlickerableStates[i]) {
+      lastFlickTimes[i] = now;
+      lastFlickerableStates[i] = currentState;
     }
   }
 }

@@ -4,7 +4,11 @@ void toggle_playing(finyl_track& t) {
   t.playing = !t.playing;
 }
 
-void cue(finyl_track& t) {
+void jump_cue(finyl_track& t) {
+  
+}
+
+void set_cue(finyl_track& t) {
   loop_in_now(t);
   t.index = t.loop_in;
 }

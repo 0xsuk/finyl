@@ -34,7 +34,7 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
   
   auto t = std::make_unique<finyl_track>();
   getTrackMeta(t->meta, usbs[0], tid);
-  getTrack(usbs[0], *t, tid);
+  readAnlz(usbs[0], *t, tid);
   
   printf("file: %s\n", t->meta.filename.data());
   
@@ -136,7 +136,7 @@ void handle_delay_on(char* v, Delay& d, finyl_track& deck) {
       printf("off\n");
     } else {
       double bpm = (deck.meta.bpm/100.0)*deck.speed;
-      d.setMsize((44100*60)/bpm*0.75);
+      d.setMsize((44100*60)/bpm*1.0);
       d.on = true;
       printf("on\n");
     }
@@ -372,7 +372,7 @@ void handleKey(char x) {
       adeck->speed = adeck->speed - 0.01;
       return;
     case 't': {
-      cue(*adeck);
+      set_cue(*adeck);
       printf("adeck->index %lf\n", adeck->index);
       return;
     }
@@ -455,7 +455,7 @@ void handleKey(char x) {
       bdeck->speed = bdeck->speed - 0.01;
       return;
     case 'y': {
-      cue(*bdeck);
+      set_cue(*bdeck);
       printf("bdeck->index %lf\n", bdeck->index);
       return;
     }

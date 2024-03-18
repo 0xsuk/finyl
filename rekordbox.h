@@ -38,6 +38,6 @@ int plug(const std::string& root);
 void getPlaylistTrackMetas(std::vector<finyl_track_meta>& tms, const Usb& usb, int playlistid);
 void getTrackMeta1(finyl_track_meta& tm, const Usb& usb, int trackId);
 void getTrackMeta(finyl_track_meta& tm, const Usb& usb, int trackId);
-void getTrack(Usb& usb, finyl_track& t, int trackId);
+void readAnlz(Usb& usb, finyl_track& t, int trackId);
 
 #endif
