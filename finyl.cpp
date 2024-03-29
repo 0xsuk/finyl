@@ -295,7 +295,7 @@ static void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) 
   }
 }
 
-static finyl_sample clip_sample(int32_t s) {
+finyl_sample clip_sample(int32_t s) {
   if (s > 32767) {
     s = 32767;
   } else if (s < -32768) {

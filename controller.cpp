@@ -331,7 +331,7 @@ void handleKey(char x) {
         //bpm beats is 44100*60 samples
         //1 beat is 44100*60/bpm samples 
         double bpm = (adeck->meta.bpm/100.0)*adeck->speed;
-        a_delay.setMsize((44100*60)/bpm*2);
+        a_delay.setMsize((44100*60)/bpm*1.0);
         a_delay.on = true;
         printf("delay on: %lf %lf\n", a_delay.drymix, a_delay.feedback);
       }

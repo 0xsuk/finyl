@@ -171,6 +171,7 @@ enum finyl_stem_target{
   finyl_4,
 };
 
+finyl_sample clip_sample(int32_t s);
 bool file_exist(std::string_view file);
 int finyl_get_quantized_beat_index(finyl_track& t, int index);
 int finyl_get_quantized_time(finyl_track& t, int index);
