@@ -1,8 +1,8 @@
-CPPFLAGS = -Wall -Wno-unused-result -Wno-write-strings -Wno-sign-compare -Wno-deprecated-declarations -std=c++20 -O3
-LDFLAGS = -lasound -lm -lSDL2 -lX11 -lcrypto -lstdc++ -lrubberband
+CPPFLAGS = -Wall -Wno-unused-result -Wno-write-strings -Wno-sign-compare -Wno-deprecated-declarations -std=c++20 -O3 -Iexternal/rubberband/rubberband
+LDFLAGS = -lasound -lm -lSDL2 -lX11 -lcrypto -lstdc++
 
 ENTRY = entry.o
-BUT_ENTRY = finyl.o controller.o dev.o interface.o util.o action.o rekordbox.o kaitaistream.o rekordbox_pdb.o rekordbox_anlz.o dsp.o
+BUT_ENTRY = finyl.o controller.o dev.o interface.o util.o action.o rekordbox.o kaitaistream.o rekordbox_pdb.o rekordbox_anlz.o dsp.o external/rubberband/single/RubberBandSingle.o
 OBJS = $(ENTRY) $(BUT_ENTRY)
 TEST_OBJS = $(addsuffix .o,$(TESTS))
 

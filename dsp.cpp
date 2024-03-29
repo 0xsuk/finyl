@@ -1,14 +1,5 @@
 #include "dsp.h"
 
-static finyl_sample clip_sample(int32_t s) {
-  if (s > 32767) {
-    s = 32767;
-  } else if (s < -32768) {
-    s = -32768;
-  }
-  return s;
-}
-
 void delay(finyl_buffer& buffer, Delay& d) {
   for (int i = 0; i<buffer.size(); i=i+2) {
     auto left = d.buf[d.index];

@@ -6,13 +6,12 @@
 #include <alsa/asoundlib.h>
 #include <algorithm>
 #include "extern.h"
-#include <rubberband/RubberBandStretcher.h>
+#include "RubberBandStretcher.h"
 
-int mindex = 0;
+int mindex = 1000000;
 bool running = true;
 
 using rb = RubberBand::RubberBandStretcher;
-
 // void fillBuffer(finyl_buffer& buffer, finyl_stem& stem) {
 //   for (int i = 0; i < period_size_2; i=i+2) {
 //     if (mindex < stem.msize()) {
@@ -34,7 +33,7 @@ using rb = RubberBand::RubberBandStretcher;
 //   }
 // }
 
-double timeratio = 1.2;
+double timeratio = 0.9;
 rb stretcher(44100, 2, rb::OptionProcessRealTime, timeratio);
 int inputSize = 16384;
 void rubberband(float** outputPtr, int nframes, finyl_stem& stem) {
@@ -43,7 +42,7 @@ void rubberband(float** outputPtr, int nframes, finyl_stem& stem) {
     int reqd = int(ceil(double(nframes - available) / timeratio));
     reqd = std::max(reqd, int(stretcher.getSamplesRequired()));
     reqd = std::min(reqd, inputSize);
-    if (reqd == 0) reqd = 1; //?
+    if (reqd == 0) reqd = 1;
     
     float inputLeft[reqd];
     float inputRight[reqd];
