@@ -361,19 +361,25 @@ void handleKey(char x) {
       return;
     case 'c':
       if (adeck->cues.size() > 0) {
-        adeck->index = adeck->cues[0].time * 44.1;
-        printf("jumped to %lf\n", adeck->index);
+        adeck->set_index(adeck->cues[0].time * 44.1);
+        printf("jumped to %lf\n", adeck->get_refindex());
       }
       return;
     case 'a':
-      adeck->speed = adeck->speed + 0.01;
+      a1_stretcher.setTimeRatio(a1_stretcher.getTimeRatio()+0.01);
+      a0_stretcher.setTimeRatio(a0_stretcher.getTimeRatio()+0.01);
+      printf("%lf\n", a1_stretcher.getTimeRatio());
+      // adeck->speed = adeck->speed + 0.01;
       return;
     case 's':
-      adeck->speed = adeck->speed - 0.01;
+      a1_stretcher.setTimeRatio(a1_stretcher.getTimeRatio()-0.01);
+      a0_stretcher.setTimeRatio(a0_stretcher.getTimeRatio()-0.01);
+
+      // adeck->speed = adeck->speed - 0.01;
       return;
     case 't': {
       set_cue(*adeck);
-      printf("adeck->index %lf\n", adeck->index);
+      printf("adeck->index %lf\n", adeck->get_refindex());
       return;
     }
     case '1':
@@ -388,16 +394,16 @@ void handleKey(char x) {
       return;
     }
     case 'v':
-      adeck->index += 300;
+      adeck->set_index(adeck->get_refindex() + 300);
       return;
     case 'V':
-      adeck->index -= 300;
+      adeck->set_index(adeck->get_refindex() - 300);
       return;
     case '5':
-      adeck->index += 3000;
+      adeck->set_index(adeck->get_refindex() + 3000);
       return;
     case '%':
-      adeck->index -= 3000;
+      adeck->set_index(adeck->get_refindex() - 3000);
       return;
 
     }
@@ -444,8 +450,8 @@ void handleKey(char x) {
       return;
     case 'C':
       if (bdeck->cues.size() > 0) {
-        bdeck->index = bdeck->cues[0].time * 44.1;
-        printf("jumped to %lf\n", bdeck->index);
+        bdeck->set_index(bdeck->cues[0].time * 44.1);
+        printf("jumped to %lf\n", bdeck->get_refindex());
       }
       return;
     case 'A':
@@ -456,7 +462,7 @@ void handleKey(char x) {
       return;
     case 'y': {
       set_cue(*bdeck);
-      printf("bdeck->index %lf\n", bdeck->index);
+      printf("bdeck->index %lf\n", bdeck->get_refindex());
       return;
     }
     case '9':
@@ -470,16 +476,16 @@ void handleKey(char x) {
       return;
     }
     case 'b':
-      bdeck->index += 300;
+      bdeck->set_index(bdeck->get_refindex() + 300);
       return;
     case 'B':
-      bdeck->index -= 300;
+      bdeck->set_index(bdeck->get_refindex() - 300);
       return;
     case '6':
-      bdeck->index += 3000;
+      bdeck->set_index(bdeck->get_refindex() + 3000);
       return;
     case '&':
-      bdeck->index -= 3000;
+      bdeck->set_index(bdeck->get_refindex() - 3000);
       return;
 
     }

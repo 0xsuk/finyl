@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <string>
 #include <array>
+#include "RubberBandStretcher.h"
 
 #define CHUNK_SIZE 2097152 //4mb
 #define MAX_CHUNKS_SIZE 64
@@ -18,6 +19,7 @@
 using finyl_sample = signed short;
 using finyl_buffer = std::vector<finyl_sample>;
 using finyl_stem_buffers = std::array<finyl_buffer, MAX_STEMS_SIZE>;
+using rb = RubberBand::RubberBandStretcher;
 
 struct finyl_cue{
   int type;
@@ -144,16 +146,24 @@ struct finyl_track{
   int msize; //number of samples in a channel for each stem
   int stems_size;
   bool playing;
-  double index; //index of pcm. left_sample = at(index*2), right_sample = at(index*2+1)
   double speed;
   bool loop_active;
   double loop_in; //index
   double loop_out; //index
+  std::array<double, MAX_STEMS_SIZE> indxs; //index for stem, used by rubberband stretcher
   std::array<std::unique_ptr<finyl_stem>, MAX_STEMS_SIZE> stems;
   std::vector<finyl_cue> cues;
   std::vector<finyl_beat> beats;
 
   finyl_track();
+  double get_refindex() { //this index just references the first stem's index
+    return indxs[0];
+  }
+  void set_index(double index) { //sets all stems
+    for (int s = 0; s<stems_size; s++) {
+      indxs[s] = index;
+    }
+  }
 };
 
 enum finyl_track_target{

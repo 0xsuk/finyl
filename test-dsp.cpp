@@ -1,14 +1,14 @@
 #include <stdio.h>
 #include <string>
 #include <memory>
+#include "thread"
 #include "finyl.h"
+#include "dev.h"
 #include "dsp.h"
 #include <alsa/asoundlib.h>
 #include <algorithm>
 #include "extern.h"
 #include "RubberBandStretcher.h"
-
-int mindex = 1000000;
 bool running = true;
 
 using rb = RubberBand::RubberBandStretcher;
@@ -33,10 +33,11 @@ using rb = RubberBand::RubberBandStretcher;
 //   }
 // }
 
-double timeratio = 0.9;
+double timeratio = 1.1;
 rb stretcher(44100, 2, rb::OptionProcessRealTime, timeratio);
+rb stretcher1(44100, 2, rb::OptionProcessRealTime, timeratio);
 int inputSize = 16384;
-void rubberband(float** outputPtr, int nframes, finyl_stem& stem) {
+int rubberband(rb& stretcher, float** outputPtr, int nframes, finyl_stem& stem, int index) {
   int available;
   while ((available = stretcher.available()) < nframes) {
     int reqd = int(ceil(double(nframes - available) / timeratio));
@@ -47,10 +48,10 @@ void rubberband(float** outputPtr, int nframes, finyl_stem& stem) {
     float inputLeft[reqd];
     float inputRight[reqd];
     for (int i = 0; i<reqd; i++) {
-      if (mindex < stem.msize()) {
+      if (index < stem.msize()) {
         finyl_sample left, right;
-        stem.get_samples(left, right, mindex);
-        mindex++;
+        stem.get_samples(left, right, index);
+        index++;
         inputLeft[i] = float(left / 32768.0);
         inputRight[i] = float(right / 32768.0);
       } else {
@@ -65,12 +66,15 @@ void rubberband(float** outputPtr, int nframes, finyl_stem& stem) {
   }
 
   stretcher.retrieve(outputPtr, nframes);
+  return index;
 }
 
 int main() {
   //----
   std::unique_ptr<finyl_stem> stem;
   read_stem("beauty.mp3", stem);
+  std::unique_ptr<finyl_stem> stem1;
+  read_stem("beauty.mp3", stem1);
   printf("size: %d\n", (int)stem->ssize());
   int err = 0;
   snd_pcm_t* handle;
@@ -79,7 +83,6 @@ int main() {
   device = "default";
   finyl_setup_alsa(&handle, &buffer_size, &period_size);
   period_size_2 = period_size*2;
-  printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
   finyl_buffer buffer;
   buffer.resize(period_size_2);
   std::fill(buffer.begin(), buffer.end(), 0);
@@ -89,14 +92,35 @@ int main() {
   float rubright[period_size];
   float* rubout[2] = {rubleft, rubright};
   
+  float rubleft1[period_size];
+  float rubright1[period_size];
+  float* rubout1[2] = {rubleft1, rubright1};
+  
+  
+
+  int mindex = 1000000;
+  
+  auto t = std::thread([](){
+    char c;
+    scanf("%c", &c);
+    running = false;
+  });
   
   while (running) {
 
-    rubberband(rubout, period_size, *stem);
+    int newindex;
+    
+    auto start = NOW;
+    std::thread t([&]() {
+      newindex = rubberband(stretcher, rubout, period_size, *stem, mindex);
+    });
+    rubberband(stretcher1, rubout1, period_size, *stem1, mindex);
+    t.join();
+    mindex = newindex;
     
     for (int i = 0; i<period_size; i++) {
-      int left = int(rubleft[i] * 32768 * 0.5);
-      int right = int(rubright[i] * 32768 * 0.5);
+      int left = int(rubleft[i] * 32768 * 1.0);
+      int right = int(rubright[i] * 32768 * 1.0);
       if (abs(left) > 32767 || abs(right) > 32767) {
         printf("bad: %f %f\n", rubleft[i], rubright[i]);
         left = clip_sample(left);
@@ -106,6 +130,8 @@ int main() {
       buffer[i*2] = left;
       buffer[i*2+1] = right;
     }
+    
+    DURATION(start);
     
     err = snd_pcm_writei(handle, buffer.data(), period_size);
     if (err == -EPIPE) {
@@ -125,4 +151,6 @@ int main() {
   }
   snd_pcm_close(handle);
   printf("alsa closed\n");
+  profile();
+  t.join();
 }

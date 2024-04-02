@@ -10,17 +10,17 @@ void jump_cue(finyl_track& t) {
 
 void set_cue(finyl_track& t) {
   loop_in_now(t);
-  t.index = t.loop_in;
+  t.set_index(t.loop_in);
 }
 
 void loop_in_now(finyl_track& t) {
-  double now = t.index;
+  double now = t.get_refindex();
   t.loop_in = finyl_get_quantized_index(t, now);
   t.loop_active = false;
 }
 
 void loop_out_now(finyl_track& t) {
-  double now = t.index;
+  double now = t.get_refindex();
   auto tmp = finyl_get_quantized_index(t, now);
   if (tmp <= t.loop_in) {
     return;

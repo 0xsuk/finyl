@@ -25,7 +25,7 @@ void print_track(finyl_track& t) {
   printf("\tloop_active: %d\n", t.loop_active);
   printf("\tloop_in: %lf\n", t.loop_in);
   printf("\tloop_out: %lf\n", t.loop_out);
-  printf("\tindex: %lf\n", t.index);
+  printf("\tindex: %lf\n", t.get_refindex());
   printf("\tspeed: %lf\n", t.speed);
   printf("\tstem_size: %d\n", (int)t.stems_size);
   printf("\tbeats_size:%d\n", (int)t.beats.size());

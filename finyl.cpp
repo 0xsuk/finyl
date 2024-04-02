@@ -32,6 +32,26 @@ finyl_stem_buffers a_stem_buffers;
 finyl_buffer bbuffer;
 finyl_stem_buffers b_stem_buffers;
 
+double a_gain = 1.0;
+double a0_gain = 0.0;
+double a1_gain = 0.0;
+double b_gain = 1.0;
+double b0_gain = 0.0;
+double b1_gain = 0.0;
+double a0_filter = 0.2;
+double a1_filter = 1.0;
+double b0_filter = 0.2;
+double b1_filter = 1.0;
+Delay a_delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5};
+Delay b_delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5};
+rb a0_stretcher(44100, 2, rb::OptionProcessRealTime, 1.0);
+rb a1_stretcher(44100, 2, rb::OptionProcessRealTime, 1.0);
+rb* a_stretchers[2] = {&a0_stretcher, &a1_stretcher};
+rb b0_stretcher(44100, 2, rb::OptionProcessRealTime, 1.0);
+rb b1_stretcher(44100, 2, rb::OptionProcessRealTime, 1.0);
+rb* b_stretchers[2] = {&b0_stretcher, &b1_stretcher};
+bool a_master = true;
+bool b_master = true;
 
 finyl_track_meta::finyl_track_meta(): id(0),
                                       bpm(0),
@@ -42,11 +62,12 @@ finyl_track::finyl_track(): meta(),
                             msize(0),
                             stems_size(0),
                             playing(false),
-                            index(0),
                             speed(1),
                             loop_active(false),
                             loop_in(-1),
-                            loop_out(-1) {};
+                            loop_out(-1) {
+  std::fill(indxs.begin(), indxs.end(), 0);
+};
 
 
 
@@ -270,15 +291,84 @@ static void gain_filter(finyl_buffer& buf, double gain) {
   }
 }
 
-static void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) {
-  for (int i = 0; i < period_size_2; i=i+2) {
-    t.index += t.speed;
+//return new t.index. writes stretched samples to stem_buffer
+static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, rb& stretcher, finyl_stem& stem, int index) {
+  int available;
+  while ((available = stretcher.available()) < period_size) {
+    int reqd = int(ceil(double(period_size - available) / stretcher.getTimeRatio()));
+    reqd = std::max(reqd, int(stretcher.getSamplesRequired()));
+    reqd = std::min(reqd, 16384);
+    if (reqd == 0) reqd = 1;
+    
+    float inputLeft[reqd];
+    float inputRight[reqd];
+    for (int i = 0; i<reqd; i++) {
+      index++;
+      if (t.loop_active && t.loop_in != -1 && t.loop_out != -1 && index >= t.loop_out) {
+        index = t.loop_in + index - t.loop_out;
+      }
+      if (index >= t.msize) {
+        t.playing = false;
+      }
 
-    if (t.loop_active && t.loop_in != -1 && t.loop_out != -1 && t.index >= (t.loop_out - 1000)) {
-      t.index = t.loop_in + t.index - t.loop_out;
+      if (t.playing == false) {
+        inputLeft[i] = 0;
+        inputRight[i] = 0;
+      } else {
+        finyl_sample left, right;
+        stem.get_samples(left, right, index);
+        inputLeft[i] = float(left / 32768.0);
+        inputRight[i] = float(right / 32768.0);
+      }
     }
     
-    if (t.index >= t.msize) {
+    float* inputs[2] = {inputLeft, inputRight};
+    
+    stretcher.process(inputs, reqd, false);
+  }
+
+  float rubleft[period_size];
+  float rubright[period_size];
+  float* rubout[2] = {rubleft, rubright};
+  
+  stretcher.retrieve(rubout, period_size);
+  
+  for (int i = 0; i<period_size; i++) {
+    int left = int(rubleft[i] * 32768);
+    int right = int(rubright[i] * 32768);
+    left = clip_sample(left);
+    right = clip_sample(right);
+      
+    stem_buffer[i*2] = left;
+    stem_buffer[i*2+1] = right;
+  }
+
+  return index;
+}
+
+//rubberband
+static void make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_buffers, rb** stretchers) {
+  std::vector<std::thread> threads;
+  
+  for (int i = 0; i<t.stems_size; i++) {
+    threads.push_back(std::thread([&, i](){
+      t.indxs[i] = make_stem_buffer_stretch(stem_buffers[i], t, *stretchers[i], *t.stems[i], t.indxs[i]);
+    }));
+  }
+
+  for (auto& t: threads) {t.join();}
+}
+
+//without time stretch
+static void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) {
+  for (int i = 0; i < period_size_2; i=i+2) {
+    t.set_index(t.get_refindex() + t.speed);
+
+    if (t.loop_active && t.loop_in != -1 && t.loop_out != -1 && t.get_refindex() >= (t.loop_out - 1000)) {
+      t.set_index(t.loop_in + t.get_refindex() - t.loop_out);
+    }
+    
+    if (t.get_refindex() >= t.msize) {
       t.playing = false;
     }
 
@@ -289,7 +379,7 @@ static void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) 
         buf[i+1] = 0;
       } else {
         auto& s = t.stems[c];
-        s->get_samples(buf[i], buf[i+1], (int)t.index);
+        s->get_samples(buf[i], buf[i+1], (int)t.get_refindex());
       }
     }
   }
@@ -311,19 +401,6 @@ static void add_and_clip_two_buffers(finyl_buffer& dest, finyl_buffer& src1, fin
   }
 }
 
-double a_gain = 1.0;
-double a0_gain = 0.0;
-double a1_gain = 0.0;
-double b_gain = 1.0;
-double b0_gain = 0.0;
-double b1_gain = 0.0;
-double a0_filter = 0.2;
-double a1_filter = 1.0;
-double b0_filter = 0.2;
-double b1_filter = 1.0;
-Delay a_delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5};
-Delay b_delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5};
-
 static void finyl_handle() {
   
   std::fill(buffer.begin(), buffer.end(), 0);
@@ -331,7 +408,11 @@ static void finyl_handle() {
   std::fill(bbuffer.begin(), bbuffer.end(), 0);
   
   if (adeck != nullptr && adeck->playing) {
-    make_stem_buffers(a_stem_buffers, *adeck);
+    if (a_master) {
+      make_stem_buffers_stretch(*adeck, a_stem_buffers, a_stretchers);
+    } else {
+      make_stem_buffers(a_stem_buffers, *adeck);
+    }
     gain_filter(a_stem_buffers[0], a0_gain);
     gain_filter(a_stem_buffers[1], a1_gain);
     add_and_clip_two_buffers(abuffer, a_stem_buffers[0], a_stem_buffers[1]);
@@ -339,7 +420,7 @@ static void finyl_handle() {
   }
   delay(abuffer, a_delay);
   if (bdeck != nullptr && bdeck->playing) {
-    make_stem_buffers(b_stem_buffers, *bdeck);
+    make_stem_buffers_stretch(*bdeck, b_stem_buffers, b_stretchers);
     gain_filter(b_stem_buffers[0], b0_gain);
     gain_filter(b_stem_buffers[1], b1_gain);
     add_and_clip_two_buffers(bbuffer, b_stem_buffers[0], b_stem_buffers[1]);
@@ -358,11 +439,11 @@ static void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size,
   snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_S16_LE);
   snd_pcm_hw_params_set_rate(handle, hw_params, 44100, 0);
   snd_pcm_hw_params_set_channels(handle, hw_params, 2);
-  snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, buffer_size);
-  snd_pcm_hw_params_set_period_size_near(handle, hw_params, period_size, 0);
+  snd_pcm_hw_params_set_period_size_near(handle, hw_params, period_size, 0); //first set period
+  snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, buffer_size); //then buffer. (NOTE: when device is set to default, buffer_size became period_size*3 although peirod_size*2 is requested)
   snd_pcm_hw_params(handle, hw_params);
-  snd_pcm_hw_params_free(hw_params);
   snd_pcm_get_params(handle, buffer_size, period_size);
+  snd_pcm_hw_params_free(hw_params);
 }
 
 static void cleanup_alsa(snd_pcm_t* handle) {
@@ -424,4 +505,5 @@ void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, s
   }
   
   cleanup_alsa(handle);
+  profile();
 }

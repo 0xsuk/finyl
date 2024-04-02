@@ -28,5 +28,11 @@ extern double b0_gain;
 extern double b1_gain;
 extern Delay a_delay;
 extern Delay b_delay;
+extern rb a0_stretcher;
+extern rb a1_stretcher;
+extern rb* a_stretchers[2];
+extern rb b0_stretcher;
+extern rb b1_stretcher;
+extern rb* b_stretchers[2];
 
 #endif

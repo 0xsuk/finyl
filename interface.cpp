@@ -319,22 +319,22 @@ int run_interface() {
 
     free_tracks();
     if (interface.render_adeck) {
-      int nowi = (int)adeck->index;
+      int nowi = (int)adeck->get_refindex();
       render_waveform(interface, interface.tx_awave, *adeck, nowi, 0);
       interface.render_adeck = false;
       previ_adeck = nowi - (int)interface.wave_range/2;
     } else if (adeck != NULL) {
-      previ_adeck = plus_waveform(interface, interface.tx_awave, *adeck, (int)adeck->index, 0, previ_adeck);
+      previ_adeck = plus_waveform(interface, interface.tx_awave, *adeck, (int)adeck->get_refindex(), 0, previ_adeck);
       render_static_grids(interface, interface.tx_asg, adeck, 0);
     }
     
     if (interface.render_bdeck) {
-      int nowi = (int)bdeck->index;
+      int nowi = (int)bdeck->get_refindex();
       render_waveform(interface, interface.tx_bwave, *bdeck, nowi, interface.wave_height+10);
       interface.render_bdeck = false;
       previ_bdeck = nowi - (int)interface.wave_range/2;;
     } else if (bdeck != NULL) {
-      previ_bdeck = plus_waveform(interface, interface.tx_bwave, *bdeck, (int)bdeck->index, interface.wave_height+10, previ_bdeck);
+      previ_bdeck = plus_waveform(interface, interface.tx_bwave, *bdeck, (int)bdeck->get_refindex(), interface.wave_height+10, previ_bdeck);
       render_static_grids(interface, interface.tx_bsg, bdeck, interface.wave_height + 10);
     }
     

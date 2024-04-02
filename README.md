@@ -10,7 +10,7 @@ make
 (c++20 compiler needed)  
 
 Depends on...  
-in debian: libasound2-dev (alsa), ffmpeg (cli), libsdl2-dev, libx11-dev, libssl-dev, librubberband-dev  
+in debian: libasound2-dev (alsa), ffmpeg (cli), libsdl2-dev, libx11-dev, libssl-dev   
 
 ## usage
 ./finyl <path to rekordbox usb: example /media/null/22BC-F655/ >

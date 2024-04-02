@@ -18,7 +18,6 @@ int main(int argc, char **argv) {
   plug(usbroot);
   device = "default";
   snd_pcm_t* handle;
-  snd_pcm_uframes_t buffer_size = 1024 * 2;
   period_size = 1024;
   if (argc >= 3) {
     device = argv[2];
@@ -29,6 +28,11 @@ int main(int argc, char **argv) {
   if (argc >=5) {
     fps = std::stoi(argv[4]);
   }
+  
+  snd_pcm_uframes_t buffer_size = period_size * 2;
+
+  
+  printf("want: %d %d\n", (int)buffer_size, (int)period_size);
   
   finyl_setup_alsa(&handle, &buffer_size, &period_size);
   period_size_2 = period_size*2;

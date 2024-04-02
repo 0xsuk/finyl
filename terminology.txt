@@ -1,6 +1,10 @@
 channel: same as stereo "channel", one for left one for right
-stem: vocal, inst, drum, whatever
-
-pcm array: [left0, right0, left1, right1]
+stem: vocal, inst, drum, whatever.
+pcm array: [left0, right0, left1, right1] -> "interleaved"
 mindex: index w.r.t. mono. mindex=1 is left1;
 sindex: index w.r.t. stereo. sindex=1 is right0;
+
+
+# ALSA
+period_size: larger period_size makes cpu wake up less, saving battery
+buffer_size: larger makes more latency.
