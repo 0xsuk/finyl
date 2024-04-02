@@ -143,19 +143,22 @@ public:
 
 struct finyl_track{
   finyl_track_meta meta;
-  int msize; //number of samples in a channel for each stem
   int stems_size;
   bool playing;
-  double speed;
   bool loop_active;
   double loop_in; //index
   double loop_out; //index
   std::array<double, MAX_STEMS_SIZE> indxs; //index for stem, used by rubberband stretcher
+  std::array<std::unique_ptr<rb>, MAX_STEMS_SIZE> stretchers;
   std::array<std::unique_ptr<finyl_stem>, MAX_STEMS_SIZE> stems;
   std::vector<finyl_cue> cues;
   std::vector<finyl_beat> beats;
 
   finyl_track();
+  int get_refmsize() {
+    return stems[0]->msize();
+  }
+  
   double get_refindex() { //this index just references the first stem's index
     return indxs[0];
   }
@@ -164,6 +167,22 @@ struct finyl_track{
       indxs[s] = index;
     }
   }
+  void set_speed(double speed) {
+    double timeratio = 1.0/speed;
+    set_timeratio(timeratio);
+  }
+  double get_speed() {
+    return 1.0/get_reftimeratio();
+  }
+  double get_reftimeratio() {
+    return stretchers[0]->getTimeRatio();
+  }
+  void set_timeratio(double ratio) { //sets for all stems
+    for (auto& each: stretchers) {
+      each->setTimeRatio(ratio);
+    }
+  }
+  
 };
 
 enum finyl_track_target{

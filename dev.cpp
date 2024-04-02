@@ -20,13 +20,13 @@ void print_track(finyl_track& t) {
   printf("\tid: %d\n", t.meta.id);
   printf("\tfilename: %s\n", t.meta.filename.c_str());
   printf("\tbpm: %d\n", t.meta.bpm);
-  printf("\teffective bpm: %lf\n", t.meta.bpm * t.speed);
-  printf("\tmsize: %d\n", t.msize);
+  printf("\teffective bpm: %lf\n", t.meta.bpm * t.get_speed());
+  printf("\tmsize: %d\n", t.get_refmsize());
   printf("\tloop_active: %d\n", t.loop_active);
   printf("\tloop_in: %lf\n", t.loop_in);
   printf("\tloop_out: %lf\n", t.loop_out);
   printf("\tindex: %lf\n", t.get_refindex());
-  printf("\tspeed: %lf\n", t.speed);
+  printf("\tspeed: %lf\n", t.get_speed());
   printf("\tstem_size: %d\n", (int)t.stems_size);
   printf("\tbeats_size:%d\n", (int)t.beats.size());
   printf("\tplaying: %d\n", t.playing);

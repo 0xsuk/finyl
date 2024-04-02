@@ -133,7 +133,7 @@ void draw_waveform(Interface& itf, SDL_Texture* texture, finyl_track& t, int sta
     int pcmi = i+starti;
     
     //horizontal line
-    bool has_pcm = pcmi>=0 && pcmi < t.msize;
+    bool has_pcm = pcmi>=0 && pcmi < t.get_refmsize();
     if (!has_pcm) {
       SDL_RenderDrawLine(itf.renderer, x, itf.wave_height_half, x, itf.wave_height_half);
       continue;

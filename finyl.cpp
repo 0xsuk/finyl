@@ -44,12 +44,6 @@ double b0_filter = 0.2;
 double b1_filter = 1.0;
 Delay a_delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5};
 Delay b_delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5};
-rb a0_stretcher(44100, 2, rb::OptionProcessRealTime, 1.0);
-rb a1_stretcher(44100, 2, rb::OptionProcessRealTime, 1.0);
-rb* a_stretchers[2] = {&a0_stretcher, &a1_stretcher};
-rb b0_stretcher(44100, 2, rb::OptionProcessRealTime, 1.0);
-rb b1_stretcher(44100, 2, rb::OptionProcessRealTime, 1.0);
-rb* b_stretchers[2] = {&b0_stretcher, &b1_stretcher};
 bool a_master = true;
 bool b_master = true;
 
@@ -59,14 +53,15 @@ finyl_track_meta::finyl_track_meta(): id(0),
                                       filesize(0) {};
 
 finyl_track::finyl_track(): meta(),
-                            msize(0),
                             stems_size(0),
                             playing(false),
-                            speed(1),
                             loop_active(false),
                             loop_in(-1),
                             loop_out(-1) {
   std::fill(indxs.begin(), indxs.end(), 0);
+  for (auto&p : stretchers) {
+    p = std::make_unique<rb>(44100, 2, rb::OptionProcessRealTime, 1.0);
+  }
 };
 
 
@@ -248,9 +243,8 @@ error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_t
   std::vector<std::thread> threads;
   
   error err;
-  int msize = 0;
   for (size_t i = 0; i < files.size(); i++) {
-    threads.push_back(std::thread([i, &files, &t, &err, &msize]() {
+    threads.push_back(std::thread([&, i]() {
       printf("reading %dth stem\n", (int)i);
       std::unique_ptr<finyl_stem> stem;
       auto _err = read_stem(files[i], stem);
@@ -263,11 +257,7 @@ error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_t
         err = error("read_stem has read empty file?");
         return;
       }
-      else if (msize == 0) msize = stem->msize(); //initialize length
-      else if (msize != stem->msize())  {
-        err = error(ERR::STEMS_DIFFERENT_SIZE);
-        return;
-      }
+      
       t.stems[i].reset(stem.release());
     }));
   }
@@ -277,7 +267,6 @@ error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_t
   }
   
   t.stems_size = files.size();
-  t.msize = msize;
   
   return err;
 }
@@ -307,7 +296,7 @@ static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, r
       if (t.loop_active && t.loop_in != -1 && t.loop_out != -1 && index >= t.loop_out) {
         index = t.loop_in + index - t.loop_out;
       }
-      if (index >= t.msize) {
+      if (index >= t.get_refmsize()) {
         t.playing = false;
       }
 
@@ -347,28 +336,28 @@ static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, r
 }
 
 //rubberband
-static void make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_buffers, rb** stretchers) {
+static void make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_buffers) {
   std::vector<std::thread> threads;
   
   for (int i = 0; i<t.stems_size; i++) {
     threads.push_back(std::thread([&, i](){
-      t.indxs[i] = make_stem_buffer_stretch(stem_buffers[i], t, *stretchers[i], *t.stems[i], t.indxs[i]);
+      t.indxs[i] = make_stem_buffer_stretch(stem_buffers[i], t, *t.stretchers[i], *t.stems[i], t.indxs[i]);
     }));
   }
 
-  for (auto& t: threads) {t.join();}
+  for (auto& th: threads) {th.join();}
 }
 
 //without time stretch
 static void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) {
   for (int i = 0; i < period_size_2; i=i+2) {
-    t.set_index(t.get_refindex() + t.speed);
+    t.set_index(t.get_refindex() + t.get_speed());
 
     if (t.loop_active && t.loop_in != -1 && t.loop_out != -1 && t.get_refindex() >= (t.loop_out - 1000)) {
       t.set_index(t.loop_in + t.get_refindex() - t.loop_out);
     }
     
-    if (t.get_refindex() >= t.msize) {
+    if (t.get_refindex() >= t.get_refmsize()) {
       t.playing = false;
     }
 
@@ -409,7 +398,7 @@ static void finyl_handle() {
   
   if (adeck != nullptr && adeck->playing) {
     if (a_master) {
-      make_stem_buffers_stretch(*adeck, a_stem_buffers, a_stretchers);
+      make_stem_buffers_stretch(*adeck, a_stem_buffers);
     } else {
       make_stem_buffers(a_stem_buffers, *adeck);
     }
@@ -420,7 +409,11 @@ static void finyl_handle() {
   }
   delay(abuffer, a_delay);
   if (bdeck != nullptr && bdeck->playing) {
-    make_stem_buffers_stretch(*bdeck, b_stem_buffers, b_stretchers);
+    if (b_master) {
+      make_stem_buffers_stretch(*bdeck, b_stem_buffers);
+    } else {
+      make_stem_buffers(b_stem_buffers, *bdeck);
+    }
     gain_filter(b_stem_buffers[0], b0_gain);
     gain_filter(b_stem_buffers[1], b1_gain);
     add_and_clip_two_buffers(bbuffer, b_stem_buffers[0], b_stem_buffers[1]);

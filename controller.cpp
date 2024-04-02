@@ -15,17 +15,17 @@
 bool quantize = false;
 
 void slide_right(finyl_track* t) {
-  double backup = t->speed;
+  double backup = t->get_speed();
   double y = 0;
   double x = 0;
   while (y>=0) {
     y  = -x*(x-2);
-    t->speed = y;
+    t->set_speed(y);
     x = 0.01 + x;
     usleep(1000);
-    printf("t is %lf\n", t->speed);
+    printf("t is %lf\n", t->get_speed());
   }
-  t->speed = backup;
+  t->set_speed(backup);
 }
 
 //n = 0 means load an original file
@@ -135,7 +135,7 @@ void handle_delay_on(char* v, Delay& d, finyl_track& deck) {
       d.on = false;
       printf("off\n");
     } else {
-      double bpm = (deck.meta.bpm/100.0)*deck.speed;
+      double bpm = (deck.meta.bpm/100.0)*deck.get_speed();
       d.setMsize((44100*60)/bpm*1.0);
       d.on = true;
       printf("on\n");
@@ -235,12 +235,12 @@ void handle_what(char* s) {
 
   if (adeck != NULL && bdeck!= NULL) {
     if (match(s, "button7", i)) {
-      adeck->speed = bdeck->speed * ((double)bdeck->meta.bpm / adeck->meta.bpm);
-      printf("synced adeck->speed: %lf\n", adeck->speed);
+      adeck->set_speed(bdeck->get_speed() * ((double)bdeck->meta.bpm / adeck->meta.bpm));
+      printf("synced adeck->speed: %lf\n", adeck->get_speed());
     }
     if (match(s, "button1", i)) {
-      bdeck->speed = adeck->speed * ((double)adeck->meta.bpm / bdeck->meta.bpm);
-      printf("synced bdeck->speed: %lf\n", bdeck->speed);
+      bdeck->set_speed(adeck->get_speed() * ((double)adeck->meta.bpm / bdeck->meta.bpm));
+      printf("synced bdeck->speed: %lf\n", bdeck->get_speed());
     }
   }
 }
@@ -330,7 +330,7 @@ void handleKey(char x) {
       } else {
         //bpm beats is 44100*60 samples
         //1 beat is 44100*60/bpm samples 
-        double bpm = (adeck->meta.bpm/100.0)*adeck->speed;
+        double bpm = (adeck->meta.bpm/100.0)*adeck->get_speed();
         a_delay.setMsize((44100*60)/bpm*1.0);
         a_delay.on = true;
         printf("delay on: %lf %lf\n", a_delay.drymix, a_delay.feedback);
@@ -341,7 +341,7 @@ void handleKey(char x) {
       printf("adeck is playing:%d\n", adeck->playing);
       return;
     case 'G':
-      adeck->speed = 1;
+      adeck->set_speed(1);
       return;
     case 'N':
       a0_gain = 0;
@@ -365,18 +365,16 @@ void handleKey(char x) {
         printf("jumped to %lf\n", adeck->get_refindex());
       }
       return;
-    case 'a':
-      a1_stretcher.setTimeRatio(a1_stretcher.getTimeRatio()+0.01);
-      a0_stretcher.setTimeRatio(a0_stretcher.getTimeRatio()+0.01);
-      printf("%lf\n", a1_stretcher.getTimeRatio());
-      // adeck->speed = adeck->speed + 0.01;
+    case 'a': {
+      adeck->set_speed(adeck->get_speed() + 0.01);
+      printf("%lf\n", adeck->get_speed());
       return;
-    case 's':
-      a1_stretcher.setTimeRatio(a1_stretcher.getTimeRatio()-0.01);
-      a0_stretcher.setTimeRatio(a0_stretcher.getTimeRatio()-0.01);
-
-      // adeck->speed = adeck->speed - 0.01;
+    }
+    case 's': {
+      adeck->set_speed(adeck->get_speed() - 0.01);
+      printf("%lf\n", adeck->get_speed());
       return;
+    }
     case 't': {
       set_cue(*adeck);
       printf("adeck->index %lf\n", adeck->get_refindex());
@@ -418,7 +416,7 @@ void handleKey(char x) {
       } else {
         //bpm beats is 44100*60 samples
         //1 beat is 44100*60/bpm samples 
-        double bpm = (bdeck->meta.bpm/100)*bdeck->speed;
+        double bpm = (bdeck->meta.bpm/100.0)*bdeck->get_speed();
         b_delay.setMsize((44100*60)/bpm*2);
         b_delay.on = true;
         printf("delay on: %lf %lf\n", b_delay.drymix, b_delay.feedback);
@@ -430,7 +428,7 @@ void handleKey(char x) {
       printf("bdeck is playing:%d\n", bdeck->playing);
       return;
     case 'H':
-      bdeck->speed = 1;
+      bdeck->set_speed(1);
       return;
     case 'M':
       b0_gain = 0;
@@ -455,10 +453,12 @@ void handleKey(char x) {
       }
       return;
     case 'A':
-      bdeck->speed = bdeck->speed + 0.01;
+      bdeck->set_speed(bdeck->get_speed() + 0.01);
+      printf("%lf\n", bdeck->get_speed());
       return;
     case 'S':
-      bdeck->speed = bdeck->speed - 0.01;
+      bdeck->set_speed(bdeck->get_speed() - 0.01);
+      printf("%lf\n", bdeck->get_speed());
       return;
     case 'y': {
       set_cue(*bdeck);
@@ -498,13 +498,13 @@ void handleKey(char x) {
       print_track(*bdeck);
       return;
     case 'q': {
-      bdeck->speed = adeck->speed * ((double)adeck->meta.bpm / bdeck->meta.bpm);
-      printf("synced bdeck->speed: %lf\n", bdeck->speed);
+      bdeck->set_speed(adeck->get_speed() * ((double)adeck->meta.bpm / bdeck->meta.bpm));
+      printf("synced bdeck->speed: %lf\n", bdeck->get_speed());
       return;
     }
     case 'Q': {
-      adeck->speed = bdeck->speed * ((double)bdeck->meta.bpm / adeck->meta.bpm);
-      printf("synced adeck->speed: %lf\n", adeck->speed);
+      adeck->set_speed(bdeck->get_speed() * ((double)bdeck->meta.bpm / adeck->meta.bpm));
+      printf("synced adeck->speed: %lf\n", adeck->get_speed());
       return;
     }
 
