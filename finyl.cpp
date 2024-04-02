@@ -281,7 +281,7 @@ static void gain_filter(finyl_buffer& buf, double gain) {
 }
 
 //return new t.index. writes stretched samples to stem_buffer
-static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, rb& stretcher, finyl_stem& stem, int index) {
+static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, rb& stretcher, finyl_stem& stem, int index, std::mutex& mutex) {
   int available;
   while ((available = stretcher.available()) < period_size) {
     int reqd = int(ceil(double(period_size - available) / stretcher.getTimeRatio()));
@@ -313,6 +313,7 @@ static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, r
     
     float* inputs[2] = {inputLeft, inputRight};
     
+    std::lock_guard<std::mutex> lock(mutex);
     stretcher.process(inputs, reqd, false);
   }
 
@@ -341,7 +342,7 @@ static void make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_b
   
   for (int i = 0; i<t.stems_size; i++) {
     threads.push_back(std::thread([&, i](){
-      t.indxs[i] = make_stem_buffer_stretch(stem_buffers[i], t, *t.stretchers[i], *t.stems[i], t.indxs[i]);
+      t.indxs[i] = make_stem_buffer_stretch(stem_buffers[i], t, *t.stretchers[i], *t.stems[i], t.indxs[i], t.mtxs[i]);
     }));
   }
 

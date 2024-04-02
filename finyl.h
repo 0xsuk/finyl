@@ -148,6 +148,7 @@ struct finyl_track{
   bool loop_active;
   double loop_in; //index
   double loop_out; //index
+  std::array<std::mutex, MAX_STEMS_SIZE> mtxs; //prevent setTimeout happen during rubberband process()
   std::array<double, MAX_STEMS_SIZE> indxs; //index for stem, used by rubberband stretcher
   std::array<std::unique_ptr<rb>, MAX_STEMS_SIZE> stretchers;
   std::array<std::unique_ptr<finyl_stem>, MAX_STEMS_SIZE> stems;
@@ -178,8 +179,12 @@ struct finyl_track{
     return stretchers[0]->getTimeRatio();
   }
   void set_timeratio(double ratio) { //sets for all stems
-    for (auto& each: stretchers) {
-      each->setTimeRatio(ratio);
+    if (ratio <= 0) {
+      return;
+    }
+    for (int i = 0; i<stems_size; i++) {
+      std::lock_guard<std::mutex> lock(mtxs[i]);
+      stretchers[i]->setTimeRatio(ratio);
     }
   }
   
