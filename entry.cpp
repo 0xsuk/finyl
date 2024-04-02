@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <pthread.h>
+#include <thread>
 #include "finyl.h"
 #include "rekordbox.h"
 #include "dev.h"
@@ -38,13 +38,9 @@ int main(int argc, char **argv) {
   period_size_2 = period_size*2;
   printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
   
-  pthread_t c;
-  if (pthread_create(&c, NULL, controller, NULL) != 0) {
-    perror("pthread_create");
-    return 1;
-  }
+  auto th = std::thread(controller);
   
   finyl_run(NULL, NULL, NULL, NULL, handle);
   
-  pthread_join(c, NULL);
+  th.join();
 }

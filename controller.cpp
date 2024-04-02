@@ -6,8 +6,8 @@
 #include "util.h"
 #include "dev.h"
 #include "interface.h"
-#include <pthread.h>
 #include <memory>
+#include <thread>
 #include "action.h"
 #include "rekordbox.h"
 #include "extern.h"
@@ -310,16 +310,6 @@ void* serial(void* args) {
   return NULL;
 }
 
-void* _interface(void*) {
-  run_interface();
-  return NULL;
-}
-
-void start_interface() {
-  pthread_t interface_thread;
-  pthread_create(&interface_thread, NULL, _interface, NULL);
-}
-
 void handleKey(char x) {
   if (adeck != NULL) {
     switch (x) {
@@ -563,7 +553,7 @@ void handleKey(char x) {
     break;
   }
   case '3':{
-    start_interface();
+    std::thread(run_interface).detach();
     break;
   }
   case '#': {
@@ -600,7 +590,7 @@ void* key_input(void* args) {
   return NULL;
 }
 
-void* controller(void* args) {
+void* controller() {
   pthread_t k;
   pthread_create(&k, NULL, key_input, NULL);
   pthread_t s;

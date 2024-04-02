@@ -4,5 +4,5 @@
 
 void load_track(finyl_track** dest, int tid);
 
-void* controller(void* args);
+void* controller();
 #endif
