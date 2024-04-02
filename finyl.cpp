@@ -396,18 +396,21 @@ static void finyl_handle() {
   std::fill(abuffer.begin(), abuffer.end(), 0);
   std::fill(bbuffer.begin(), bbuffer.end(), 0);
   
-  if (adeck != nullptr && adeck->playing) {
-    if (a_master) {
-      make_stem_buffers_stretch(*adeck, a_stem_buffers);
-    } else {
-      make_stem_buffers(a_stem_buffers, *adeck);
+  auto thread = std::thread([&](){
+    if (adeck != nullptr && adeck->playing) {
+      if (a_master) {
+        make_stem_buffers_stretch(*adeck, a_stem_buffers);
+      } else {
+        make_stem_buffers(a_stem_buffers, *adeck);
+      }
+      gain_filter(a_stem_buffers[0], a0_gain);
+      gain_filter(a_stem_buffers[1], a1_gain);
+      add_and_clip_two_buffers(abuffer, a_stem_buffers[0], a_stem_buffers[1]);
+      gain_filter(abuffer, a_gain);
     }
-    gain_filter(a_stem_buffers[0], a0_gain);
-    gain_filter(a_stem_buffers[1], a1_gain);
-    add_and_clip_two_buffers(abuffer, a_stem_buffers[0], a_stem_buffers[1]);
-    gain_filter(abuffer, a_gain);
-  }
-  delay(abuffer, a_delay);
+    delay(abuffer, a_delay);
+  });
+  
   if (bdeck != nullptr && bdeck->playing) {
     if (b_master) {
       make_stem_buffers_stretch(*bdeck, b_stem_buffers);
@@ -421,6 +424,7 @@ static void finyl_handle() {
   }
   delay(bbuffer, b_delay);
   
+  thread.join();
   add_and_clip_two_buffers(buffer, abuffer, bbuffer);
 }
 
