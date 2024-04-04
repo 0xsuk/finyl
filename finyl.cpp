@@ -47,6 +47,8 @@ Delay b_delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5};
 bool a_master = true;
 bool b_master = true;
 
+int max_process_size = 2048;
+
 finyl_track_meta::finyl_track_meta(): id(0),
                                       bpm(0),
                                       musickeyid(0),
@@ -61,6 +63,7 @@ finyl_track::finyl_track(): meta(),
   std::fill(indxs.begin(), indxs.end(), 0);
   for (auto&p : stretchers) {
     p = std::make_unique<rb>(44100, 2, rb::OptionProcessRealTime, 1.0);
+    p->setMaxProcessSize(max_process_size);
   }
 };
 
@@ -285,9 +288,7 @@ static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, r
   int available;
   while ((available = stretcher.available()) < period_size) {
     int reqd = int(ceil(double(period_size - available) / stretcher.getTimeRatio()));
-    reqd = std::max(reqd, int(stretcher.getSamplesRequired()));
-    reqd = std::min(reqd, 16384);
-    if (reqd == 0) reqd = 1;
+    if (reqd > max_process_size) reqd = max_process_size;
     
     float inputLeft[reqd];
     float inputRight[reqd];
