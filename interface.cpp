@@ -124,7 +124,7 @@ void draw_waveform(Interface& itf, SDL_Texture* texture, finyl_track& t, int sta
   int prev_pcmi = starti+idraw_offset;
   
   int beati = finyl_get_quantized_beat_index(t, prev_pcmi);
-  if (t.beats[beati].time * 44.1 < prev_pcmi) {
+  if (t.beats[beati].time * (sample_rate/1000.0) < prev_pcmi) {
     beati++;
   }
 
@@ -140,7 +140,7 @@ void draw_waveform(Interface& itf, SDL_Texture* texture, finyl_track& t, int sta
     }
     
     //beat grid
-    int beat_pcmi = t.beats[beati].time * 44.1;
+    int beat_pcmi = t.beats[beati].time * (sample_rate/1000.0);
     if (prev_pcmi <= beat_pcmi && beat_pcmi < pcmi) {
       SDL_Rect rect = {x, 0, 0, itf.wave_height};
       if (t.beats[beati].number == 1) {
@@ -157,7 +157,7 @@ void draw_waveform(Interface& itf, SDL_Texture* texture, finyl_track& t, int sta
     
     //cue
     for (auto cue = t.cues.begin(); cue!=t.cues.end(); cue++) {
-      auto cuei = cue->time*44.1;
+      auto cuei = cue->time*(sample_rate/ 1000.0);
       if (prev_pcmi < cuei  && cuei < pcmi) {
         SDL_SetRenderDrawColor(itf.renderer, 255, 71, 0, 255);
         SDL_RenderDrawLine(itf.renderer, x, 0, x, 10);
@@ -218,7 +218,7 @@ void draw_static_grids(Interface& itf, finyl_track* t) {
   SDL_SetRenderDrawColor(itf.renderer, 100, 0, 100, 255);
 
   int dur = t->beats[1].time - t->beats[0].time; //msec
-  int samples = dur * 44.1;
+  int samples = dur * (sample_rate / 1000.0);
 
   int i = 1;
   while (1) {

@@ -11,6 +11,7 @@ extern std::string device;
 extern int fps;
 extern snd_pcm_uframes_t period_size;
 extern snd_pcm_uframes_t period_size_2;
+extern int sample_rate;
 
 extern bool finyl_running;
 

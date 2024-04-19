@@ -7,6 +7,7 @@
 #include <algorithm>
 #include "util.h"
 #include "dev.h"
+#include "extern.h"
 #include "rekordbox.h"
 
 std::vector<Usb> usbs;
@@ -313,7 +314,7 @@ static void readCueTags(finyl_track& t, rekordbox_anlz_t::cue_tag_t* cuesTag) {
   if (t.cues.size() > 1) {
     // 1000 milisec = 44100 samples
     // time milisec = 44100 / 1000 * time samples
-    t.loop_in = 44.1 * (double)t.cues[0].time;
+    t.loop_in = (sample_rate / 1000.0) * (double)t.cues[0].time;
   }
 }
 

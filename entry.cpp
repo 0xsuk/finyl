@@ -17,6 +17,7 @@ int main(int argc, char **argv) {
   std::string usbroot = argv[1];
   plug(usbroot);
   device = "default";
+  sample_rate = 44100;
   snd_pcm_t* handle;
   period_size = 1024;
   if (argc >= 3) {

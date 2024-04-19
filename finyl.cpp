@@ -3,6 +3,7 @@
 #include "util.h"
 #include "dsp.h"
 #include "dev.h"
+#include "extern.h"
 #include <thread>
 #include <alsa/asoundlib.h>
 #include <math.h>
@@ -18,6 +19,7 @@ std::string device;
 int fps = 30;
 snd_pcm_uframes_t period_size;
 snd_pcm_uframes_t period_size_2;
+int sample_rate;
 
 bool finyl_running = true;
 
@@ -62,7 +64,7 @@ finyl_track::finyl_track(): meta(),
                             loop_out(-1) {
   std::fill(indxs.begin(), indxs.end(), 0);
   for (auto&p : stretchers) {
-    p = std::make_unique<rb>(44100, 2, rb::OptionProcessRealTime, 1.0);
+    p = std::make_unique<rb>(sample_rate, 2, rb::OptionProcessRealTime, 1.0);
     p->setMaxProcessSize(max_process_size);
   }
 };
@@ -78,7 +80,7 @@ int finyl_get_quantized_beat_index(finyl_track& t, int index) {
   //44100 samples = 1sec
   //index samples = 1 / 44100 * index sec
   //= 1 / 44100 * index * 1000 millisec
-  double nowtime = 1000.0 / 44100.0 * index;
+  double nowtime = (1000.0 / sample_rate) * index;
 
   if (nowtime < t.beats[0].time) {
     return 0;
@@ -113,7 +115,7 @@ int finyl_get_quantized_time(finyl_track& t, int index) {
 }
 
 double finyl_get_quantized_index(finyl_track& t, int index) {
-  double v =  44.1 * finyl_get_quantized_time(t, index);
+  double v =  (sample_rate / 1000.0) * finyl_get_quantized_time(t, index);
 
   return v;
 }
@@ -132,7 +134,7 @@ static error open_pcm(FILE** fp, const std::string& filename) {
   }
   char command[1000];
   //opens interleaved pcm data stream
-  snprintf(command, sizeof(command), "ffmpeg -i \"%s\" -f s16le -ar 44100 -ac 2 -v quiet -", filename.data());
+  snprintf(command, sizeof(command), "ffmpeg -i \"%s\" -f s16le -ar %d -ac 2 -v quiet -", filename.data(), sample_rate);
   *fp = popen(command, "r");
   if (fp == nullptr) {
     printf(" %s\n", filename.data());
@@ -166,10 +168,10 @@ static int wav_valid(char* addr) {
   }
   
   short* nchannels = (short*)(addr+22);
-  int* sample_rate = (int*)(addr+24);
+  int* _sample_rate = (int*)(addr+24);
   short* bitdepth = (short*)(addr+34);
   
-  if (*bitdepth != 16 || *nchannels != 2 || *sample_rate != 44100) {
+  if (*bitdepth != 16 || *nchannels != 2 || *_sample_rate != sample_rate) {
     return -1;
   }
   
@@ -436,7 +438,7 @@ static void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size,
   snd_pcm_hw_params_any(handle, hw_params);
   snd_pcm_hw_params_set_access(handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
   snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_S16_LE);
-  snd_pcm_hw_params_set_rate(handle, hw_params, 44100, 0);
+  snd_pcm_hw_params_set_rate(handle, hw_params, sample_rate, 0);
   snd_pcm_hw_params_set_channels(handle, hw_params, 2);
   snd_pcm_hw_params_set_period_size_near(handle, hw_params, period_size, 0); //first set period
   snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, buffer_size); //then buffer. (NOTE: when device is set to default, buffer_size became period_size*3 although peirod_size*2 is requested)

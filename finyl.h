@@ -16,7 +16,8 @@
 #define MAX_STEMS_SIZE 5
 #endif
 
-using finyl_sample = signed short;
+using finyl_sample = signed short; // because wav file is signed short, and can be mmap-ed if finyl_sample is signed short, although for other data types, interpreting data as signed short after mmap is possible
+//signed short (16-bit) is enough because the sound quality of stem is not so good that more than 16-bit representation does not worth the cost
 using finyl_buffer = std::vector<finyl_sample>;
 using finyl_stem_buffers = std::array<finyl_buffer, MAX_STEMS_SIZE>;
 using rb = RubberBand::RubberBandStretcher;

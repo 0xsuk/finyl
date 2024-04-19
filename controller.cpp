@@ -136,7 +136,7 @@ void handle_delay_on(char* v, Delay& d, finyl_track& deck) {
       printf("off\n");
     } else {
       double bpm = (deck.meta.bpm/100.0)*deck.get_speed();
-      d.setMsize((44100*60)/bpm*1.0);
+      d.setMsize((sample_rate*60)/bpm*1.0);
       d.on = true;
       printf("on\n");
     }
@@ -321,7 +321,7 @@ void handleKey(char x) {
         //bpm beats is 44100*60 samples
         //1 beat is 44100*60/bpm samples 
         double bpm = (adeck->meta.bpm/100.0)*adeck->get_speed();
-        a_delay.setMsize((44100*60)/bpm*1.0);
+        a_delay.setMsize((sample_rate*60)/bpm*1.0);
         a_delay.on = true;
         printf("delay on: %lf %lf\n", a_delay.drymix, a_delay.feedback);
       }
@@ -351,7 +351,7 @@ void handleKey(char x) {
       return;
     case 'c':
       if (adeck->cues.size() > 0) {
-        adeck->set_index(adeck->cues[0].time * 44.1);
+        adeck->set_index(adeck->cues[0].time * (sample_rate / 1000.0));
         printf("jumped to %lf\n", adeck->get_refindex());
       }
       return;
@@ -407,7 +407,7 @@ void handleKey(char x) {
         //bpm beats is 44100*60 samples
         //1 beat is 44100*60/bpm samples 
         double bpm = (bdeck->meta.bpm/100.0)*bdeck->get_speed();
-        b_delay.setMsize((44100*60)/bpm*2);
+        b_delay.setMsize(((sample_rate/1000.0)*60)/bpm*2);
         b_delay.on = true;
         printf("delay on: %lf %lf\n", b_delay.drymix, b_delay.feedback);
       }
@@ -438,7 +438,7 @@ void handleKey(char x) {
       return;
     case 'C':
       if (bdeck->cues.size() > 0) {
-        bdeck->set_index(bdeck->cues[0].time * 44.1);
+        bdeck->set_index(bdeck->cues[0].time * (sample_rate / 1000.0));
         printf("jumped to %lf\n", bdeck->get_refindex());
       }
       return;

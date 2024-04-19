@@ -3,7 +3,7 @@
 
 #include "finyl.h"
 
-#define MAX_DELAY_SEC 5
+#define MAX_DELAY_SEC 10
 #define MAX_DELAY_SAMPLES 44100*MAX_DELAY_SEC*2
 
 struct Delay {
