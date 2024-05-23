@@ -4,6 +4,7 @@
 #include <termios.h>
 #include "finyl.h"
 #include "util.h"
+#include "dsp.h"
 #include "dev.h"
 #include "interface.h"
 #include <memory>

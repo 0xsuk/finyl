@@ -2,6 +2,7 @@
 #define DSP_H
 
 #include "finyl.h"
+#include "extern.h"
 
 #define MAX_DELAY_SEC 10
 #define MAX_DELAY_SAMPLES 44100*MAX_DELAY_SEC*2

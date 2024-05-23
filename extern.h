@@ -1,7 +1,6 @@
 #ifndef EXTERN_H
 #define EXTERN_H
 
-#include "dsp.h"
 #include "rekordbox.h"
 #include "interface.h"
 extern std::vector<Usb> usbs;
@@ -27,6 +26,7 @@ extern double a1_gain;
 extern double b_gain;
 extern double b0_gain;
 extern double b1_gain;
+class Delay;
 extern Delay a_delay;
 extern Delay b_delay;
 #endif
