@@ -64,6 +64,13 @@ void report(finyl_buffer& buffer) {
   printf("cc %d\n", clip_count);
 }
 
+std::mutex times_mutex;
+void duration(std::chrono::system_clock::time_point start) {
+  auto end = NOW;
+  std::lock_guard<std::mutex> lock(times_mutex);
+  TIMES.push_back(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+}
+
 void profile() {
   std::ofstream file("profile");
   

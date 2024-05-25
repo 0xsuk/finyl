@@ -11,7 +11,6 @@
 #include "RubberBandStretcher.h"
 bool running = true;
 
-using rb = RubberBand::RubberBandStretcher;
 // void fillBuffer(finyl_buffer& buffer, finyl_stem& stem) {
 //   for (int i = 0; i < period_size_2; i=i+2) {
 //     if (mindex < stem.msize()) {
@@ -69,7 +68,7 @@ int rubberband(rb& stretcher, float** outputPtr, int nframes, finyl_stem& stem, 
   return index;
 }
 
-int main() {
+int test_rubberband() {
   //----
   std::unique_ptr<finyl_stem> stem;
   read_stem("beauty.mp3", stem);
@@ -110,7 +109,6 @@ int main() {
 
     int newindex;
     
-    auto start = NOW;
     std::thread t([&]() {
       newindex = rubberband(stretcher, rubout, period_size, *stem, mindex);
     });
@@ -130,8 +128,6 @@ int main() {
       buffer[i*2] = left;
       buffer[i*2+1] = right;
     }
-    
-    DURATION(start);
     
     err = snd_pcm_writei(handle, buffer.data(), period_size);
     if (err == -EPIPE) {
@@ -154,3 +150,76 @@ int main() {
   profile();
   t.join();
 }
+
+
+
+void test_make_stem_buffer(finyl_buffer& buffer, finyl_stem& stem, double& mindex) {
+
+  for (int i = 0; i<period_size_2; i=i+2) {
+    stem.get_samples(buffer[i], buffer[i+1], (int)mindex+1);
+  }
+  mindex = mindex + period_size;
+}
+
+int test_fidlib() {
+  //----
+  int err = 0;
+  snd_pcm_t* handle;
+  snd_pcm_uframes_t buffer_size = 1024 * 2;
+  period_size = 1024;
+  device = "default";
+
+  finyl_setup_alsa(&handle, &buffer_size, &period_size);
+  period_size_2 = period_size*2;
+  finyl_buffer buffer;
+  buffer.resize(period_size_2);
+  std::fill(buffer.begin(), buffer.end(), 0);
+  //----
+
+  
+  printf("opened %d\n", (int)period_size_2);
+  
+  std::unique_ptr<finyl_stem> stem;
+  read_stem("outlaw.mp3", stem);
+
+  printf("len %d\n", (int)stem->msize());
+  
+  // auto bqisoProcessor = BiquadFullKillEQEffect();
+  // auto bqisoState = BiquadFullKillEQEffectGroupState();
+  
+  double mindex = 0;
+  
+  std::vector<float> input(period_size_2, 0);
+  std::vector<float> output(period_size_2, 0);
+  
+  // bqisoProcessor.process(&bqisoState, input.data(), output.data());
+  
+  while (running) {
+
+    test_make_stem_buffer(buffer, *stem, mindex);
+    printf("mindex: %lf\n", mindex);
+    
+    err = snd_pcm_writei(handle, buffer.data(), period_size);
+    if (err == -EPIPE) {
+      printf("Underrun occurred: %s\n", snd_strerror(err));
+      snd_pcm_prepare(handle);
+    } else if (err == -EAGAIN) {
+      printf("eagain\n");
+    } else if (err < 0) {
+      printf("error %s\n", snd_strerror(err));
+      break;
+    }
+    printf("err: %d\n", err);
+  }
+  
+  printf("alsa closing\n");
+  
+  err = snd_pcm_drain(handle);
+  if (err < 0) {
+    printf("snd_pcm_drain failed: %s\n", snd_strerror(err));
+  }
+  snd_pcm_close(handle);
+  printf("alsa closed\n");
+}
+
+int main() { test_fidlib(); }

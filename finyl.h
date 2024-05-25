@@ -214,6 +214,6 @@ double finyl_get_quantized_index(finyl_track& t, int index);
 error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_track& t);
 error read_stem(const std::string& file, std::unique_ptr<finyl_stem>& stem);
 void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size);
-
+void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t);
 void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, snd_pcm_t* handle);
 #endif

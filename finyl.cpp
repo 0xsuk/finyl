@@ -288,6 +288,8 @@ static void gain_filter(finyl_buffer& buf, double gain) {
 //return new t.index. writes stretched samples to stem_buffer
 static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, rb& stretcher, finyl_stem& stem, int index, std::mutex& mutex) {
   int available;
+  
+  
   while ((available = stretcher.available()) < period_size) {
     int reqd = int(ceil(double(period_size - available) / stretcher.getTimeRatio()));
     if (reqd > max_process_size) reqd = max_process_size;
@@ -325,7 +327,7 @@ static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, r
   float* rubout[2] = {rubleft, rubright};
   
   stretcher.retrieve(rubout, period_size);
-  
+
   for (int i = 0; i<period_size; i++) {
     int left = int(rubleft[i] * 32768);
     int right = int(rubright[i] * 32768);
@@ -336,11 +338,13 @@ static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, r
     stem_buffer[i*2+1] = right;
   }
 
+  
   return index;
 }
 
 //rubberband
-static void make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_buffers) {
+//TODO slow, takes 500 microsecs
+void make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_buffers) {
   std::vector<std::thread> threads;
   
   for (int i = 0; i<t.stems_size; i++) {
@@ -353,7 +357,7 @@ static void make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_b
 }
 
 //without time stretch
-static void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) {
+void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) {
   for (int i = 0; i < period_size_2; i=i+2) {
     t.set_index(t.get_refindex() + t.get_speed());
 
@@ -489,8 +493,26 @@ void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, s
   init_decks(a, b, c, d);
   resize_buffers();
   
+  auto bqisoProcessor = BiquadFullKillEQEffect();
+  auto bqisoState = BiquadFullKillEQEffectGroupState();
+
+  std::thread(test_gain).detach();
+
   while (finyl_running) {
     finyl_handle();
+    
+    std::vector<float> in(period_size_2);
+    std::vector<float> out(period_size_2);
+    
+    for (int i = 0; i<period_size_2; i++) {
+      in[i] = buffer[i] / 32768.0;
+    }
+    
+    bqisoProcessor.process(&bqisoState, in.data(), out.data());
+    
+    for (int i = 0; i<period_size_2; i++) {
+      buffer[i] = out[i] * 32768.0;
+    }
     
     err = snd_pcm_writei(handle, buffer.data(), period_size);
     if (err == -EPIPE) {
