@@ -29,4 +29,6 @@ extern double b1_gain;
 class Delay;
 extern Delay a_delay;
 extern Delay b_delay;
+class BiquadFullKillEQEffectGroupState;
+extern BiquadFullKillEQEffectGroupState* a_bqisoState;
 #endif

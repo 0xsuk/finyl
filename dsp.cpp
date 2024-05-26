@@ -72,7 +72,7 @@ double knobValueToBiquadGainDb(double value, bool kill) {
 
 EngineFilterBiquad1LowShelving::EngineFilterBiquad1LowShelving(double centerFreq, double Q) {
     m_startFromDry = true;
-    printf("[INFO] EngineFilterBiquad1LowShelving center q: %lf %lf\n", centerFreq, Q);
+    // printf("[INFO] EngineFilterBiquad1LowShelving center q: %lf %lf\n", centerFreq, Q);
     setFrequencyCorners(centerFreq, Q, 0);
 }
 
@@ -82,7 +82,7 @@ void EngineFilterBiquad1LowShelving::setFrequencyCorners(double centerFreq,
   //MYNOTE: the core
   //MYNOTE: dBgain is bqGainLow (0 when no effect)
     snprintf(m_spec, sizeof(m_spec), "LsBq/%.10f/%.10f", Q, dBgain);
-    printf("LOWKILL spec %s (center: %lf)\n", m_spec, centerFreq);
+    // printf("LOWKILL spec %s (center: %lf)\n", m_spec, centerFreq);
     setCoefs(m_spec, sizeof(m_spec), centerFreq);
 }
 
@@ -114,46 +114,34 @@ BiquadFullKillEQEffect::BiquadFullKillEQEffect() {
   
 }
 
-double bqGainLow = -23.0f;
 
 
-void test_gain() {
-  std::this_thread::sleep_for(std::chrono::seconds(6));
-  
-  bqGainLow = 12.0;
-  printf("bqgainlow 0\n");
-  std::this_thread::sleep_for(std::chrono::seconds(5));
-  
-  bqGainLow = -23.0;
-  printf("bqgainlow 0\n");
-
-}
 
 void BiquadFullKillEQEffect::process(BiquadFullKillEQEffectGroupState *pState,
                                 const CSAMPLE *pInput, CSAMPLE *pOutput) {
-  double bqGainMid = 0;
-  double bqGainHigh = 0;
+  double bqGainLow = pState->bqGainLow;
+  double bqGainMid = pState->bqGainMid;
+  double bqGainHigh = pState->bqGainHigh;
 
   //bqgainlow: max 12.041200 min -23.0
   
-  // if (bqGainLow > 0.0 || pState->m_oldLowBoost > 0.0) {
-  //   if (bqGainLow != pState->m_oldLowBoost) {
-  //     double lowCenter = getCenterFrequency(kMinimumFrequency, pState->m_loFreqCorner);
-  //     pState->m_lowBoost->setFrequencyCorners(lowCenter, kQBoost, bqGainLow);
-  //     pState->m_oldLowBoost = bqGainLow;
-  //   }
-  //   if (bqGainLow > 0.0) {
-  //     pState->m_lowBoost->process(pInput, pOutput, period_size_2);
-  //   } else {
-  //     pState->m_lowBoost->processAndPauseFilter(pInput, pOutput, period_size_2);
-  //   }
-  // } else {
-  //   pState->m_lowBoost->pauseFilter();
-  // }
+  if (bqGainLow > 0.0 || pState->m_oldLowBoost > 0.0) {
+    if (bqGainLow != pState->m_oldLowBoost) {
+      double lowCenter = getCenterFrequency(kMinimumFrequency, pState->m_loFreqCorner);
+      pState->m_lowBoost->setFrequencyCorners(lowCenter, kQBoost, bqGainLow);
+      pState->m_oldLowBoost = bqGainLow;
+    }
+    if (bqGainLow > 0.0) {
+      pState->m_lowBoost->process(pInput, pOutput, period_size_2);
+    } else {
+      pState->m_lowBoost->processAndPauseFilter(pInput, pOutput, period_size_2);
+    }
+  } else {
+    pState->m_lowBoost->pauseFilter();
+  }
   
   if (bqGainLow < 0.0 || pState->m_oldLowKill < 0.0) {
     if (bqGainLow != pState->m_oldLowKill) {
-      printf("m_loFreqCorner: %lf\n", pState->m_loFreqCorner);
       double lowCenter = getCenterFrequency(kMinimumFrequency, pState->m_loFreqCorner);
       pState->m_lowKill->setFrequencyCorners(lowCenter*2, kQLowKillShelve, bqGainLow);
       pState->m_oldLowKill = bqGainLow;
@@ -258,5 +246,4 @@ void EngineFilterBiquad1Peaking::setFrequencyCorners(double centerFreq, double Q
   snprintf(m_spec, sizeof(m_spec), "PkBq/%.10f/%.10f", Q, dBgain);
 
   setCoefs(m_spec, sizeof(m_spec), centerFreq);
-  printf("did\n");
 }

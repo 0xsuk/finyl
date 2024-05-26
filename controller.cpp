@@ -314,6 +314,16 @@ void* serial(void* args) {
 void handleKey(char x) {
   if (adeck != NULL) {
     switch (x) {
+    case '-': {
+      a_bqisoState->bqGainLow += 0.1;
+      printf("a_bqisoState.bqGainLow: %lf\n", a_bqisoState->bqGainLow);
+      return;
+    }
+    case '=': {
+      a_bqisoState->bqGainLow -= 0.1;
+      printf("a_bqisoState.bqGainLow: %lf\n", a_bqisoState->bqGainLow);
+      return;
+    }
     case 'z':
       if (a_delay.on) {
         a_delay.on = false;

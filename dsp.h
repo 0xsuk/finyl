@@ -355,8 +355,6 @@ inline double EngineFilterIIR<5, IIR_BP>::processSample(double* coef,
     return val;
 }
 
-void test_gain();
-
 class EngineFilterBiquad1LowShelving : public EngineFilterIIR<5, IIR_BP> {
 public:
   EngineFilterBiquad1LowShelving(double centerFreq, double Q);
@@ -385,6 +383,10 @@ public:
   double m_oldLowKill;
   double m_oldLowBoost;
   double m_loFreqCorner;
+
+  double bqGainLow;
+  double bqGainMid;
+  double bqGainHigh;
 };
 
 class BiquadFullKillEQEffect : public EffectProcessor<BiquadFullKillEQEffectGroupState> {

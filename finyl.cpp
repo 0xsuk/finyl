@@ -48,6 +48,8 @@ Delay a_delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5};
 Delay b_delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5};
 bool a_master = true;
 bool b_master = true;
+BiquadFullKillEQEffect bqisoProcessor{};
+BiquadFullKillEQEffectGroupState* a_bqisoState;
 
 int max_process_size = 2048;
 
@@ -278,7 +280,7 @@ error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_t
 //TODO: one file has many stems (eg. flac)
 void read_stems_from_file(char* file);
 
-static void gain_filter(finyl_buffer& buf, double gain) {
+static void gain_effect(finyl_buffer& buf, double gain) {
   for (int i = 0; i<period_size_2;i=i+2) {
     buf[i] = gain * buf[i];
     buf[i+1] = gain * buf[i+1];
@@ -398,6 +400,29 @@ static void add_and_clip_two_buffers(finyl_buffer& dest, finyl_buffer& src1, fin
   }
 }
 
+void signedshortToFloat(signed short* in, float* out) {
+  for (int i = 0; i<period_size_2; i++) {
+    out[i] = in[i] / 32768.0;
+  }
+}
+
+void floatToSignedshort(float* in, signed short* out) {
+  for (int i = 0; i<period_size_2; i++) {
+    out[i] = in[i] * 32768.0;
+  }
+}
+
+static void eq_effect(finyl_buffer& buf, BiquadFullKillEQEffectGroupState* state) {
+  float in[period_size_2];
+  float out[period_size_2];
+
+  signedshortToFloat(buf.data(), in);
+  
+  bqisoProcessor.process(state, in, out);
+
+  floatToSignedshort(out, buf.data());
+}
+
 static void finyl_handle() {
   
   std::fill(buffer.begin(), buffer.end(), 0);
@@ -411,10 +436,14 @@ static void finyl_handle() {
       } else {
         make_stem_buffers(a_stem_buffers, *adeck);
       }
-      gain_filter(a_stem_buffers[0], a0_gain);
-      gain_filter(a_stem_buffers[1], a1_gain);
+      
+      gain_effect(a_stem_buffers[0], a0_gain);
+      gain_effect(a_stem_buffers[1], a1_gain);
       add_and_clip_two_buffers(abuffer, a_stem_buffers[0], a_stem_buffers[1]);
-      gain_filter(abuffer, a_gain);
+      
+      eq_effect(abuffer, a_bqisoState);
+      
+      gain_effect(abuffer, a_gain);
     }
     delay(abuffer, a_delay);
   });
@@ -425,10 +454,10 @@ static void finyl_handle() {
     } else {
       make_stem_buffers(b_stem_buffers, *bdeck);
     }
-    gain_filter(b_stem_buffers[0], b0_gain);
-    gain_filter(b_stem_buffers[1], b1_gain);
+    gain_effect(b_stem_buffers[0], b0_gain);
+    gain_effect(b_stem_buffers[1], b1_gain);
     add_and_clip_two_buffers(bbuffer, b_stem_buffers[0], b_stem_buffers[1]);
-    gain_filter(bbuffer, b_gain);
+    gain_effect(bbuffer, b_gain);
   }
   delay(bbuffer, b_delay);
   
@@ -488,31 +517,18 @@ static void init_decks(finyl_track* a, finyl_track* b, finyl_track* c, finyl_tra
   ddeck = d;
 }
 
+void init_effect_states() {
+  a_bqisoState = new BiquadFullKillEQEffectGroupState();
+}
+
 void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, snd_pcm_t* handle) {
   int err = 0;
   init_decks(a, b, c, d);
   resize_buffers();
+  init_effect_states();
   
-  auto bqisoProcessor = BiquadFullKillEQEffect();
-  auto bqisoState = BiquadFullKillEQEffectGroupState();
-
-  std::thread(test_gain).detach();
-
   while (finyl_running) {
     finyl_handle();
-    
-    std::vector<float> in(period_size_2);
-    std::vector<float> out(period_size_2);
-    
-    for (int i = 0; i<period_size_2; i++) {
-      in[i] = buffer[i] / 32768.0;
-    }
-    
-    bqisoProcessor.process(&bqisoState, in.data(), out.data());
-    
-    for (int i = 0; i<period_size_2; i++) {
-      buffer[i] = out[i] * 32768.0;
-    }
     
     err = snd_pcm_writei(handle, buffer.data(), period_size);
     if (err == -EPIPE) {
