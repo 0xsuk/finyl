@@ -55,8 +55,8 @@ protected:
   size_t msize_ = 0;
   size_t ssize_ = 0;
 public:
-  virtual finyl_sample operator[](size_t sindex) = 0;
-  virtual void get_samples(finyl_sample& left, finyl_sample& right, size_t mindex) = 0;
+  virtual finyl_sample operator[](int sindex) = 0;
+  virtual void get_samples(finyl_sample& left, finyl_sample& right, int mindex) = 0;
   size_t msize() {
     return msize_;
   }
@@ -66,6 +66,7 @@ public:
   virtual ~finyl_stem() = default;
 };
 
+//mmapped stem
 struct finyl_mstem: public finyl_stem {
 private:
   finyl_sample* data;
@@ -80,13 +81,18 @@ public:
   }
   finyl_mstem(finyl_mstem&&) = default;
 
-  void get_samples(finyl_sample& left, finyl_sample& right, size_t mindex) {
+  void get_samples(finyl_sample& left, finyl_sample& right, int mindex) {
+    if (mindex < 0) {
+      left = 0;
+      right = 0;
+      return;
+    }
     int sindex = mindex*2;
     left = data[sindex];
     right = data[sindex+1];
   }
   
-  finyl_sample operator[](size_t sindex) {
+  finyl_sample operator[](int sindex) {
     return data[sindex];
   }
 
@@ -120,15 +126,20 @@ public:
     chunks_size_++;
   }
   
-  void get_samples(finyl_sample& left, finyl_sample& right, size_t mindex) {
-    size_t sindex = mindex*2;
+  void get_samples(finyl_sample& left, finyl_sample& right, int mindex) {
+    if (mindex < 0) {
+      left = 0;
+      right = 0;
+      return;
+    }
+    int sindex = mindex*2;
     int ichunk = sindex / CHUNK_SIZE;
     int isample = sindex - (CHUNK_SIZE * ichunk);
     left = data[ichunk][isample];
     right = data[ichunk][isample+1];
   }
   
-  finyl_sample operator[](size_t sindex) {
+  finyl_sample operator[](int sindex) {
     int ichunk = sindex / CHUNK_SIZE;
     int isample = sindex - (CHUNK_SIZE * ichunk);
     return data[ichunk][isample];

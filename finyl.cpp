@@ -291,7 +291,6 @@ static void gain_effect(finyl_buffer& buf, double gain) {
 static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, rb& stretcher, finyl_stem& stem, int index, std::mutex& mutex) {
   int available;
   
-  
   while ((available = stretcher.available()) < period_size) {
     int reqd = int(ceil(double(period_size - available) / stretcher.getTimeRatio()));
     if (reqd > max_process_size) reqd = max_process_size;
@@ -340,7 +339,6 @@ static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, r
     stem_buffer[i*2+1] = right;
   }
 
-  
   return index;
 }
 
@@ -371,9 +369,10 @@ void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) {
       t.playing = false;
     }
 
+    
     for (int c = 0; c<t.stems_size; c++) {
       auto& buf = stem_buffers[c];
-      if (t.playing == false) {
+      if (t.playing == false || t.get_refindex() < 0) {
         buf[i] = 0;
         buf[i+1] = 0;
       } else {
@@ -428,6 +427,10 @@ static void finyl_handle() {
   std::fill(buffer.begin(), buffer.end(), 0);
   std::fill(abuffer.begin(), abuffer.end(), 0);
   std::fill(bbuffer.begin(), bbuffer.end(), 0);
+  std::fill(a_stem_buffers[0].begin(), a_stem_buffers[0].end(), 0);
+  std::fill(a_stem_buffers[1].begin(), a_stem_buffers[1].end(), 0);
+  std::fill(b_stem_buffers[0].begin(), b_stem_buffers[0].end(), 0);
+  std::fill(b_stem_buffers[1].begin(), b_stem_buffers[1].end(), 0);
   
   auto thread = std::thread([&](){
     if (adeck != nullptr && adeck->playing) {
