@@ -1,0 +1,6 @@
+git clone picosdk
+cd to that
+git submodule update --init # try until it succeeds
+
+
+
