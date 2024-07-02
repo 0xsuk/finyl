@@ -9,11 +9,78 @@
 #include "interface.h"
 #include <memory>
 #include <thread>
-#include "action.h"
 #include "rekordbox.h"
 #include "extern.h"
+#include "midi.h"
+#include "controller.h"
 
-bool quantize = false;
+#define ifvelocity(exp) if (velocity!=0) {exp}
+
+ActionToFunc actionToFuncMap[] = {
+  {"DeckA-gain", [](double val){set_gain(adeck, val);}},
+  {"DeckA-gain0", [](double val){set_gain0(adeck, val);}},
+  {"DeckA-gain1", [](double val){set_gain1(adeck, val);}},
+  {"DeckA-eqlow", [](double val){set_bqGainLow(adeck, val);}},
+  {"DeckA-press_cue", [](double velocity){press_cue_velocity(adeck, velocity);}},
+  {"DeckA-toggle_playing", [](double velocity){toggle_playing_velocity(adeck, velocity);}},
+  {"DeckA-inc_index", [](double velocity){ifvelocity(inc_index(adeck);)}},
+  {"DeckA-dec_index", [](double velocity){ifvelocity(dec_index(adeck);)}},
+  {"DeckA-inc_delta_index", [](double velocity){ifvelocity(inc_delta_index(adeck);)}},
+  {"DeckA-dec_delta_index", [](double velocity){ifvelocity(dec_delta_index(adeck);)}},
+  {"DeckA-loop_in", [](double velocity){ifvelocity(loop_in_now(adeck);)}},
+  {"DeckA-loop_out", [](double velocity){ifvelocity(loop_out_now(adeck);)}},
+  {"DeckA-loop_deactivate", [](double velocity){ifvelocity(loop_deactivate(adeck);)}},
+  {"DeckA-sync_bpm", [](double velocity){ifvelocity(sync_bpm(adeck);)}},
+  {"DeckA-inc_speed", [](double velocity){ifvelocity(inc_speed(adeck);)}},
+  {"DeckA-dec_speed", [](double velocity){ifvelocity(dec_speed(adeck);)}},
+  {"DeckA-toggle_delay", [](double velocity){ifvelocity(toggle_delay(adeck);)}},
+};
+
+const int len_actionToFuncMap = sizeof(actionToFuncMap)/sizeof(actionToFuncMap[0]);
+
+
+MidiToAction launchkey[] = {
+  {0xb0, 21, "DeckA-gain"},
+  {0xb0, 22, "DeckA-gain0"},
+  {0xb0, 23, "DeckA-gain1"},
+  {0xb0, 24, "DeckA-eqlow"},
+  {0x99, 40, "DeckA-press_cue"},
+  {0x99, 36, "DeckA-toggle_playing"},
+  {0x90, 53, "DeckA-inc_index"},
+  {0x90, 52, "DeckA-dec_index"},
+  {0x90, 50, "DeckA-inc_delta_index"},
+  {0x90, 48, "DeckA-dec_delta_index"},
+  {0x99, 41, "DeckA-loop_in"},
+  {0x99, 42, "DeckA-loop_out"},
+  {0x99, 43, "DeckA-loop_deactivate"},
+  {0x90, 59, "DeckA-sync_bpm"},
+  {0x90, 57, "DeckA-inc_speed"},
+  {0x90, 55, "DeckA-dec_speed"},
+  {0x99, 37, "DeckA-toggle_delay"},
+};
+
+void midi_handler(int len, unsigned char buf[]) {
+  if (len < 3) {
+    return; //TODO for now
+  }
+
+  //search action name by buf[0:1] from midilearn file
+  //search func by action name from actionToFunc
+  //call it
+  
+  for (auto& ent: launchkey) {
+    if (ent.status == buf[0] && ent.control == buf[1]) {
+      for (auto& atf: actionToFuncMap) {
+        if (atf.base_action == ent.action_name) {
+          atf.func(buf[2]/127.0);
+        }
+      }
+      
+      break;
+    }
+  }
+  
+}
 
 void slide_right(finyl_track* t) {
   double backup = t->get_speed();
@@ -30,7 +97,7 @@ void slide_right(finyl_track* t) {
 }
 
 //n = 0 means load an original file
-void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, int n) {
+void load_track_nstems(finyl_track** dest, int tid, finyl_deck_type deck, int n) {
   finyl_track* before = *dest;
   
   auto t = std::make_unique<finyl_track>();
@@ -40,7 +107,7 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
   printf("file: %s\n", t->meta.filename.data());
   
   if (t->meta.stem_filepaths.size() < n) {
-    printf("not enough channels\n");
+    printf("not enough stems\n");
     return;
   }
   
@@ -74,443 +141,418 @@ void load_track_nchannels(finyl_track** dest, int tid, finyl_track_target deck, 
   }
 }
 
-void load_track(finyl_track** dest, int tid, finyl_track_target deck) {
-  load_track_nchannels(dest, tid, deck, 0);
+void load_track(finyl_track** dest, int tid, finyl_deck_type deck) {
+  load_track_nstems(dest, tid, deck, 0);
 }
 
-void magic(int port, struct termios* tty) {
-  //reads existing settings
-  if(tcgetattr(port, tty) != 0) {
-    printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-    return;
-  }
+// void magic(int port, struct termios* tty) {
+//   //reads existing settings
+//   if(tcgetattr(port, tty) != 0) {
+//     printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
+//     return;
+//   }
 
-  cfsetispeed(tty, B9600);
-  cfsetospeed(tty, B9600);
+//   cfsetispeed(tty, B9600);
+//   cfsetospeed(tty, B9600);
   
-  tty->c_cflag &= ~PARENB; // Clear parity bit
-  tty->c_cflag &= ~CSTOPB; // Clear stop field
-  tty->c_cflag &= ~CSIZE; // Clear all bits that set the data size 
-  tty->c_cflag |= CS8; // 8 bits per byte
-  tty->c_cflag &= ~CRTSCTS; // Disable RTS/CTS hardware flow control
-  tty->c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines
+//   tty->c_cflag &= ~PARENB; // Clear parity bit
+//   tty->c_cflag &= ~CSTOPB; // Clear stop field
+//   tty->c_cflag &= ~CSIZE; // Clear all bits that set the data size 
+//   tty->c_cflag |= CS8; // 8 bits per byte
+//   tty->c_cflag &= ~CRTSCTS; // Disable RTS/CTS hardware flow control
+//   tty->c_cflag |= CREAD | CLOCAL; // Turn on READ & ignore ctrl lines
 
-  tty->c_lflag &= ~ICANON;
-  tty->c_lflag &= ~ECHO; // Disable echo
-  tty->c_lflag &= ~ECHOE; // Disable erasure
-  tty->c_lflag &= ~ECHONL; // Disable new-line echo
-  tty->c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
-  tty->c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
-  tty->c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL); // Disable any special handling of received bytes
+//   tty->c_lflag &= ~ICANON;
+//   tty->c_lflag &= ~ECHO; // Disable echo
+//   tty->c_lflag &= ~ECHOE; // Disable erasure
+//   tty->c_lflag &= ~ECHONL; // Disable new-line echo
+//   tty->c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
+//   tty->c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
+//   tty->c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL); // Disable any special handling of received bytes
 
-  tty->c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
-  tty->c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
+//   tty->c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
+//   tty->c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
 
-  tty->c_cc[VTIME] = 10;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
-  tty->c_cc[VMIN] = 0;
-}
+//   tty->c_cc[VTIME] = 10;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
+//   tty->c_cc[VMIN] = 0;
+// }
 
-static bool match(char* s, char* x, int i) {
-  return (strlen(x) == i && strncmp(s, x, i) == 0);
-}
+// static bool match(char* s, char* x, int i) {
+//   return (strlen(x) == i && strncmp(s, x, i) == 0);
+// }
 
-static std::unique_ptr<char[]> trim_value(char* s, int i) {
-  int len = strlen(s);
-  int vlen = len - i - 1;
-  auto v = std::make_unique<char[]>(vlen+1);
-  strncpy(v.get(), &s[i+1], vlen);
-  v[vlen] = '\0';
-  return v;
-}
+// static std::unique_ptr<char[]> trim_value(char* s, int i) {
+//   int len = strlen(s);
+//   int vlen = len - i - 1;
+//   auto v = std::make_unique<char[]>(vlen+1);
+//   strncpy(v.get(), &s[i+1], vlen);
+//   v[vlen] = '\0';
+//   return v;
+// }
 
-static bool is_on(char* v) {
-  if (strcmp(v, "on") == 0) {
-    return true;
-  }
-  return false;
-}
+// static bool is_on(char* v) {
+//   if (strcmp(v, "on") == 0) {
+//     return true;
+//   }
+//   return false;
+// }
 
-void handle_delay_on(char* v, Delay& d, finyl_track& deck) {
-  if (is_on(v)) {
-    if (d.on) {
-      d.on = false;
-      printf("off\n");
-    } else {
-      double bpm = (deck.meta.bpm/100.0)*deck.get_speed();
-      d.setMsize((sample_rate*60)/bpm*1.0);
-      d.on = true;
-      printf("on\n");
-    }
-  }
-}
+// void handle_delay_on(char* v, Delay& d, finyl_track& deck) {
+//   if (is_on(v)) {
+//     if (d.on) {
+//       d.on = false;
+//       printf("off\n");
+//     } else {
+//       double bpm = (deck.meta.bpm/100.0)*deck.get_speed();
+//       d.setMsize((sample_rate*60)/bpm*1.0);
+//       d.on = true;
+//       printf("on\n");
+//     }
+//   }
+// }
 
-void handle_toggle_playing(char* v, finyl_track* t) {
-  if (is_on(v)) {
-    toggle_playing(*t);
-  }
-}
+// void handle_toggle_playing(Deck& deck, char* v) {
+//   if (is_on(v)) {
+//     toggle_playing(deck);
+//   }
+// }
 
-void handle_loop_in(char* v, finyl_track* t) {
-  if (is_on(v)) {
-    loop_in_now(*t);
-  }
-}
+// void handle_loop_in(char* v, finyl_track* t) {
+//   if (is_on(v)) {
+//     loop_in_now(*t);
+//   }
+// }
 
-void handle_loop_out(char* v, finyl_track* t) {
-  if (is_on(v)) {
-    loop_out_now(*t);
-  }
-}
+// void handle_loop_out(char* v, finyl_track* t) {
+//   if (is_on(v)) {
+//     loop_out_now(*t);
+//   }
+// }
 
-void handle_vi(char* v, double * vo, double* i, bool flip=false) { //vocal - inst
-  char* endptr;
-  int n = strtol(v, &endptr, 10);
-  if (endptr == v || *endptr != '\0') return;
-  if (flip) {
-    n = abs(n-4095);
-  }
-  if (n < 2046) {
-    *vo = 1.0;
-    *i = n / 2046.0;
-  } else {
-    *i = 1.0;
-    *vo = abs(n-4095.0) / 2046.0;
-  }
-}
+// void handle_vi(char* v, double * vo, double* i, bool flip=false) { //vocal - inst
+//   char* endptr;
+//   int n = strtol(v, &endptr, 10);
+//   if (endptr == v || *endptr != '\0') return;
+//   if (flip) {
+//     n = abs(n-4095);
+//   }
+//   if (n < 2046) {
+//     *vo = 1.0;
+//     *i = n / 2046.0;
+//   } else {
+//     *i = 1.0;
+//     *vo = abs(n-4095.0) / 2046.0;
+//   }
+// }
 
-void handle_gain(char* v, double* g, bool flip=false) {
-  char* endptr;
-  int n = strtol(v, &endptr, 10);
-  if (endptr == v || *endptr != '\0') return;
-  if (flip) {
-    n = abs(n-4095);
-  }
-  *g = n / 4095.0;
-}
+// void handle_gain(char* v, double* g, bool flip=false) {
+//   char* endptr;
+//   int n = strtol(v, &endptr, 10);
+//   if (endptr == v || *endptr != '\0') return;
+//   if (flip) {
+//     n = abs(n-4095);
+//   }
+//   *g = n / 4095.0;
+// }
 
-void handle_what(char* s) {
-  int i = find_char_last(s, ':');
-  if (i<1) {
-    return;
-  }
+// void handle_what(char* s) {
+//   int i = find_char_last(s, ':');
+//   if (i<1) {
+//     return;
+//   }
   
-  auto _v = trim_value(s, i);
-  char* v = _v.get();
+//   auto _v = trim_value(s, i);
+//   char* v = _v.get();
 
-  if (match(s, "pot1", i)) {
-    handle_gain(v, &a_gain, true);
-  } else if (match(s, "pot0", i)) {
-    handle_gain(v, &b_gain, true);
-  } else if (match(s, "pot2", i)) {
-    handle_vi(v, &a0_gain, &a1_gain);
-  } else if (match(s, "pot3", i)) {
-    handle_vi(v, &b0_gain, &b1_gain);
-  }
-  if (adeck != NULL) {
-    if (match(s, "button3", i)) {
-      handle_toggle_playing(v, adeck);
-    }
-    else if (match(s, "button4", i)) {
-      handle_loop_in(v, adeck);
-    }
-    else if (match(s, "button10", i)) {
-      handle_loop_out(v, adeck);
-    } else if (match(s, "button8", i)) {
-      handle_delay_on(v, a_delay, *adeck);
-    }
-  }
+//   if (match(s, "pot1", i)) {
+//     handle_gain(v, &adeck.gain, true);
+//   } else if (match(s, "pot0", i)) {
+//     handle_gain(v, &bdeck.gain, true);
+//   } else if (match(s, "pot2", i)) {
+//     handle_vi(v, &a0_gain, &a1_gain);
+//   } else if (match(s, "pot3", i)) {
+//     handle_vi(v, &b0_gain, &b1_gain);
+//   }
+//   if (adeck != NULL) {
+//     if (match(s, "button3", i)) {
+//       handle_toggle_playing(v, adeck);
+//     }
+//     else if (match(s, "button4", i)) {
+//       handle_loop_in(v, adeck);
+//     }
+//     else if (match(s, "button10", i)) {
+//       handle_loop_out(v, adeck);
+//     } else if (match(s, "button8", i)) {
+//       handle_delay_on(v, a_delay, *adeck);
+//     }
+//   }
   
-  if (bdeck != NULL) {
-    if (match(s, "button2", i)) {
-      handle_toggle_playing(v, bdeck);
-    }
-    else if (match(s, "button5", i)) { //bdeck
-      handle_loop_in(v, bdeck);
-    }
-    else if(match(s, "button6", i)) {
-      handle_loop_out(v, bdeck);
-    } else if (match(s, "button9", i)) {
-      handle_delay_on(v, b_delay, *bdeck);
-    }
-  }
+//   if (bdeck != NULL) {
+//     if (match(s, "button2", i)) {
+//       handle_toggle_playing(v, bdeck);
+//     }
+//     else if (match(s, "button5", i)) { //bdeck
+//       handle_loop_in(v, bdeck);
+//     }
+//     else if(match(s, "button6", i)) {
+//       handle_loop_out(v, bdeck);
+//     } else if (match(s, "button9", i)) {
+//       handle_delay_on(v, b_delay, *bdeck);
+//     }
+//   }
 
-  if (adeck != NULL && bdeck!= NULL) {
-    if (match(s, "button7", i)) {
-      adeck->set_speed(bdeck->get_speed() * ((double)bdeck->meta.bpm / adeck->meta.bpm));
-      printf("synced adeck->speed: %lf\n", adeck->get_speed());
-    }
-    if (match(s, "button1", i)) {
-      bdeck->set_speed(adeck->get_speed() * ((double)adeck->meta.bpm / bdeck->meta.bpm));
-      printf("synced bdeck->speed: %lf\n", bdeck->get_speed());
-    }
-  }
-}
+//   if (adeck != NULL && bdeck!= NULL) {
+//     if (match(s, "button7", i)) {
+//       adeck->set_speed(bdeck->get_speed() * ((double)bdeck->meta.bpm / adeck->meta.bpm));
+//       printf("synced adeck->speed: %lf\n", adeck->get_speed());
+//     }
+//     if (match(s, "button1", i)) {
+//       bdeck->set_speed(adeck->get_speed() * ((double)adeck->meta.bpm / bdeck->meta.bpm));
+//       printf("synced bdeck->speed: %lf\n", bdeck->get_speed());
+//     }
+//   }
+// }
 
-void* serial(void* args) {
-  int serialPort = open("/dev/ttyUSB0", O_RDWR);
+// void* serial(void* args) {
+//   int serialPort = open("/dev/ttyUSB0", O_RDWR);
 
-  printf("serial\n");
+//   printf("serial\n");
   
-  if (serialPort < 0) {
-    printf("Error %i from serial open: %s\n", errno, strerror(errno));
-    return NULL;
-  }
+//   if (serialPort < 0) {
+//     printf("Error %i from serial open: %s\n", errno, strerror(errno));
+//     return NULL;
+//   }
 
-  struct termios tty;
-  magic(serialPort, &tty);
+//   struct termios tty;
+//   magic(serialPort, &tty);
   
-  if (tcsetattr(serialPort, TCSANOW, &tty) != 0) {
-    printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-    return NULL;
-  }
+//   if (tcsetattr(serialPort, TCSANOW, &tty) != 0) {
+//     printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
+//     return NULL;
+//   }
   
-  write(serialPort, "init", 4);
+//   write(serialPort, "init", 4);
   
-  char tmp[100];
-  int tmplen = 0;
-  while(1) {
-    char read_buf [256]; //could contain error
-    int num_bytes = read(serialPort, &read_buf, sizeof(read_buf));
-    if (num_bytes < 0) {
-      printf("Error reading: %s\n", strerror(errno));
-      return NULL;
-    }
+//   char tmp[100];
+//   int tmplen = 0;
+//   while(1) {
+//     char read_buf [256]; //could contain error
+//     int num_bytes = read(serialPort, &read_buf, sizeof(read_buf));
+//     if (num_bytes < 0) {
+//       printf("Error reading: %s\n", strerror(errno));
+//       return NULL;
+//     }
     
-    int start_i = 0;
-    for (int i = 0; i<num_bytes; i++) {
-      int linelen = i - start_i; //\n not counted
-      char c = read_buf[i];
-      if (c != '\n') {
-        continue;
-      }
-      if (tmplen > 0) {
-        int len = tmplen + linelen;
-        char s[len+1];
-        strncpy(s, tmp, tmplen);
-        s[tmplen] = '\0';
-        strncat(s, &read_buf[start_i], linelen);
-        handle_what(s);
-        tmplen = 0;
-      } else {
-        if (linelen == 0) continue;
-        //no need to care tmp
-        char s[linelen+1];
-        strncpy(s, &read_buf[start_i], linelen);
-        s[linelen] = '\0';
-        handle_what(s);
-      }
+//     int start_i = 0;
+//     for (int i = 0; i<num_bytes; i++) {
+//       int linelen = i - start_i; //\n not counted
+//       char c = read_buf[i];
+//       if (c != '\n') {
+//         continue;
+//       }
+//       if (tmplen > 0) {
+//         int len = tmplen + linelen;
+//         char s[len+1];
+//         strncpy(s, tmp, tmplen);
+//         s[tmplen] = '\0';
+//         strncat(s, &read_buf[start_i], linelen);
+//         handle_what(s);
+//         tmplen = 0;
+//       } else {
+//         if (linelen == 0) continue;
+//         //no need to care tmp
+//         char s[linelen+1];
+//         strncpy(s, &read_buf[start_i], linelen);
+//         s[linelen] = '\0';
+//         handle_what(s);
+//       }
 
-      start_i = i+1; //i+1 is next to newline
-    }
+//       start_i = i+1; //i+1 is next to newline
+//     }
 
-    tmplen = num_bytes-start_i;
-    strncpy(tmp, &read_buf[start_i], tmplen);
-  }
+//     tmplen = num_bytes-start_i;
+//     strncpy(tmp, &read_buf[start_i], tmplen);
+//   }
   
-  close(serialPort);
-  return NULL;
-}
+//   close(serialPort);
+//   return NULL;
+// }
 
-void handleKey(char x) {
-  if (adeck != NULL) {
+// struct KeyHandler {
+//   char key;
+//   void* condition;
+//   void* func;
+//   void* args;
+// };
+
+
+// bool a_exist() {
+  
+// }
+
+// bool b_exist() {
+  
+// }
+
+// bool ab_exist() {
+  
+// }
+
+// KeyHandler key_handlers[] = {
+//   {'-', (void*)&a_exist, }
+// }
+
+void handle_key(char x) {
+  if (adeck.pTrack != nullptr) {
     switch (x) {
     case '-': {
-      a_bqisoState->bqGainLow += 0.1;
-      printf("a_bqisoState.bqGainLow: %lf\n", a_bqisoState->bqGainLow);
+      set_bqGainLow(adeck, adeck.bqisoState->bqGainLow+0.1);
       return;
     }
     case '=': {
-      a_bqisoState->bqGainLow -= 0.1;
-      printf("a_bqisoState.bqGainLow: %lf\n", a_bqisoState->bqGainLow);
+      set_bqGainLow(adeck, adeck.bqisoState->bqGainLow-0.1);
       return;
     }
     case 'z':
-      if (a_delay.on) {
-        a_delay.on = false;
-        printf("delay off\n");
-      } else {
-        //bpm beats is 44100*60 samples
-        //1 beat is 44100*60/bpm samples 
-        double bpm = (adeck->meta.bpm/100.0)*adeck->get_speed();
-        a_delay.setMsize((sample_rate*60)/bpm*1.0);
-        a_delay.on = true;
-        printf("delay on: %lf %lf\n", a_delay.drymix, a_delay.feedback);
-      }
-      break;
+      toggle_delay(adeck);
+      return;
     case 'g':
-      adeck->playing = !adeck->playing;
-      printf("adeck is playing:%d\n", adeck->playing);
+      toggle_playing(adeck);
       return;
     case 'G':
-      adeck->set_speed(1);
+      set_speed(adeck, 1);
       return;
     case 'N':
-      a0_gain = 0;
-      printf("a0_gain %lf\n", a0_gain);
+      set_gain0(adeck, 0);
       return;
     case 'J':
-      a0_gain = 1;
-      printf("a0_gain %lf\n", a0_gain);
+      set_gain0(adeck, 1);
       return;
     case 'n':
-      a1_gain = max(a1_gain-0.05, 0.0);
-      printf("a1_gain %lf\n", a1_gain);
+      set_gain1(adeck, max(adeck.gain1-0.05, 0.0));
       return;
     case 'j':
-      a1_gain = min(a1_gain+0.05, 1.0);
-      printf("a1_gain %lf\n", a1_gain);
+      set_gain1(adeck, min(adeck.gain1+0.05, 1.0));
       return;
     case 'c':
-      if (adeck->cues.size() > 0) {
-        adeck->set_index(adeck->cues[0].time * (sample_rate / 1000.0));
-        printf("jumped to %lf\n", adeck->get_refindex());
-      }
+      jump_cue(adeck);
       return;
     case 'a': {
-      adeck->set_speed(adeck->get_speed() + 0.01);
-      printf("%lf\n", adeck->get_speed());
+      set_speed(adeck, adeck.pTrack->get_speed()+0.01);
       return;
     }
     case 's': {
-      adeck->set_speed(adeck->get_speed() - 0.01);
-      printf("%lf\n", adeck->get_speed());
+      set_speed(adeck, adeck.pTrack->get_speed() - 0.01);
       return;
     }
     case 't': {
-      set_cue(*adeck);
-      printf("adeck->index %lf\n", adeck->get_refindex());
+      add_active_cue(adeck);
       return;
     }
     case '1':
       /* mark loop in */
-      loop_in_now(*adeck);
+      loop_in_now(adeck);
       return;
     case '!':
-      loop_deactivate(*adeck);
+      loop_deactivate(adeck);
       return;
     case '2': {
-      loop_out_now(*adeck);
+      loop_out_now(adeck);
       return;
     }
     case 'v':
-      adeck->set_index(adeck->get_refindex() + 300);
+      adeck.pTrack->set_index(adeck.pTrack->get_refindex() + 300);
       return;
     case 'V':
-      adeck->set_index(adeck->get_refindex() - 300);
+      adeck.pTrack->set_index(adeck.pTrack->get_refindex() - 300);
       return;
     case '5':
-      adeck->set_index(adeck->get_refindex() + 3000);
+      adeck.pTrack->set_index(adeck.pTrack->get_refindex() + 3000);
       return;
     case '%':
-      adeck->set_index(adeck->get_refindex() - 3000);
+      adeck.pTrack->set_index(adeck.pTrack->get_refindex() - 3000);
       return;
 
     }
   }
   
-  if (bdeck != NULL) {
+  if (bdeck.pTrack != nullptr) {
     switch (x) {
     case 'x':
-      if (b_delay.on) {
-        b_delay.on = false;
-        printf("delay off\n");
-      } else {
-        //bpm beats is 44100*60 samples
-        //1 beat is 44100*60/bpm samples 
-        double bpm = (bdeck->meta.bpm/100.0)*bdeck->get_speed();
-        b_delay.setMsize(((sample_rate/1000.0)*60)/bpm*2);
-        b_delay.on = true;
-        printf("delay on: %lf %lf\n", b_delay.drymix, b_delay.feedback);
-      }
-      break;
-
+      toggle_delay(bdeck);
+      return;
     case 'h':
-      bdeck->playing = !bdeck->playing;
-      printf("bdeck is playing:%d\n", bdeck->playing);
+      toggle_playing(bdeck);
       return;
     case 'H':
-      bdeck->set_speed(1);
+      set_speed(bdeck, 1);
       return;
     case 'M':
-      b0_gain = 0;
-      printf("b0_gain %lf\n", b0_gain);
+      set_gain0(bdeck, 0);
       return;
     case 'K':
-      b0_gain = 1;
-      printf("b0_gain %lf\n", b0_gain);
+      set_gain0(bdeck, 1);
       return;
     case 'm':
-      b1_gain = max(b1_gain-0.05, 0.0);
-      printf("b1_gain %lf\n", b1_gain);
+      set_gain1(bdeck, max(bdeck.gain1-0.05, 0.0));
       return;
     case 'k':
-      b1_gain = min(b1_gain+0.05, 1.0);
-      printf("b1_gain %lf\n", b1_gain);
+      set_gain1(bdeck, min(bdeck.gain1+0.05, 1.0));
       return;
     case 'C':
-      if (bdeck->cues.size() > 0) {
-        bdeck->set_index(bdeck->cues[0].time * (sample_rate / 1000.0));
-        printf("jumped to %lf\n", bdeck->get_refindex());
-      }
+      jump_cue(bdeck);
       return;
     case 'A':
-      bdeck->set_speed(bdeck->get_speed() + 0.01);
-      printf("%lf\n", bdeck->get_speed());
+      set_speed(bdeck, bdeck.pTrack->get_speed() + 0.01);
       return;
     case 'S':
-      bdeck->set_speed(bdeck->get_speed() - 0.01);
-      printf("%lf\n", bdeck->get_speed());
+      set_speed(bdeck, bdeck.pTrack->get_speed() - 0.01);
       return;
     case 'y': {
-      set_cue(*bdeck);
-      printf("bdeck->index %lf\n", bdeck->get_refindex());
+      add_active_cue(bdeck);
       return;
     }
     case '9':
-      loop_in_now(*bdeck);
+      loop_in_now(bdeck);
       return;
     case '{':
-      loop_deactivate(*bdeck);
+      loop_deactivate(bdeck);
       return;
     case '0': {
-      loop_out_now(*bdeck);
+      loop_out_now(bdeck);
       return;
     }
     case 'b':
-      bdeck->set_index(bdeck->get_refindex() + 300);
+      bdeck.pTrack->set_index(bdeck.pTrack->get_refindex() + 300);
       return;
     case 'B':
-      bdeck->set_index(bdeck->get_refindex() - 300);
+      bdeck.pTrack->set_index(bdeck.pTrack->get_refindex() - 300);
       return;
     case '6':
-      bdeck->set_index(bdeck->get_refindex() + 3000);
+      bdeck.pTrack->set_index(bdeck.pTrack->get_refindex() + 3000);
       return;
     case '&':
-      bdeck->set_index(bdeck->get_refindex() - 3000);
+      bdeck.pTrack->set_index(bdeck.pTrack->get_refindex() - 3000);
       return;
 
     }
   }
   
-  if (adeck != NULL && bdeck != NULL) {
+  if (adeck.pTrack != NULL && bdeck.pTrack != NULL) {
     switch (x) {
     case 'p':
-      print_track(*adeck);
-      print_track(*bdeck);
+      print_track(*adeck.pTrack);
+      print_track(*bdeck.pTrack);
       return;
     case 'q': {
-      bdeck->set_speed(adeck->get_speed() * ((double)adeck->meta.bpm / bdeck->meta.bpm));
-      printf("synced bdeck->speed: %lf\n", bdeck->get_speed());
+      set_speed(bdeck, adeck.pTrack->get_speed() * ((double)adeck.pTrack->meta.bpm / bdeck.pTrack->meta.bpm));
       return;
     }
     case 'Q': {
-      adeck->set_speed(bdeck->get_speed() * ((double)bdeck->meta.bpm / adeck->meta.bpm));
-      printf("synced adeck->speed: %lf\n", adeck->get_speed());
+      set_speed(adeck, bdeck.pTrack->get_speed() * ((double)bdeck.pTrack->meta.bpm / adeck.pTrack->meta.bpm));
       return;
     }
-
     }
-    
   }
   
   switch (x) {
@@ -536,7 +578,7 @@ void handleKey(char x) {
     printf("tid:");
     scanf("%d", &tid);
     printf("loading...%d\n", tid);
-    load_track_nchannels(&adeck, tid, finyl_a, 2);
+    load_track_nstems(&adeck.pTrack, tid, finyl_a, 2);
     break;
   }
   case 'o': {
@@ -544,7 +586,7 @@ void handleKey(char x) {
     printf("tid:");
     scanf("%d", &tid);
     printf("loading...%d\n", tid);
-    load_track_nchannels(&bdeck, tid, finyl_b, 2);
+    load_track_nstems(&bdeck.pTrack, tid, finyl_b, 2);
     break;
   }
   case 'I': {
@@ -552,7 +594,7 @@ void handleKey(char x) {
     printf("tid:");
     scanf("%d", &tid);
     printf("loading...%d\n", tid);
-    load_track(&adeck, tid, finyl_a);
+    load_track(&adeck.pTrack, tid, finyl_a);
     break;
   }
   case 'O': {
@@ -560,7 +602,7 @@ void handleKey(char x) {
     printf("tid:");
     scanf("%d", &tid);
     printf("loading...%d\n", tid);
-    load_track(&bdeck, tid, finyl_b);
+    load_track(&bdeck.pTrack, tid, finyl_b);
     break;
   }
   case '3':{
@@ -594,7 +636,7 @@ void* key_input(void* args) {
   newt.c_lflag &= ~(ICANON);          
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
   while(finyl_running) {
-    handleKey(getchar());                 
+    handle_key(getchar());                 
   }
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
   printf("key_input closed\n");
@@ -602,13 +644,11 @@ void* key_input(void* args) {
 }
 
 void* controller() {
-  pthread_t k;
-  pthread_create(&k, NULL, key_input, NULL);
-  pthread_t s;
-  pthread_create(&s, NULL, serial, NULL);
+  std::thread([](){key_input(nullptr);}).detach();
   
-  pthread_join(k, NULL);
-  pthread_cancel(s);
+  auto mp = MidiParser();
+  mp.open_device("hw:1,0,0");
+  mp.handle(midi_handler);
   
   return NULL;
 }

@@ -1,7 +1,6 @@
 #ifndef DSP_H
 #define DSP_H
 
-#include "finyl.h"
 #include <cstring>
 #include "extern.h"
 #include "fidlib.h"
@@ -374,15 +373,37 @@ private:
   char m_spec[FIDSPEC_LENGTH];
 };
 
+class EngineFilterBiquad1HighShelving : public EngineFilterIIR<5, IIR_BP> {
+public:
+  EngineFilterBiquad1HighShelving(double centerFreq, double Q);
+  void setFrequencyCorners(double centerFreq,
+                           double Q,
+                           double dBgain);
+
+private:
+  char m_spec[FIDSPEC_LENGTH];
+
+};
+
 class BiquadFullKillEQEffectGroupState : public EffectState {
 public:
   BiquadFullKillEQEffectGroupState();
   void setFilters(double lowFreqCorner, double highFreqCorner); 
   std::unique_ptr<EngineFilterBiquad1Peaking> m_lowBoost;
+  std::unique_ptr<EngineFilterBiquad1Peaking> m_midBoost;
+  std::unique_ptr<EngineFilterBiquad1Peaking> m_highBoost;
   std::unique_ptr<EngineFilterBiquad1LowShelving> m_lowKill;
-  double m_oldLowKill;
+  std::unique_ptr<EngineFilterBiquad1Peaking> m_midKill;
+  std::unique_ptr<EngineFilterBiquad1HighShelving> m_highKill;
+  
   double m_oldLowBoost;
+  double m_oldLowKill;
+  double m_oldMidBoost;
+  double m_oldMidKill;
+  double m_oldHighBoost;
+  double m_oldHighKill;
   double m_loFreqCorner;
+  double m_highFreqCorner;
 
   double bqGainLow;
   double bqGainMid;

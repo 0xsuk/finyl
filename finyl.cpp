@@ -15,43 +15,29 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+Deck::Deck(finyl_deck_type _type): type(_type),
+                                   pTrack(nullptr),
+                                   gain(1.0),
+                                   gain0(0.0),
+                                   gain1(0.0),
+                                   filter1(1.0),
+                                   quantize(true),
+                                   master(true),
+                                   delay(new Delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5}),
+                                   bqisoState(new BiquadFullKillEQEffectGroupState()) //cant initialize until sample_rate is set
+                                   {}
+
 std::string device;
 int fps = 30;
 snd_pcm_uframes_t period_size;
 snd_pcm_uframes_t period_size_2;
-int sample_rate;
-
-bool finyl_running = true;
-
-finyl_track* adeck; //pointer to track, is a d
-finyl_track* bdeck;
-finyl_track* cdeck;
-finyl_track* ddeck;
-
-finyl_buffer buffer;
-finyl_buffer abuffer;
-finyl_stem_buffers a_stem_buffers;
-finyl_buffer bbuffer;
-finyl_stem_buffers b_stem_buffers;
-
-double a_gain = 1.0;
-double a0_gain = 0.0;
-double a1_gain = 0.0;
-double b_gain = 1.0;
-double b0_gain = 0.0;
-double b1_gain = 0.0;
-double a0_filter = 0.2;
-double a1_filter = 1.0;
-double b0_filter = 0.2;
-double b1_filter = 1.0;
-Delay a_delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5};
-Delay b_delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5};
-bool a_master = true;
-bool b_master = true;
-BiquadFullKillEQEffect bqisoProcessor{};
-BiquadFullKillEQEffectGroupState* a_bqisoState;
-
+int sample_rate = 44100;
 int max_process_size = 2048;
+bool finyl_running = true;
+finyl_buffer buffer;
+BiquadFullKillEQEffect bqisoProcessor{};
+Deck adeck(finyl_a);
+Deck bdeck(finyl_b);
 
 finyl_track_meta::finyl_track_meta(): id(0),
                                       bpm(0),
@@ -60,6 +46,7 @@ finyl_track_meta::finyl_track_meta(): id(0),
 
 finyl_track::finyl_track(): meta(),
                             stems_size(0),
+                            jump_lock(false),
                             playing(false),
                             loop_active(false),
                             loop_in(-1),
@@ -349,11 +336,17 @@ void make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_buffers)
   
   for (int i = 0; i<t.stems_size; i++) {
     threads.push_back(std::thread([&, i](){
-      t.indxs[i] = make_stem_buffer_stretch(stem_buffers[i], t, *t.stretchers[i], *t.stems[i], t.indxs[i], t.mtxs[i]);
+      int newindex = make_stem_buffer_stretch(stem_buffers[i], t, *t.stretchers[i], *t.stems[i], t.indxs[i], t.mtxs[i]);
+      if (!t.jump_lock) { //dont want to set index during jump(cue)
+        t.indxs[i] = newindex;
+      }
     }));
   }
 
   for (auto& th: threads) {th.join();}
+  if (t.jump_lock) {
+    t.jump_lock = false;
+  }
 }
 
 //without time stretch
@@ -422,50 +415,43 @@ static void eq_effect(finyl_buffer& buf, BiquadFullKillEQEffectGroupState* state
   floatToSignedshort(out, buf.data());
 }
 
-static void finyl_handle() {
-  
-  std::fill(buffer.begin(), buffer.end(), 0);
-  std::fill(abuffer.begin(), abuffer.end(), 0);
-  std::fill(bbuffer.begin(), bbuffer.end(), 0);
-  std::fill(a_stem_buffers[0].begin(), a_stem_buffers[0].end(), 0);
-  std::fill(a_stem_buffers[1].begin(), a_stem_buffers[1].end(), 0);
-  std::fill(b_stem_buffers[0].begin(), b_stem_buffers[0].end(), 0);
-  std::fill(b_stem_buffers[1].begin(), b_stem_buffers[1].end(), 0);
-  
-  auto thread = std::thread([&](){
-    if (adeck != nullptr && adeck->playing) {
-      if (a_master) {
-        make_stem_buffers_stretch(*adeck, a_stem_buffers);
-      } else {
-        make_stem_buffers(a_stem_buffers, *adeck);
-      }
-      
-      gain_effect(a_stem_buffers[0], a0_gain);
-      gain_effect(a_stem_buffers[1], a1_gain);
-      add_and_clip_two_buffers(abuffer, a_stem_buffers[0], a_stem_buffers[1]);
-      
-      eq_effect(abuffer, a_bqisoState);
-      
-      gain_effect(abuffer, a_gain);
-    }
-    delay(abuffer, a_delay);
-  });
-  
-  if (bdeck != nullptr && bdeck->playing) {
-    if (b_master) {
-      make_stem_buffers_stretch(*bdeck, b_stem_buffers);
+void handle_deck(Deck& deck) {
+  if (deck.pTrack != nullptr && deck.pTrack->playing) {
+    if (deck.master) {
+      make_stem_buffers_stretch(*deck.pTrack, deck.stem_buffers);
     } else {
-      make_stem_buffers(b_stem_buffers, *bdeck);
+      deck.pTrack->jump_lock=false;
+      make_stem_buffers(deck.stem_buffers, *deck.pTrack);
     }
-    gain_effect(b_stem_buffers[0], b0_gain);
-    gain_effect(b_stem_buffers[1], b1_gain);
-    add_and_clip_two_buffers(bbuffer, b_stem_buffers[0], b_stem_buffers[1]);
-    gain_effect(bbuffer, b_gain);
+      
+    gain_effect(deck.stem_buffers[0], deck.gain0);
+    gain_effect(deck.stem_buffers[1], deck.gain1);
+    add_and_clip_two_buffers(deck.buffer, deck.stem_buffers[0], deck.stem_buffers[1]);
+      
+    eq_effect(deck.buffer, deck.bqisoState);
+      
+    gain_effect(deck.buffer, deck.gain);
   }
-  delay(bbuffer, b_delay);
+  delay(deck.buffer, *deck.delay);
+}
+
+static void finyl_handle() {
+  std::fill(buffer.begin(), buffer.end(), 0);
+  std::fill(adeck.buffer.begin(), adeck.buffer.end(), 0);
+  std::fill(bdeck.buffer.begin(), bdeck.buffer.end(), 0);
+  std::fill(adeck.stem_buffers[0].begin(), adeck.stem_buffers[0].end(), 0);
+  std::fill(adeck.stem_buffers[1].begin(), adeck.stem_buffers[1].end(), 0);
+  std::fill(bdeck.stem_buffers[0].begin(), bdeck.stem_buffers[0].end(), 0);
+  std::fill(bdeck.stem_buffers[1].begin(), bdeck.stem_buffers[1].end(), 0);
   
-  thread.join();
-  add_and_clip_two_buffers(buffer, abuffer, bbuffer);
+  // auto thread = std::thread([&](){
+  handle_deck(adeck);
+  // });
+  
+  handle_deck(bdeck);
+  
+  // thread.join();
+  add_and_clip_two_buffers(buffer, adeck.buffer, bdeck.buffer);
 }
 
 static void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
@@ -504,31 +490,18 @@ void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pc
 
 static void resize_buffers() {
   buffer.resize(period_size_2);
-  abuffer.resize(period_size_2);
-  bbuffer.resize(period_size_2);
+  adeck.buffer.resize(period_size_2);
+  bdeck.buffer.resize(period_size_2);
   
   for (size_t i = 0; i<MAX_STEMS_SIZE; i++) {
-    a_stem_buffers[i].resize(period_size_2);
-    b_stem_buffers[i].resize(period_size_2);
+    adeck.stem_buffers[i].resize(period_size_2);
+    bdeck.stem_buffers[i].resize(period_size_2);
   }
 }
 
-static void init_decks(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d) {
-  adeck = a;
-  bdeck = b;
-  cdeck = c;
-  ddeck = d;
-}
-
-void init_effect_states() {
-  a_bqisoState = new BiquadFullKillEQEffectGroupState();
-}
-
-void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, snd_pcm_t* handle) {
+void finyl_run(snd_pcm_t* handle) {
   int err = 0;
-  init_decks(a, b, c, d);
   resize_buffers();
-  init_effect_states();
   
   while (finyl_running) {
     finyl_handle();

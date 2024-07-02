@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
   
   auto th = std::thread(controller);
   
-  finyl_run(NULL, NULL, NULL, NULL, handle);
+  finyl_run(handle);
   
   th.join();
 }

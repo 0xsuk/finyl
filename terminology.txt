@@ -8,3 +8,7 @@ sindex: index w.r.t. stereo. sindex=1 is right0;
 # ALSA
 period_size: larger period_size makes cpu wake up less, saving battery
 buffer_size: larger makes more latency.
+
+
+midi sequence: 3 bytes of data (buf)
+midi sequences: list of midi sequence

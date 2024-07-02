@@ -296,8 +296,8 @@ static void readCueTags(finyl_track& t, rekordbox_anlz_t::cue_tag_t* cuesTag) {
       // } break;
       // } break;
       t.cues.push_back(finyl_cue{
-          .type=0,
-          .time=time
+          .type=CUE::MEMORY_CUE,
+          .time=(double)time
         });
     }
     case rekordbox_anlz_t::CUE_LIST_TYPE_HOT_CUES: {
@@ -311,10 +311,11 @@ static void readCueTags(finyl_track& t, rekordbox_anlz_t::cue_tag_t* cuesTag) {
     
   }
 
-  if (t.cues.size() > 1) {
+  if (t.cues.size() > 0) {
     // 1000 milisec = 44100 samples
     // time milisec = 44100 / 1000 * time samples
     t.loop_in = (sample_rate / 1000.0) * (double)t.cues[0].time;
+    t.cues[0].type = CUE::ACTIVE_MEMORY_CUE;
   }
 }
 

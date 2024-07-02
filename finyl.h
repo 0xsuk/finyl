@@ -22,9 +22,15 @@ using finyl_buffer = std::vector<finyl_sample>;
 using finyl_stem_buffers = std::array<finyl_buffer, MAX_STEMS_SIZE>;
 using rb = RubberBand::RubberBandStretcher;
 
+enum class CUE {
+  ACTIVE_MEMORY_CUE,
+  MEMORY_CUE,
+  HOTCUE,
+};
+
 struct finyl_cue{
-  int type;
-  int time;
+  CUE type;
+  double time; //in millisec
 };
 
 struct finyl_beat{
@@ -156,6 +162,7 @@ public:
 struct finyl_track{
   finyl_track_meta meta;
   int stems_size;
+  bool jump_lock;
   bool playing;
   bool loop_active;
   double loop_in; //index
@@ -202,20 +209,34 @@ struct finyl_track{
   
 };
 
-enum finyl_track_target{
+enum finyl_deck_type{
   finyl_a,
   finyl_b,
   finyl_c,
   finyl_d,
 };
 
-enum finyl_stem_target{
-  finyl_0,
-  finyl_1,
-  finyl_2,
-  finyl_3,
-  finyl_4,
+struct Test;
+struct Delay;
+class BiquadFullKillEQEffectGroupState;
+struct Deck {
+  finyl_deck_type type;
+  finyl_track* pTrack;
+  finyl_buffer buffer;
+  finyl_stem_buffers stem_buffers;
+  double gain;
+  double gain0;
+  double gain1;
+  double filter1;
+  bool quantize;
+  bool master;
+  Delay* delay;
+  Test* test;
+  BiquadFullKillEQEffectGroupState* bqisoState;
+
+  Deck(finyl_deck_type _type);
 };
+
 
 finyl_sample clip_sample(int32_t s);
 bool file_exist(std::string_view file);
@@ -226,5 +247,5 @@ error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_t
 error read_stem(const std::string& file, std::unique_ptr<finyl_stem>& stem);
 void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size);
 void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t);
-void finyl_run(finyl_track* a, finyl_track* b, finyl_track* c, finyl_track* d, snd_pcm_t* handle);
+void finyl_run(snd_pcm_t* handle);
 #endif

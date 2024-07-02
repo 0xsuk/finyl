@@ -2,10 +2,29 @@
 #define ACTION_H
 #include "finyl.h"
 
-void set_cue(finyl_track& t);
-void toggle_playing(finyl_track& t);
-void loop_in_now(finyl_track& t);
-void loop_out_now(finyl_track& t);
-void loop_deactivate(finyl_track& t);
+void add_active_cue(Deck& deck);
+void jump_cue(Deck& deck);
+void set_speed(Deck& deck, double val);
+void set_gain0(Deck& deck, double val);
+void set_gain1(Deck& deck, double val);
+void set_gain(Deck& deck, double val);
+void inc_index(Deck& deck);
+void dec_index(Deck& deck);
+void inc_delta_index(Deck& deck);
+void dec_delta_index(Deck& deck);
+void toggle_playing(Deck& deck);
+void toggle_playing_velocity(Deck& deck, double velocity);
+void loop_in_now(Deck& deck);
+void loop_out_now(Deck& deck);
+void loop_in_velocity(Deck& deck, double velocity);
+void loop_deactivate(Deck& deck);
+void set_bqGainLow(Deck& deck, double val);
+void set_delay_on(Deck& deck);
+void set_delay_off(Deck& deck);
+void toggle_delay(Deck& deck);
+void inc_speed(Deck& deck);
+void dec_speed(Deck& deck);
+void sync_bpm(Deck& deck);
+void press_cue_velocity(Deck& deck, double velocity);
 #endif
 

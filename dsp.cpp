@@ -86,18 +86,39 @@ void EngineFilterBiquad1LowShelving::setFrequencyCorners(double centerFreq,
     setCoefs(m_spec, sizeof(m_spec), centerFreq);
 }
 
+EngineFilterBiquad1HighShelving::EngineFilterBiquad1HighShelving(double centerFreq, double Q) {
+  m_startFromDry = true;
+  setFrequencyCorners(centerFreq, Q, 0);
+}
+
+void EngineFilterBiquad1HighShelving::setFrequencyCorners(double centerFreq,
+                                                          double Q,
+                                                          double dBgain) {
+  snprintf(m_spec, sizeof(m_spec), "HsBq/%.10f/%.10f", Q, dBgain);
+  setCoefs(m_spec, sizeof(m_spec), centerFreq);
+}
+
 
 BiquadFullKillEQEffectGroupState::BiquadFullKillEQEffectGroupState():
-  m_oldLowKill(0),
   m_oldLowBoost(0),
-  m_loFreqCorner(250.004443){
+  m_oldLowKill(0),
+  m_oldMidBoost(0),
+  m_oldMidKill(0),
+  m_oldHighBoost(0),
+  m_oldHighKill(0),
+  m_loFreqCorner(250.004443),
+  m_highFreqCorner(2499.925102){ //TODO
 
   m_lowBoost = std::make_unique<EngineFilterBiquad1Peaking>(kStartupLoFreq, kQBoost);
-
   m_lowKill = std::make_unique<EngineFilterBiquad1LowShelving>(kStartupLoFreq * 2, kQLowKillShelve);
 
-  setFilters(kStartupLoFreq,
-             kStartupHiFreq);
+  m_midBoost = std::make_unique<EngineFilterBiquad1Peaking>(kStartupMidFreq, kQBoost);
+  m_midKill = std::make_unique<EngineFilterBiquad1Peaking>(kStartupMidFreq, kQKill);
+
+  m_highBoost = std::make_unique<EngineFilterBiquad1Peaking>(kStartupHiFreq, kQBoost);
+  m_highKill = std::make_unique<EngineFilterBiquad1HighShelving>(kStartupHiFreq / 2, kQHighKillShelve);
+  
+  setFilters(kStartupLoFreq, kStartupHiFreq);
 }
 
 void BiquadFullKillEQEffectGroupState::setFilters(double lowFreqCorner, double highFreqCorner) {
@@ -108,6 +129,11 @@ void BiquadFullKillEQEffectGroupState::setFilters(double lowFreqCorner, double h
   m_lowBoost->setFrequencyCorners(lowCenter, kQBoost, m_oldLowBoost);
   m_lowKill->setFrequencyCorners(lowCenter * 2, kQLowKillShelve, m_oldLowKill);
 
+  m_midBoost->setFrequencyCorners(midCenter, kQBoost, m_oldMidBoost);
+  m_midKill->setFrequencyCorners(midCenter, kQKill, m_oldMidKill);
+
+  m_highBoost->setFrequencyCorners(highCenter, kQBoost, m_oldHighBoost);
+  m_highKill->setFrequencyCorners(highCenter / 2, kQHighKillShelve, m_oldHighKill);
 }
 
 BiquadFullKillEQEffect::BiquadFullKillEQEffect() {
@@ -125,7 +151,8 @@ void BiquadFullKillEQEffect::process(BiquadFullKillEQEffectGroupState *pState,
 
   //bqgainlow: max 12.041200 min -23.0
   
-  if (bqGainLow > 0.0 || pState->m_oldLowBoost > 0.0) {
+  //NOTE: changed > to >=
+  if (bqGainLow >= 0.0 || pState->m_oldLowBoost > 0.0) {
     if (bqGainLow != pState->m_oldLowBoost) {
       double lowCenter = getCenterFrequency(kMinimumFrequency, pState->m_loFreqCorner);
       pState->m_lowBoost->setFrequencyCorners(lowCenter, kQBoost, bqGainLow);

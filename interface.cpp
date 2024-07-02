@@ -272,6 +272,17 @@ void free_tracks() {
 int previ_adeck = 0;
 int previ_bdeck = 0;
 
+void render_deck(Deck& deck, int& previ, SDL_Texture* wavetx, int wave_y) {
+  int nowi = (int)deck.pTrack->get_refindex();
+  render_waveform(interface, wavetx, *deck.pTrack, nowi, wave_y);
+  previ = nowi - (int)interface.wave_range/2;
+}
+
+void update_deck(Deck &deck, int &previ, SDL_Texture* wavetx, SDL_Texture* sgtx, int wave_y) {
+  previ = plus_waveform(interface, wavetx, *deck.pTrack, (int)deck.pTrack->get_refindex(), wave_y, previ);
+  render_static_grids(interface, sgtx, deck.pTrack, wave_y);
+}
+
 int run_interface() {
   if (get_window_size(interface.win_width, interface.win_height) == -1) {
     return 1;
@@ -321,23 +332,17 @@ int run_interface() {
 
     free_tracks();
     if (interface.render_adeck) {
-      int nowi = (int)adeck->get_refindex();
-      render_waveform(interface, interface.tx_awave, *adeck, nowi, 0);
+      render_deck(adeck, previ_adeck, interface.tx_awave, 0);
       interface.render_adeck = false;
-      previ_adeck = nowi - (int)interface.wave_range/2;
-    } else if (adeck != NULL) {
-      previ_adeck = plus_waveform(interface, interface.tx_awave, *adeck, (int)adeck->get_refindex(), 0, previ_adeck);
-      render_static_grids(interface, interface.tx_asg, adeck, 0);
+    } else if (adeck.pTrack != nullptr) {
+      update_deck(adeck, previ_adeck, interface.tx_awave, interface.tx_asg, 0);
     }
     
     if (interface.render_bdeck) {
-      int nowi = (int)bdeck->get_refindex();
-      render_waveform(interface, interface.tx_bwave, *bdeck, nowi, interface.wave_height+10);
+      render_deck(bdeck, previ_bdeck, interface.tx_bwave, interface.wave_height + 10);
       interface.render_bdeck = false;
-      previ_bdeck = nowi - (int)interface.wave_range/2;;
-    } else if (bdeck != NULL) {
-      previ_bdeck = plus_waveform(interface, interface.tx_bwave, *bdeck, (int)bdeck->get_refindex(), interface.wave_height+10, previ_bdeck);
-      render_static_grids(interface, interface.tx_bsg, bdeck, interface.wave_height + 10);
+    } else if (bdeck.pTrack != nullptr) {
+      update_deck(bdeck, previ_bdeck, interface.tx_bwave, interface.tx_bsg, interface.wave_height + 10);
     }
     
         
