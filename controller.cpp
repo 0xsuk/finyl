@@ -34,6 +34,25 @@ ActionToFunc actionToFuncMap[] = {
   {"DeckA-inc_speed", [](double velocity){ifvelocity(inc_speed(adeck);)}},
   {"DeckA-dec_speed", [](double velocity){ifvelocity(dec_speed(adeck);)}},
   {"DeckA-toggle_delay", [](double velocity){ifvelocity(toggle_delay(adeck);)}},
+
+  {"DeckB-gain", [](double val){set_gain(bdeck, val);}},
+  {"DeckB-gain0", [](double val){set_gain0(bdeck, val);}},
+  {"DeckB-gain1", [](double val){set_gain1(bdeck, val);}},
+  {"DeckB-eqlow", [](double val){set_bqGainLow(bdeck, val);}},
+  {"DeckB-press_cue", [](double velocity){press_cue_velocity(bdeck, velocity);}},
+  {"DeckB-toggle_playing", [](double velocity){toggle_playing_velocity(bdeck, velocity);}},
+  {"DeckB-inc_index", [](double velocity){ifvelocity(inc_index(bdeck);)}},
+  {"DeckB-dec_index", [](double velocity){ifvelocity(dec_index(bdeck);)}},
+  {"DeckB-inc_delta_index", [](double velocity){ifvelocity(inc_delta_index(bdeck);)}},
+  {"DeckB-dec_delta_index", [](double velocity){ifvelocity(dec_delta_index(bdeck);)}},
+  {"DeckB-loop_in", [](double velocity){ifvelocity(loop_in_now(bdeck);)}},
+  {"DeckB-loop_out", [](double velocity){ifvelocity(loop_out_now(bdeck);)}},
+  {"DeckB-loop_deactivate", [](double velocity){ifvelocity(loop_deactivate(bdeck);)}},
+  {"DeckB-sync_bpm", [](double velocity){ifvelocity(sync_bpm(bdeck);)}},
+  {"DeckB-inc_speed", [](double velocity){ifvelocity(inc_speed(bdeck);)}},
+  {"DeckB-dec_speed", [](double velocity){ifvelocity(dec_speed(bdeck);)}},
+  {"DeckB-toggle_delay", [](double velocity){ifvelocity(toggle_delay(bdeck);)}},
+
 };
 
 const int len_actionToFuncMap = sizeof(actionToFuncMap)/sizeof(actionToFuncMap[0]);
@@ -57,6 +76,24 @@ MidiToAction launchkey[] = {
   {0x90, 57, "DeckA-inc_speed"},
   {0x90, 55, "DeckA-dec_speed"},
   {0x99, 37, "DeckA-toggle_delay"},
+
+  {0xb0, 25, "DeckB-gain"},
+  {0xb0, 26, "DeckB-gain0"},
+  {0xb0, 27, "DeckB-gain1"},
+  {0xb0, 28, "DeckB-eqlow"},
+  {0x99, 48, "DeckB-press_cue"},
+  {0x99, 44, "DeckB-toggle_playing"},
+  {0x90, 65, "DeckB-inc_index"},
+  {0x90, 64, "DeckB-dec_index"},
+  {0x90, 62, "DeckB-inc_delta_index"},
+  {0x90, 60, "DeckB-dec_delta_index"},
+  {0x99, 49, "DeckB-loop_in"},
+  {0x99, 50, "DeckB-loop_out"},
+  {0x99, 51, "DeckB-loop_deactivate"},
+  {0x90, 71, "DeckB-sync_bpm"},
+  {0x90, 69, "DeckB-inc_speed"},
+  {0x90, 67, "DeckB-dec_speed"},
+  {0x99, 45, "DeckB-toggle_delay"},
 };
 
 void midi_handler(int len, unsigned char buf[]) {

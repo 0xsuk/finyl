@@ -4,6 +4,9 @@ pcm array: [left0, right0, left1, right1] -> "interleaved"
 mindex: index w.r.t. mono. mindex=1 is left1;
 sindex: index w.r.t. stereo. sindex=1 is right0;
 
+memory_cue: cue that is not hot cue
+active_memory_cue: memory cue that is active (jump to it when cue is pressed while playing). = loop_in
+
 
 # ALSA
 period_size: larger period_size makes cpu wake up less, saving battery
@@ -12,3 +15,5 @@ buffer_size: larger makes more latency.
 
 midi sequence: 3 bytes of data (buf)
 midi sequences: list of midi sequence
+action: ?
+

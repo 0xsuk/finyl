@@ -286,7 +286,7 @@ static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, r
     float inputRight[reqd];
     for (int i = 0; i<reqd; i++) {
       index++;
-      if (t.loop_active && t.loop_in != -1 && t.loop_out != -1 && index >= t.loop_out) {
+      if (t.loop_active && t.loop_in != -1 && t.loop_out != -1 && index >= t.loop_out-1000) {
         index = t.loop_in + index - t.loop_out;
       }
       if (index >= t.get_refmsize()) {
