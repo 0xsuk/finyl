@@ -274,10 +274,11 @@ static void gain_effect(finyl_buffer& buf, double gain) {
   }
 }
 
+//rubberband
+//stretcher keeps storing "reqd" number of samples of samples in its internal buffer until output buffer can be fully prepared, leaving unused samples in the internal buffer.
 //return new t.index. writes stretched samples to stem_buffer
 static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, rb& stretcher, finyl_stem& stem, int index, std::mutex& mutex) {
   int available;
-  
   while ((available = stretcher.available()) < period_size) {
     int reqd = int(ceil(double(period_size - available) / stretcher.getTimeRatio()));
     if (reqd > max_process_size) reqd = max_process_size;
@@ -329,7 +330,6 @@ static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, r
   return index;
 }
 
-//rubberband
 //TODO slow, takes 500 microsecs
 void make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_buffers) {
   std::vector<std::thread> threads;
@@ -337,16 +337,15 @@ void make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_buffers)
   for (int i = 0; i<t.stems_size; i++) {
     threads.push_back(std::thread([&, i](){
       int newindex = make_stem_buffer_stretch(stem_buffers[i], t, *t.stretchers[i], *t.stems[i], t.indxs[i], t.mtxs[i]);
-      if (!t.jump_lock) { //dont want to set index during jump(cue)
+      if (!t.jump_lock) { //dont want to set index if jump happened during stretching
         t.indxs[i] = newindex;
+      } else { //jump_lock was set to on during make_stem_buffer_stretch
       }
     }));
   }
 
   for (auto& th: threads) {th.join();}
-  if (t.jump_lock) {
-    t.jump_lock = false;
-  }
+
 }
 
 //without time stretch
@@ -415,12 +414,24 @@ static void eq_effect(finyl_buffer& buf, BiquadFullKillEQEffectGroupState* state
   floatToSignedshort(out, buf.data());
 }
 
+static void reset_stretchers(Deck& deck) {
+  for (int i = 0; i<deck.pTrack->stems_size; i++) {
+    deck.pTrack->stretchers[i]->reset();
+  }
+}
+
 void handle_deck(Deck& deck) {
-  if (deck.pTrack != nullptr && deck.pTrack->playing) {
+  if (deck.pTrack == nullptr) return;
+  if (deck.pTrack->jump_lock) {
+    deck.pTrack->jump_lock = false;
+    if (deck.master) {
+      reset_stretchers(deck);
+    }
+  }
+  if (deck.pTrack->playing) {
     if (deck.master) {
       make_stem_buffers_stretch(*deck.pTrack, deck.stem_buffers);
     } else {
-      deck.pTrack->jump_lock=false;
       make_stem_buffers(deck.stem_buffers, *deck.pTrack);
     }
       

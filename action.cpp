@@ -132,7 +132,6 @@ void jump_cue(Deck& deck) {
 
 bool is_at_active_memory_cue(Deck& deck) {
   if (!memory_cue_exist(deck)) return false;
-  printf("\t %lf %lf\n",millisec_to_index(get_active_memory_cue(deck).time), deck.pTrack->get_refindex());
   double diff = abs(millisec_to_index(get_active_memory_cue(deck).time) - deck.pTrack->get_refindex());
   return diff < 0.1;
 }
@@ -159,7 +158,6 @@ void press_cue_velocity(Deck& deck, double velocity) {
     } else {
     }
   } else {
-    printf("is aat cue %d\n", is_at_active_memory_cue(deck));
     //TODO when speed is small
     if (!is_at_active_memory_cue(deck) && velocity != 0) {
       finyl_cue cue;
@@ -176,7 +174,6 @@ void press_cue_velocity(Deck& deck, double velocity) {
     
     //is at active cue
     if (velocity != 0) {
-      printf("cue play\n");
       deck.pTrack->playing = true;
     }
   }

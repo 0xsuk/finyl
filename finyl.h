@@ -167,7 +167,7 @@ struct finyl_track{
   bool loop_active;
   double loop_in; //index
   double loop_out; //index
-  std::array<std::mutex, MAX_STEMS_SIZE> mtxs; //prevent setTimeout happen during rubberband process()
+  std::array<std::mutex, MAX_STEMS_SIZE> mtxs; //prevent setTimeRatio happen during rubberband process()
   std::array<double, MAX_STEMS_SIZE> indxs; //index for stem, used by rubberband stretcher
   std::array<std::unique_ptr<rb>, MAX_STEMS_SIZE> stretchers;
   std::array<std::unique_ptr<finyl_stem>, MAX_STEMS_SIZE> stems;
