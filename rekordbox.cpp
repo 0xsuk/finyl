@@ -171,6 +171,10 @@ int plug(const std::string& root) {
   
   std::string filepath = join_path(usb.root.data(), "/PIONEER/rekordbox/export.pdb");
   std::ifstream ifs(filepath, std::ifstream::binary);
+  if (!ifs) {
+    printf("usb does not exist\n");
+    return 1;
+  }
   kaitai::kstream ks(&ifs);
 
   rekordbox_pdb_t rekordboxDB = rekordbox_pdb_t(&ks);

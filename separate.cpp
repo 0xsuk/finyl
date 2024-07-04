@@ -116,7 +116,10 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  plug(argv[1]);
+  int err = plug(argv[1]);
+  if (err == 1) {
+    return 1;
+  }
   Usb& usb = usbs[0];
   
   char* op = argv[2];

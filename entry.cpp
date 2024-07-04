@@ -15,7 +15,10 @@ int main(int argc, char **argv) {
     return 0;
   }
   std::string usbroot = argv[1];
-  plug(usbroot);
+  int err = plug(usbroot);
+  if (err == 1) {
+    return 1;
+  }
   device = "default";
   sample_rate = 44100;
   snd_pcm_t* handle;

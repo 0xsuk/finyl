@@ -690,8 +690,10 @@ void* controller() {
   std::thread([](){key_input(nullptr);}).detach();
   
   auto mp = MidiParser();
-  mp.open_device("hw:1,0,0");
-  mp.handle(midi_handler);
+  int err = mp.open_device("hw:1,0,0");
+  if (!err) {
+    mp.handle(midi_handler);
+  }
   
   return NULL;
 }
