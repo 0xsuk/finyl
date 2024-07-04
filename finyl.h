@@ -219,11 +219,13 @@ enum finyl_deck_type{
 struct Test;
 struct Delay;
 class BiquadFullKillEQEffectGroupState;
+struct ActionState;
 struct Deck {
   finyl_deck_type type;
   finyl_track* pTrack;
   finyl_buffer buffer;
   finyl_stem_buffers stem_buffers;
+  ActionState* action_state;
   double gain;
   double gain0;
   double gain1;

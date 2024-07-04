@@ -23,10 +23,10 @@ ActionToFunc actionToFuncMap[] = {
   {"DeckA-eqlow", [](double val){set_bqGainLow(adeck, val);}},
   {"DeckA-press_cue", [](double velocity){press_cue_velocity(adeck, velocity);}},
   {"DeckA-toggle_playing", [](double velocity){toggle_playing_velocity(adeck, velocity);}},
-  {"DeckA-inc_index", [](double velocity){ifvelocity(inc_index(adeck);)}},
-  {"DeckA-dec_index", [](double velocity){ifvelocity(dec_index(adeck);)}},
-  {"DeckA-inc_delta_index", [](double velocity){ifvelocity(inc_delta_index(adeck);)}},
-  {"DeckA-dec_delta_index", [](double velocity){ifvelocity(dec_delta_index(adeck);)}},
+  {"DeckA-inc_index", [](double velocity){inc_index(adeck, velocity);}},
+  {"DeckA-dec_index", [](double velocity){dec_index(adeck, velocity);}},
+  {"DeckA-inc_delta_index", [](double velocity){inc_delta_index(adeck, velocity);}},
+  {"DeckA-dec_delta_index", [](double velocity){dec_delta_index(adeck, velocity);}},
   {"DeckA-loop_in", [](double velocity){ifvelocity(loop_in_now(adeck);)}},
   {"DeckA-loop_out", [](double velocity){ifvelocity(loop_out_now(adeck);)}},
   {"DeckA-loop_deactivate", [](double velocity){ifvelocity(loop_deactivate(adeck);)}},
@@ -41,10 +41,10 @@ ActionToFunc actionToFuncMap[] = {
   {"DeckB-eqlow", [](double val){set_bqGainLow(bdeck, val);}},
   {"DeckB-press_cue", [](double velocity){press_cue_velocity(bdeck, velocity);}},
   {"DeckB-toggle_playing", [](double velocity){toggle_playing_velocity(bdeck, velocity);}},
-  {"DeckB-inc_index", [](double velocity){ifvelocity(inc_index(bdeck);)}},
-  {"DeckB-dec_index", [](double velocity){ifvelocity(dec_index(bdeck);)}},
-  {"DeckB-inc_delta_index", [](double velocity){ifvelocity(inc_delta_index(bdeck);)}},
-  {"DeckB-dec_delta_index", [](double velocity){ifvelocity(dec_delta_index(bdeck);)}},
+  {"DeckB-inc_index", [](double velocity){inc_index(bdeck, velocity);}},
+  {"DeckB-dec_index", [](double velocity){dec_index(bdeck, velocity);}},
+  {"DeckB-inc_delta_index", [](double velocity){inc_delta_index(bdeck, velocity);}},
+  {"DeckB-dec_delta_index", [](double velocity){dec_delta_index(bdeck, velocity);}},
   {"DeckB-loop_in", [](double velocity){ifvelocity(loop_in_now(bdeck);)}},
   {"DeckB-loop_out", [](double velocity){ifvelocity(loop_out_now(bdeck);)}},
   {"DeckB-loop_deactivate", [](double velocity){ifvelocity(loop_deactivate(bdeck);)}},
@@ -53,6 +53,8 @@ ActionToFunc actionToFuncMap[] = {
   {"DeckB-dec_speed", [](double velocity){ifvelocity(dec_speed(bdeck);)}},
   {"DeckB-toggle_delay", [](double velocity){ifvelocity(toggle_delay(bdeck);)}},
 
+  {"inc_wave_range", [](double velocity){ifvelocity(set_wave_range(interface, interface.wave_range*2);)}},
+  {"dec_wave_range", [](double velocity){ifvelocity(set_wave_range(interface, interface.wave_range/2);)}},
 };
 
 const int len_actionToFuncMap = sizeof(actionToFuncMap)/sizeof(actionToFuncMap[0]);
@@ -94,6 +96,9 @@ MidiToAction launchkey[] = {
   {0x90, 69, "DeckB-inc_speed"},
   {0x90, 67, "DeckB-dec_speed"},
   {0x99, 45, "DeckB-toggle_delay"},
+
+  {0xbf, 104, "inc_wave_range"},
+  {0xbf, 105, "dec_wave_range"},
 };
 
 void midi_handler(int len, unsigned char buf[]) {
@@ -109,6 +114,7 @@ void midi_handler(int len, unsigned char buf[]) {
     if (ent.status == buf[0] && ent.control == buf[1]) {
       for (auto& atf: actionToFuncMap) {
         if (atf.base_action == ent.action_name) {
+          //every actions should be quick or non blocking
           atf.func(buf[2]/127.0);
         }
       }

@@ -14,9 +14,11 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include "action.h"
 
 Deck::Deck(finyl_deck_type _type): type(_type),
                                    pTrack(nullptr),
+                                   action_state(new ActionState{}),
                                    gain(1.0),
                                    gain0(0.0),
                                    gain1(0.0),

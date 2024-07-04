@@ -1,5 +1,7 @@
 #include "action.h"
 #include "dsp.h"
+#include <thread>
+#include <functional>
 
 void print_deck_name(Deck& deck) {
   if (deck.type == finyl_a) {
@@ -48,20 +50,57 @@ void set_index_quantized(Deck& deck) {
   deck.pTrack->set_index(quantized);
 }
 
-void inc_index(Deck& deck) {
-  deck.pTrack->set_index(deck.pTrack->get_refindex() + 3000);
+
+
+void modify_index_while_velocity(Deck& deck, double velocity, std::function<void()> f) {
+  if (velocity == 0) {
+    deck.action_state->last_inc_index.has_time = false;
+    return;
+  }
+  
+  std::thread([&](){
+    deck.action_state->last_inc_index.time = std::chrono::system_clock::now();
+    deck.action_state->last_inc_index.has_time = true;
+    
+    while (deck.action_state->last_inc_index.has_time) {
+      f();
+
+      auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - deck.action_state->last_inc_index.time).count();
+
+      bool is_first_call = diff < 500; //dont want to go next loop until 700 millisec elapses from the first call
+      
+      if (is_first_call) {
+        usleep(500*1000);
+      } else {
+        usleep(10*1000);
+      }
+    }
+  }).detach();
+  
 }
 
-void dec_index(Deck& deck) {
-  deck.pTrack->set_index(deck.pTrack->get_refindex() - 3000);
+void inc_index(Deck& deck, double velocity) {
+  modify_index_while_velocity(deck, velocity, [&](){
+    deck.pTrack->set_index(deck.pTrack->get_refindex() + 3000);
+  });
 }
 
-void inc_delta_index(Deck& deck) {
-  deck.pTrack->set_index(deck.pTrack->get_refindex() + 300);
+void dec_index(Deck& deck, double velocity) {
+  modify_index_while_velocity(deck, velocity, [&](){
+    deck.pTrack->set_index(deck.pTrack->get_refindex() - 3000);
+  });
 }
 
-void dec_delta_index(Deck& deck) {
+void inc_delta_index(Deck& deck, double velocity) {
+  modify_index_while_velocity(deck, velocity, [&]() {
+    deck.pTrack->set_index(deck.pTrack->get_refindex() + 300);
+  });
+}
+
+void dec_delta_index(Deck& deck, double velocity) {
+  modify_index_while_velocity(deck, velocity, [&]() {
     deck.pTrack->set_index(deck.pTrack->get_refindex() - 300);
+  });
 }
 
 double millisec_to_index(double time) {
