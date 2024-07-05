@@ -3,6 +3,14 @@
 #include <thread>
 #include <functional>
 
+//if deck is adeck, return bdeck, vice versa
+Deck& get_pair(Deck& deck) {
+  if (deck.type == finyl_a) {
+    return bdeck;
+  }
+  return adeck;
+}
+
 void print_deck_name(Deck& deck) {
   if (deck.type == finyl_a) {
     printf("A ");
@@ -256,12 +264,32 @@ void loop_deactivate(Deck& deck) {
   deck.pTrack->loop_active = false;
 }
 
-void sync_bpm(Deck& deck) {
-  if (deck.type == finyl_a) {
-    set_speed(adeck, bdeck.pTrack->get_speed() * ((double)bdeck.pTrack->meta.bpm / adeck.pTrack->meta.bpm));
-  } else {
-    set_speed(bdeck, adeck.pTrack->get_speed() * ((double)adeck.pTrack->meta.bpm / bdeck.pTrack->meta.bpm));
+static double calc_bpm(Deck& sync, Deck& master) {
+  double ratio = (double)master.pTrack->meta.bpm / sync.pTrack->meta.bpm;
+  
+  //ratio+x = 1;
+  //ratio*2 = 1+x;
+  //then, ratio * 3 = 2; 
+  //ratio = 2/3 = 0.66;
+  //if ratio < 0.66, 
+  if (ratio < 0.66) {
+    ratio *= 2;
   }
+  
+  //ratio-x = 1;
+  //ratio/2 = 1-x;
+  //then, ratio * 3/2 = 2;
+  //ratio = 2*2/3 = 4/3 = 1.33;
+  else if (ratio > 1.33) {
+    ratio /=2;
+  }
+  
+  return master.pTrack->get_speed() * ratio;
+}
+
+void sync_bpm(Deck& deck) {
+  auto pair_deck = get_pair(deck);
+  set_speed(deck, calc_bpm(deck, pair_deck));
 }
 
 void inc_speed(Deck& deck) {
