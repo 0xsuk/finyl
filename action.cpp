@@ -58,22 +58,21 @@ void set_index_quantized(Deck& deck) {
   deck.pTrack->set_index(quantized);
 }
 
-
-
-void modify_index_while_velocity(Deck& deck, double velocity, std::function<void()> f) {
+void do_while_velocity(double velocity, std::function<void()> off, std::function<void()> f, std::chrono::system_clock::time_point& time, bool& has_time) {
   if (velocity == 0) {
-    deck.action_state->last_inc_index.has_time = false;
+    off();
     return;
   }
   
-  std::thread([&](){
-    deck.action_state->last_inc_index.time = std::chrono::system_clock::now();
-    deck.action_state->last_inc_index.has_time = true;
+  //moving because if f is lambda (in stack) it dies
+  std::thread([&, ff = std::move(f)](){
+    time = std::chrono::system_clock::now();
+    has_time = true;
     
-    while (deck.action_state->last_inc_index.has_time) {
-      f();
-
-      auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - deck.action_state->last_inc_index.time).count();
+    while (has_time) {
+      ff();
+      
+      auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - time).count();
 
       bool is_first_call = diff < 500; //dont want to go next loop until 700 millisec elapses from the first call
       
@@ -84,31 +83,38 @@ void modify_index_while_velocity(Deck& deck, double velocity, std::function<void
       }
     }
   }).detach();
-  
 }
 
 void inc_index(Deck& deck, double velocity) {
-  modify_index_while_velocity(deck, velocity, [&](){
-    deck.pTrack->set_index(deck.pTrack->get_refindex() + 3000);
-  });
+  do_while_velocity(velocity,
+                    [&deck](){deck.action_state->last_inc_index.has_time = false;},
+                    [&deck](){deck.pTrack->set_index(deck.pTrack->get_refindex() + 3000);},
+                    deck.action_state->last_inc_index.time,
+                    deck.action_state->last_inc_index.has_time);
 }
 
 void dec_index(Deck& deck, double velocity) {
-  modify_index_while_velocity(deck, velocity, [&](){
-    deck.pTrack->set_index(deck.pTrack->get_refindex() - 3000);
-  });
+  do_while_velocity(velocity,
+                    [&deck](){deck.action_state->last_dec_index.has_time = false;},
+                    [&deck](){deck.pTrack->set_index(deck.pTrack->get_refindex() - 3000);},
+                    deck.action_state->last_dec_index.time,
+                    deck.action_state->last_dec_index.has_time);
 }
 
 void inc_delta_index(Deck& deck, double velocity) {
-  modify_index_while_velocity(deck, velocity, [&]() {
-    deck.pTrack->set_index(deck.pTrack->get_refindex() + 300);
-  });
+  do_while_velocity(velocity,
+                    [&deck](){deck.action_state->last_inc_index.has_time = false;},
+                    [&deck](){deck.pTrack->set_index(deck.pTrack->get_refindex() + 300);},
+                    deck.action_state->last_inc_index.time,
+                    deck.action_state->last_inc_index.has_time);
 }
 
 void dec_delta_index(Deck& deck, double velocity) {
-  modify_index_while_velocity(deck, velocity, [&]() {
-    deck.pTrack->set_index(deck.pTrack->get_refindex() - 300);
-  });
+  do_while_velocity(velocity,
+                    [&deck](){deck.action_state->last_dec_index.has_time = false;},
+                    [&deck](){deck.pTrack->set_index(deck.pTrack->get_refindex() - 300);},
+                    deck.action_state->last_dec_index.time,
+                    deck.action_state->last_dec_index.has_time);
 }
 
 double millisec_to_index(double time) {
