@@ -19,6 +19,7 @@ void set_speed(Deck& deck, double val);
 void set_gain0(Deck& deck, double val);
 void set_gain1(Deck& deck, double val);
 void set_gain(Deck& deck, double val);
+void set_gain0_1(Deck& deck, double val);
 void inc_index(Deck& deck, double velocity);
 void dec_index(Deck& deck, double velocity);
 void inc_delta_index(Deck& deck, double velocity);

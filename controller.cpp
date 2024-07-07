@@ -16,10 +16,12 @@
 
 #define ifvelocity(exp) if (velocity!=0) {exp}
 
+//val and velocity is 0 to 1
 ActionToFunc actionToFuncMap[] = {
   {"DeckA-gain", [](double val){set_gain(adeck, val);}},
   {"DeckA-gain0", [](double val){set_gain0(adeck, val);}},
   {"DeckA-gain1", [](double val){set_gain1(adeck, val);}},
+  {"DeckA-gain0_1", [](double val){set_gain0_1(adeck, val);}},
   {"DeckA-eqlow", [](double val){set_bqGainLow(adeck, val);}},
   {"DeckA-press_cue", [](double velocity){press_cue_velocity(adeck, velocity);}},
   {"DeckA-toggle_playing", [](double velocity){toggle_playing_velocity(adeck, velocity);}},
@@ -40,6 +42,7 @@ ActionToFunc actionToFuncMap[] = {
   {"DeckB-gain", [](double val){set_gain(bdeck, val);}},
   {"DeckB-gain0", [](double val){set_gain0(bdeck, val);}},
   {"DeckB-gain1", [](double val){set_gain1(bdeck, val);}},
+  {"DeckB-gain0_1", [](double val){set_gain0_1(bdeck, val);}},
   {"DeckB-eqlow", [](double val){set_bqGainLow(bdeck, val);}},
   {"DeckB-press_cue", [](double velocity){press_cue_velocity(bdeck, velocity);}},
   {"DeckB-toggle_playing", [](double velocity){toggle_playing_velocity(bdeck, velocity);}},
@@ -65,8 +68,8 @@ const int len_actionToFuncMap = sizeof(actionToFuncMap)/sizeof(actionToFuncMap[0
 
 MidiToAction launchkey[] = {
   {0xb0, 21, "DeckA-gain"},
-  {0xb0, 22, "DeckA-gain0"},
-  {0xb0, 23, "DeckA-gain1"},
+  {0xb0, 22, "DeckA-gain0_1"},
+  // {0xb0, 23, "DeckA-gain1"},
   {0xb0, 24, "DeckA-eqlow"},
   {0x99, 40, "DeckA-press_cue"},
   {0x99, 36, "DeckA-toggle_playing"},
@@ -84,8 +87,8 @@ MidiToAction launchkey[] = {
   {0x99, 38, "DeckA-toggle_delay"},
 
   {0xb0, 25, "DeckB-gain"},
-  {0xb0, 26, "DeckB-gain0"},
-  {0xb0, 27, "DeckB-gain1"},
+  {0xb0, 26, "DeckB-gain0_1"},
+  // {0xb0, 27, "DeckB-gain1"},
   {0xb0, 28, "DeckB-eqlow"},
   {0x99, 48, "DeckB-press_cue"},
   {0x99, 44, "DeckB-toggle_playing"},
@@ -99,7 +102,7 @@ MidiToAction launchkey[] = {
   {0x90, 71, "DeckB-sync_bpm"},
   {0x90, 69, "DeckB-inc_speed"},
   {0x90, 67, "DeckB-dec_speed"},
-  {0x99, 45, "DeckA-toggle_mute_gain0"},
+  {0x99, 45, "DeckB-toggle_mute_gain0"},
   {0x99, 46, "DeckB-toggle_delay"},
 
   {0xbf, 104, "inc_wave_range"},

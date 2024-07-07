@@ -52,6 +52,17 @@ void set_gain(Deck& deck, double val) {
   print_deck_name(deck);
   printf("gain %lf\n", val);
 }
+void set_gain0_1(Deck& deck, double val) {
+  if (val < 0.5) {
+    val = val*2;
+    set_gain0(deck, 1);
+    set_gain1(deck, val);
+  } else {
+    val = 1 - (val - 0.5) * 2;
+    set_gain0(deck, val);
+    set_gain1(deck, 1);
+  }
+}
 
 void set_index_quantized(Deck& deck) {
   auto quantized = finyl_get_quantized_index(*deck.pTrack, deck.pTrack->get_refindex());
@@ -306,7 +317,6 @@ void dec_speed(Deck& deck) {
   set_speed(deck, deck.pTrack->get_speed() - 0.01);
 }
 
-//val is 0 to 1
 void set_bqGainLow(Deck& deck, double val) {
   //scale val to -23 to 12;, 0.5 to 0.0
   val = val*2 - 1; //range: [-1 1]
@@ -347,5 +357,6 @@ void toggle_delay(Deck& deck) {
 
 void toggle_mute0(Deck& deck) {
   deck.mute0 = !deck.mute0;
+  print_deck_name(deck);
   printf("mute0: %d\n", deck.mute0);
 }
