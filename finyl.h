@@ -229,6 +229,7 @@ struct Deck {
   double gain;
   double gain0;
   double gain1;
+  bool mute0;
   double filter1;
   bool quantize;
   bool master;

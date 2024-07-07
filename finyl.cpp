@@ -22,6 +22,7 @@ Deck::Deck(finyl_deck_type _type): type(_type),
                                    gain(1.0),
                                    gain0(0.0),
                                    gain1(0.0),
+                                   mute0(false),
                                    filter1(1.0),
                                    quantize(true),
                                    master(true),
@@ -422,6 +423,15 @@ static void reset_stretchers(Deck& deck) {
   }
 }
 
+//NOTE: mute is implemented per buffer basis (simpler), contrary to per sample basis (better)
+static void mute_effect(finyl_buffer& buf, bool mute) {
+  if (!mute) return;
+  for (int i = 0; i<period_size_2;i=i+2) {
+    buf[i] = 0;
+    buf[i+1] = 0;
+  }
+}
+
 void handle_deck(Deck& deck) {
   if (deck.pTrack == nullptr) return;
   if (deck.pTrack->jump_lock) {
@@ -439,6 +449,7 @@ void handle_deck(Deck& deck) {
       
     gain_effect(deck.stem_buffers[0], deck.gain0);
     gain_effect(deck.stem_buffers[1], deck.gain1);
+    mute_effect(deck.stem_buffers[0], deck.mute0);
     add_and_clip_two_buffers(deck.buffer, deck.stem_buffers[0], deck.stem_buffers[1]);
       
     eq_effect(deck.buffer, deck.bqisoState);
@@ -457,13 +468,13 @@ static void finyl_handle() {
   std::fill(bdeck.stem_buffers[0].begin(), bdeck.stem_buffers[0].end(), 0);
   std::fill(bdeck.stem_buffers[1].begin(), bdeck.stem_buffers[1].end(), 0);
   
-  // auto thread = std::thread([&](){
-  handle_deck(adeck);
-  // });
+  auto t = std::thread([&](){
+    handle_deck(adeck);
+  });
   
   handle_deck(bdeck);
   
-  // thread.join();
+  t.join();
   add_and_clip_two_buffers(buffer, adeck.buffer, bdeck.buffer);
 }
 

@@ -34,6 +34,8 @@ ActionToFunc actionToFuncMap[] = {
   {"DeckA-inc_speed", [](double velocity){ifvelocity(inc_speed(adeck);)}},
   {"DeckA-dec_speed", [](double velocity){ifvelocity(dec_speed(adeck);)}},
   {"DeckA-toggle_delay", [](double velocity){ifvelocity(toggle_delay(adeck);)}},
+  {"DeckA-toggle_mute_gain0", [](double velocity){ifvelocity(toggle_mute0(adeck);)}},
+
 
   {"DeckB-gain", [](double val){set_gain(bdeck, val);}},
   {"DeckB-gain0", [](double val){set_gain0(bdeck, val);}},
@@ -52,6 +54,7 @@ ActionToFunc actionToFuncMap[] = {
   {"DeckB-inc_speed", [](double velocity){ifvelocity(inc_speed(bdeck);)}},
   {"DeckB-dec_speed", [](double velocity){ifvelocity(dec_speed(bdeck);)}},
   {"DeckB-toggle_delay", [](double velocity){ifvelocity(toggle_delay(bdeck);)}},
+  {"DeckB-toggle_mute_gain0", [](double velocity){ifvelocity(toggle_mute0(bdeck);)}},
 
   {"inc_wave_range", [](double velocity){ifvelocity(set_wave_range(interface, interface.wave_range*2);)}},
   {"dec_wave_range", [](double velocity){ifvelocity(set_wave_range(interface, interface.wave_range/2);)}},
@@ -77,7 +80,8 @@ MidiToAction launchkey[] = {
   {0x90, 59, "DeckA-sync_bpm"},
   {0x90, 57, "DeckA-inc_speed"},
   {0x90, 55, "DeckA-dec_speed"},
-  {0x99, 37, "DeckA-toggle_delay"},
+  {0x99, 37, "DeckA-toggle_mute_gain0"},
+  {0x99, 38, "DeckA-toggle_delay"},
 
   {0xb0, 25, "DeckB-gain"},
   {0xb0, 26, "DeckB-gain0"},
@@ -95,7 +99,8 @@ MidiToAction launchkey[] = {
   {0x90, 71, "DeckB-sync_bpm"},
   {0x90, 69, "DeckB-inc_speed"},
   {0x90, 67, "DeckB-dec_speed"},
-  {0x99, 45, "DeckB-toggle_delay"},
+  {0x99, 45, "DeckA-toggle_mute_gain0"},
+  {0x99, 46, "DeckB-toggle_delay"},
 
   {0xbf, 104, "inc_wave_range"},
   {0xbf, 105, "dec_wave_range"},

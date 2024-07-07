@@ -345,3 +345,7 @@ void toggle_delay(Deck& deck) {
   }
 }
 
+void toggle_mute0(Deck& deck) {
+  deck.mute0 = !deck.mute0;
+  printf("mute0: %d\n", deck.mute0);
+}
