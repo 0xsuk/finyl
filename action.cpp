@@ -355,6 +355,12 @@ void toggle_delay(Deck& deck) {
   }
 }
 
+void delay(Deck& deck, double val) {
+  deck.delay->wetmix = val;
+  print_deck_name(deck);
+  printf("delay wet %lf\n", val);
+}
+
 void toggle_mute0(Deck& deck) {
   deck.mute0 = !deck.mute0;
   print_deck_name(deck);

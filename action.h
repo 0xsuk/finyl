@@ -33,6 +33,7 @@ void loop_deactivate(Deck& deck);
 void set_bqGainLow(Deck& deck, double val);
 void set_delay_on(Deck& deck);
 void set_delay_off(Deck& deck);
+void delay(Deck& deck, double val);
 void toggle_delay(Deck& deck);
 void inc_speed(Deck& deck);
 void dec_speed(Deck& deck);
