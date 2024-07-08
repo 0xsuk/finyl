@@ -54,7 +54,7 @@ finyl_track::finyl_track(): meta(),
                             loop_active(false),
                             loop_in(-1),
                             loop_out(-1) {
-  std::fill(indxs.begin(), indxs.end(), 0);
+  std::fill(indxs, indxs + MAX_STEMS_SIZE, 0);
   for (auto&p : stretchers) {
     p = std::make_unique<rb>(sample_rate, 2, rb::OptionProcessRealTime, 1.0);
     p->setMaxProcessSize(max_process_size);

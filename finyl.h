@@ -19,7 +19,7 @@
 using finyl_sample = signed short; // because wav file is signed short, and can be mmap-ed if finyl_sample is signed short, although for other data types, interpreting data as signed short after mmap is possible
 //signed short (16-bit) is enough because the sound quality of stem is not so good that more than 16-bit representation does not worth the cost
 using finyl_buffer = std::vector<finyl_sample>;
-using finyl_stem_buffers = std::array<finyl_buffer, MAX_STEMS_SIZE>;
+using finyl_stem_buffers = finyl_buffer[MAX_STEMS_SIZE];
 using rb = RubberBand::RubberBandStretcher;
 
 enum class CUE {
@@ -167,10 +167,10 @@ struct finyl_track{
   bool loop_active;
   double loop_in; //index
   double loop_out; //index
-  std::array<std::mutex, MAX_STEMS_SIZE> mtxs; //prevent setTimeRatio happen during rubberband process()
-  std::array<double, MAX_STEMS_SIZE> indxs; //index for stem, used by rubberband stretcher
-  std::array<std::unique_ptr<rb>, MAX_STEMS_SIZE> stretchers;
-  std::array<std::unique_ptr<finyl_stem>, MAX_STEMS_SIZE> stems;
+  std::mutex mtxs[MAX_STEMS_SIZE]; //prevent setTimeRatio happen during rubberband process()
+  double indxs[MAX_STEMS_SIZE]; //index for stem, used by rubberband stretcher
+  std::unique_ptr<rb> stretchers[MAX_STEMS_SIZE];
+  std::unique_ptr<finyl_stem> stems[MAX_STEMS_SIZE];
   std::vector<finyl_cue> cues;
   std::vector<finyl_beat> beats;
 
