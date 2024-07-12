@@ -52,15 +52,16 @@ void set_gain(Deck& deck, double val) {
   print_deck_name(deck);
   printf("gain %lf\n", val);
 }
+double scale = 0.3;
 void set_gain0_1(Deck& deck, double val) {
   if (val < 0.5) {
-    val = val*2;
-    set_gain0(deck, 1);
-    set_gain1(deck, val);
+    val = val * 2; //0 to 1
+    set_gain0(deck, scale);
+    set_gain1(deck, val*scale);
   } else {
-    val = 1 - (val - 0.5) * 2;
-    set_gain0(deck, val);
-    set_gain1(deck, 1);
+    val = (1 - val) * 2; //0 to 1
+    set_gain0(deck, val*scale);
+    set_gain1(deck, scale);
   }
 }
 

@@ -6,7 +6,6 @@
 #include <memory>
 #include <sys/mman.h>
 #include <string>
-#include <array>
 #include "RubberBandStretcher.h"
 
 #define CHUNK_SIZE 2097152 //4mb
