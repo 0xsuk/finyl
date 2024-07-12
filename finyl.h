@@ -6,6 +6,7 @@
 #include <memory>
 #include <sys/mman.h>
 #include <string>
+#include <atomic>
 #include "RubberBandStretcher.h"
 
 #define CHUNK_SIZE 2097152 //4mb
@@ -161,13 +162,13 @@ public:
 struct finyl_track{
   finyl_track_meta meta;
   int stems_size;
-  bool jump_lock;
-  bool playing;
-  bool loop_active;
-  double loop_in; //index
-  double loop_out; //index
+  std::atomic<bool> jump_lock;
+  std::atomic<bool> playing;
+  std::atomic<bool> loop_active;
+  std::atomic<double> loop_in; //index
+  std::atomic<double> loop_out; //index
   std::mutex mtxs[MAX_STEMS_SIZE]; //prevent setTimeRatio happen during rubberband process()
-  double indxs[MAX_STEMS_SIZE]; //index for stem, used by rubberband stretcher
+  std::atomic<double> indxs[MAX_STEMS_SIZE]; //index for stem, used by rubberband stretcher
   std::unique_ptr<rb> stretchers[MAX_STEMS_SIZE];
   std::unique_ptr<finyl_stem> stems[MAX_STEMS_SIZE];
   std::vector<finyl_cue> cues;

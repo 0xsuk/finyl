@@ -22,7 +22,7 @@ void print_deck_name(Deck& deck) {
 void toggle_playing(Deck& deck) {
   deck.pTrack->playing = !deck.pTrack->playing;
   print_deck_name(deck);
-  printf("is playing:%d\n", deck.pTrack->playing);
+  printf("is playing:%d\n", deck.pTrack->playing.load());
 }
 
 void toggle_playing_velocity(Deck& deck, double velocity) {
@@ -366,4 +366,8 @@ void toggle_mute0(Deck& deck) {
   deck.mute0 = !deck.mute0;
   print_deck_name(deck);
   printf("mute0: %d\n", deck.mute0);
+}
+
+void toggle_master(Deck &deck) {
+  deck.master = !deck.master;
 }

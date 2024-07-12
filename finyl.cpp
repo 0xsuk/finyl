@@ -56,7 +56,7 @@ finyl_track::finyl_track(): meta(),
                             loop_out(-1) {
   std::fill(indxs, indxs + MAX_STEMS_SIZE, 0);
   for (auto&p : stretchers) {
-    p = std::make_unique<rb>(sample_rate, 2, rb::OptionProcessRealTime, 1.0);
+    p = std::make_unique<rb>(sample_rate, 2, rb::OptionProcessRealTime | rb::OptionEngineFiner, 1.0);
     p->setMaxProcessSize(max_process_size);
   }
 };
@@ -309,11 +309,9 @@ static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, r
     }
     
     float* inputs[2] = {inputLeft, inputRight};
-    
-    std::lock_guard<std::mutex> lock(mutex);
+    std::lock_guard<std::mutex> lock(mutex); //TODO: for rubberband2, not sure why this cant prevent seg fault
     stretcher.process(inputs, reqd, false);
   }
-
   float rubleft[period_size];
   float rubright[period_size];
   float* rubout[2] = {rubleft, rubright};

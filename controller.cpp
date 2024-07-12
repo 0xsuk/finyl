@@ -38,6 +38,7 @@ ActionToFunc actionToFuncMap[] = {
   {"DeckA-dec_speed", [](double velocity){ifvelocity(dec_speed(adeck);)}},
   {"DeckA-toggle_delay", [](double velocity){ifvelocity(toggle_delay(adeck);)}},
   {"DeckA-toggle_mute_gain0", [](double velocity){ifvelocity(toggle_mute0(adeck);)}},
+  {"DeckA-toggle_master", [](double velocity){ifvelocity(toggle_master(adeck);)}},
 
 
   {"DeckB-gain", [](double val){set_gain(bdeck, val);}},
@@ -87,6 +88,7 @@ MidiToAction launchkey[] = {
   {0x90, 55, "DeckA-dec_speed"},
   {0x99, 37, "DeckA-toggle_mute_gain0"},
   {0x99, 38, "DeckA-toggle_delay"},
+  {0x90, 49, "DeckA-toggle_master"},
 
   {0xb0, 25, "DeckB-gain"},
   {0xb0, 26, "DeckB-gain0_1"},
@@ -658,10 +660,10 @@ void handle_key(char x) {
     load_track(&bdeck.pTrack, tid, finyl_b);
     break;
   }
-  case '3':{
-    std::thread(run_interface).detach();
-    break;
-  }
+  // case '3':{
+  //   std::thread(run_interface).detach();
+  //   break;
+  // }
   case '#': {
     free_tracks();
     break;
@@ -681,7 +683,7 @@ void handle_key(char x) {
   }
 }
 
-void* key_input(void* args) {
+void key_input() {
   static struct termios oldt, newt;
   
   tcgetattr(STDIN_FILENO, &oldt);
@@ -693,11 +695,12 @@ void* key_input(void* args) {
   }
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
   printf("key_input closed\n");
-  return NULL;
+  return;
 }
 
 void* controller() {
-  std::thread([](){key_input(nullptr);}).detach();
+  std::thread(run_interface).detach();
+  std::thread(key_input).detach();
   
   auto mp = MidiParser();
   int err = mp.open_device("hw:1,0,0");

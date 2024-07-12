@@ -40,5 +40,6 @@ void dec_speed(Deck& deck);
 void sync_bpm(Deck& deck);
 void press_cue_velocity(Deck& deck, double velocity);
 void toggle_mute0(Deck& deck);
+void toggle_master(Deck& deck);
 #endif
 
