@@ -69,49 +69,93 @@ ActionToFunc actionToFuncMap[] = {
 const int len_actionToFuncMap = sizeof(actionToFuncMap)/sizeof(actionToFuncMap[0]);
 
 
-MidiToAction launchkey[] = {
-  {0xb0, 21, "DeckA-gain"},
-  {0xb0, 22, "DeckA-gain0_1"},
-  {0xb0, 23, "DeckA-delay"},
-  {0xb0, 24, "DeckA-eqlow"},
-  {0x99, 40, "DeckA-press_cue"},
-  {0x99, 36, "DeckA-toggle_playing"},
-  {0x90, 53, "DeckA-inc_index"},
-  {0x90, 52, "DeckA-dec_index"},
-  {0x90, 50, "DeckA-inc_delta_index"},
-  {0x90, 48, "DeckA-dec_delta_index"},
-  {0x99, 41, "DeckA-loop_in"},
-  {0x99, 42, "DeckA-loop_out"},
-  {0x99, 43, "DeckA-loop_deactivate"},
-  {0x90, 59, "DeckA-sync_bpm"},
-  {0x90, 57, "DeckA-inc_speed"},
-  {0x90, 55, "DeckA-dec_speed"},
-  {0x99, 37, "DeckA-toggle_mute_gain0"},
-  {0x99, 38, "DeckA-toggle_delay"},
-  {0x90, 49, "DeckA-toggle_master"},
+MidiToAction xdj_xz[] = {
+  {0xb4, 17, "DeckA-gain"},
+  {0xb4, 1, "DeckA-gain0_1"},
+  {0xb4, 5, "DeckA-delay"},
+  {0xb4, 4, "DeckA-eqlow"},
+  {0x90, 1, "DeckA-press_cue"},
+  {0x90, 0, "DeckA-toggle_playing"},
+  {0x95, 1, "DeckA-inc_index"},
+  {0x95, 0, "DeckA-dec_index"},
+  {0x95, 5, "DeckA-inc_delta_index"},
+  {0x95, 4, "DeckA-dec_delta_index"},
+  {0x90, 6, "DeckA-loop_in"},
+  {0x90, 7, "DeckA-loop_out"},
+  {0x90, 8, "DeckA-loop_deactivate"},
+  {0x90, 30, "DeckA-sync_bpm"},
+  {0x95, 3, "DeckA-inc_speed"},
+  {0x95, 2, "DeckA-dec_speed"},
+  {0xb4, 72, "DeckA-toggle_mute_gain0"},
+  {0xb4, 70, "DeckA-toggle_delay"},
+  {0x90, 17, "DeckA-toggle_master"},
 
-  {0xb0, 25, "DeckB-gain"},
-  {0xb0, 26, "DeckB-gain0_1"},
-  {0xb0, 27, "DeckB-delay"},
-  {0xb0, 28, "DeckB-eqlow"},
-  {0x99, 48, "DeckB-press_cue"},
-  {0x99, 44, "DeckB-toggle_playing"},
-  {0x90, 65, "DeckB-inc_index"},
-  {0x90, 64, "DeckB-dec_index"},
-  {0x90, 62, "DeckB-inc_delta_index"},
-  {0x90, 60, "DeckB-dec_delta_index"},
-  {0x99, 49, "DeckB-loop_in"},
-  {0x99, 50, "DeckB-loop_out"},
-  {0x99, 51, "DeckB-loop_deactivate"},
-  {0x90, 71, "DeckB-sync_bpm"},
-  {0x90, 69, "DeckB-inc_speed"},
-  {0x90, 67, "DeckB-dec_speed"},
-  {0x99, 45, "DeckB-toggle_mute_gain0"},
-  {0x99, 46, "DeckB-toggle_delay"},
+  {0xb4, 18, "DeckB-gain"},
+  {0xb4, 6, "DeckB-gain0_1"},
+  {0xb4, 10, "DeckB-delay"},
+  {0xb4, 9, "DeckB-eqlow"},
+  {0x91, 1, "DeckB-press_cue"},
+  {0x91, 0, "DeckB-toggle_playing"},
+  {0x96, 1, "DeckB-inc_index"},
+  {0x96, 0, "DeckB-dec_index"},
+  {0x96, 5, "DeckB-inc_delta_index"},
+  {0x96, 4, "DeckB-dec_delta_index"},
+  {0x91, 6, "DeckB-loop_in"},
+  {0x91, 7, "DeckB-loop_out"},
+  {0x91, 8, "DeckB-loop_deactivate"},
+  {0x91, 30, "DeckB-sync_bpm"},
+  {0x96, 3, "DeckB-inc_speed"},
+  {0x96, 2, "DeckB-dec_speed"},
+  {0xb4, 73, "DeckB-toggle_mute_gain0"},
+  {0xb4, 71, "DeckB-toggle_delay"},
 
-  {0xbf, 104, "inc_wave_range"},
-  {0xbf, 105, "dec_wave_range"},
+  {0xb4, 107, "inc_wave_range"},
+  {0xb4, 105, "dec_wave_range"},
 };
+
+// MidiToAction launchkey[] = {
+//   {0xb0, 21, "DeckA-gain"},
+//   {0xb0, 22, "DeckA-gain0_1"},
+//   {0xb0, 23, "DeckA-delay"},
+//   {0xb0, 24, "DeckA-eqlow"},
+//   {0x99, 40, "DeckA-press_cue"},
+//   {0x99, 36, "DeckA-toggle_playing"},
+//   {0x90, 53, "DeckA-inc_index"},
+//   {0x90, 52, "DeckA-dec_index"},
+//   {0x90, 50, "DeckA-inc_delta_index"},
+//   {0x90, 48, "DeckA-dec_delta_index"},
+//   {0x99, 41, "DeckA-loop_in"},
+//   {0x99, 42, "DeckA-loop_out"},
+//   {0x99, 43, "DeckA-loop_deactivate"},
+//   {0x90, 59, "DeckA-sync_bpm"},
+//   {0x90, 57, "DeckA-inc_speed"},
+//   {0x90, 55, "DeckA-dec_speed"},
+//   {0x99, 37, "DeckA-toggle_mute_gain0"},
+//   {0x99, 38, "DeckA-toggle_delay"},
+//   {0x90, 49, "DeckA-toggle_master"},
+
+//   {0xb0, 25, "DeckB-gain"},
+//   {0xb0, 26, "DeckB-gain0_1"},
+//   {0xb0, 27, "DeckB-delay"},
+//   {0xb0, 28, "DeckB-eqlow"},
+//   {0x99, 48, "DeckB-press_cue"},
+//   {0x99, 44, "DeckB-toggle_playing"},
+//   {0x90, 65, "DeckB-inc_index"},
+//   {0x90, 64, "DeckB-dec_index"},
+//   {0x90, 62, "DeckB-inc_delta_index"},
+//   {0x90, 60, "DeckB-dec_delta_index"},
+//   {0x99, 49, "DeckB-loop_in"},
+//   {0x99, 50, "DeckB-loop_out"},
+//   {0x99, 51, "DeckB-loop_deactivate"},
+//   {0x90, 71, "DeckB-sync_bpm"},
+//   {0x90, 69, "DeckB-inc_speed"},
+//   {0x90, 67, "DeckB-dec_speed"},
+//   {0x99, 45, "DeckB-toggle_mute_gain0"},
+//   {0x99, 46, "DeckB-toggle_delay"},
+
+//   {0xbf, 104, "inc_wave_range"},
+//   {0xbf, 105, "dec_wave_range"},
+// };
 
 void midi_handler(int len, unsigned char buf[]) {
   if (len < 3) {
@@ -122,7 +166,7 @@ void midi_handler(int len, unsigned char buf[]) {
   //search func by action name from actionToFunc
   //call it
   
-  for (auto& ent: launchkey) {
+  for (auto& ent: xdj_xz) {
     if (ent.status == buf[0] && ent.control == buf[1]) {
       for (auto& atf: actionToFuncMap) {
         if (atf.base_action == ent.action_name) {
@@ -704,9 +748,18 @@ void* controller() {
   
   auto mp = MidiParser();
   int err = mp.open_device("hw:1,0,0");
-  if (!err) {
-    mp.handle(midi_handler);
+  if (err) {
+    return NULL;
   }
+  std::thread([&]() {
+    mp.handle(midi_handler);
+  }).detach();
   
+  auto mp2 = MidiParser();
+  err = mp2.open_device("hw:2,0,0");
+  if (err) {
+    return NULL;
+  }
+  mp2.handle(midi_handler);
   return NULL;
 }

@@ -127,7 +127,6 @@ void MidiLearn::learn() {
   for (int i = 0; i<len_actionToFuncMap; i++) {
     auto& ent = actionToFuncMap[i];
     printf("\n%s:\n", ent.base_action);
-    fflush(stdout);
     int d;
     auto t = std::thread([this](){listen();});
     scanf("%d", &d);
@@ -148,6 +147,7 @@ void MidiLearn::learn() {
 int test_midi() {
   MidiLearn ml{};
   int err = ml.open_device("hw:1,0,0");
+  // int err = ml.open_device("hw:2,0,0");
   if (err) {
     fprintf(stderr,"snd_rawmidi_open failed: %d\n", err);
   }

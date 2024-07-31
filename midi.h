@@ -56,7 +56,7 @@ public:
   int open_device(char* _device_in);
   void handle(std::function<void(int len, unsigned char buf[])>);
 
-private:
+// private:
   snd_rawmidi_t *handle_in; 
   char* device_in;
   unsigned char buf[1024];
