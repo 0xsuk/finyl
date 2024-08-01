@@ -3,30 +3,28 @@
 
 #include "finyl.h"
 #include <SDL2/SDL.h>
+#include "waveform.h"
 
-struct Interface {
+class WaveForm;
+
+class Interface {
+public:
+  Interface(){};
+  int run();
+
   int win_width = 1000;
   int win_height = 500;
-  int wave_range = 1000000;
-  int wave_height = 100;
-  int wave_height_half = 50;
-  int wave_iteration_margin = 100;
-  bool render_adeck = false;
-  bool render_bdeck = false;
+  std::unique_ptr<WaveForm> waveform;
+  SDL_Renderer* renderer;
+  SDL_Window* window;
+  
 
-  SDL_Renderer* renderer = nullptr;
-  SDL_Texture* tx_awave = nullptr;
-  SDL_Texture* tx_bwave = nullptr;
-  SDL_Texture* tx_asg = nullptr; //static grid for A
-  SDL_Texture* tx_bsg = nullptr; //for B
+  void add_track_to_free(finyl_track* t);
+  //interface frees track when done with it
+  void free_tracks();
+private:
+  finyl_track* tracks_to_free[2];
+  int tracks_to_free_tail = 0;
+  
 };
-
-void add_track_to_free(finyl_track* t);
-
-void free_tracks();
-
-void set_wave_range(Interface& itf, int wave_range);
-
-int run_interface();
-
 #endif
