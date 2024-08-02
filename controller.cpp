@@ -10,64 +10,8 @@
 #include <memory>
 #include <thread>
 #include "rekordbox.h"
-#include "extern.h"
 #include "midi.h"
 #include "controller.h"
-
-#define ifvelocity(exp) if (velocity!=0) {exp}
-
-//val and velocity is 0 to 1
-ActionToFunc actionToFuncMap[] = {
-  {"DeckA-gain", [](double val){set_gain(adeck, val);}},
-  {"DeckA-gain0", [](double val){set_gain0(adeck, val);}},
-  {"DeckA-gain1", [](double val){set_gain1(adeck, val);}},
-  {"DeckA-gain0_1", [](double val){set_gain0_1(adeck, val);}},
-  {"DeckA-eqlow", [](double val){set_bqGainLow(adeck, val);}},
-  {"DeckA-delay", [](double val){delay(adeck, val);}},
-  {"DeckA-press_cue", [](double velocity){press_cue_velocity(adeck, velocity);}},
-  {"DeckA-toggle_playing", [](double velocity){toggle_playing_velocity(adeck, velocity);}},
-  {"DeckA-inc_index", [](double velocity){inc_index(adeck, velocity);}},
-  {"DeckA-dec_index", [](double velocity){dec_index(adeck, velocity);}},
-  {"DeckA-inc_delta_index", [](double velocity){inc_delta_index(adeck, velocity);}},
-  {"DeckA-dec_delta_index", [](double velocity){dec_delta_index(adeck, velocity);}},
-  {"DeckA-loop_in", [](double velocity){ifvelocity(loop_in_now(adeck);)}},
-  {"DeckA-loop_out", [](double velocity){ifvelocity(loop_out_now(adeck);)}},
-  {"DeckA-loop_deactivate", [](double velocity){ifvelocity(loop_deactivate(adeck);)}},
-  {"DeckA-sync_bpm", [](double velocity){ifvelocity(sync_bpm(adeck);)}},
-  {"DeckA-inc_speed", [](double velocity){ifvelocity(inc_speed(adeck);)}},
-  {"DeckA-dec_speed", [](double velocity){ifvelocity(dec_speed(adeck);)}},
-  {"DeckA-toggle_delay", [](double velocity){ifvelocity(toggle_delay(adeck);)}},
-  {"DeckA-toggle_mute_gain0", [](double velocity){ifvelocity(toggle_mute0(adeck);)}},
-  {"DeckA-toggle_master", [](double velocity){ifvelocity(toggle_master(adeck);)}},
-
-
-  {"DeckB-gain", [](double val){set_gain(bdeck, val);}},
-  {"DeckB-gain0", [](double val){set_gain0(bdeck, val);}},
-  {"DeckB-gain1", [](double val){set_gain1(bdeck, val);}},
-  {"DeckB-gain0_1", [](double val){set_gain0_1(bdeck, val);}},
-  {"DeckB-eqlow", [](double val){set_bqGainLow(bdeck, val);}},
-  {"DeckB-delay", [](double val){delay(bdeck, val);}},
-  {"DeckB-press_cue", [](double velocity){press_cue_velocity(bdeck, velocity);}},
-  {"DeckB-toggle_playing", [](double velocity){toggle_playing_velocity(bdeck, velocity);}},
-  {"DeckB-inc_index", [](double velocity){inc_index(bdeck, velocity);}},
-  {"DeckB-dec_index", [](double velocity){dec_index(bdeck, velocity);}},
-  {"DeckB-inc_delta_index", [](double velocity){inc_delta_index(bdeck, velocity);}},
-  {"DeckB-dec_delta_index", [](double velocity){dec_delta_index(bdeck, velocity);}},
-  {"DeckB-loop_in", [](double velocity){ifvelocity(loop_in_now(bdeck);)}},
-  {"DeckB-loop_out", [](double velocity){ifvelocity(loop_out_now(bdeck);)}},
-  {"DeckB-loop_deactivate", [](double velocity){ifvelocity(loop_deactivate(bdeck);)}},
-  {"DeckB-sync_bpm", [](double velocity){ifvelocity(sync_bpm(bdeck);)}},
-  {"DeckB-inc_speed", [](double velocity){ifvelocity(inc_speed(bdeck);)}},
-  {"DeckB-dec_speed", [](double velocity){ifvelocity(dec_speed(bdeck);)}},
-  {"DeckB-toggle_delay", [](double velocity){ifvelocity(toggle_delay(bdeck);)}},
-  {"DeckB-toggle_mute_gain0", [](double velocity){ifvelocity(toggle_mute0(bdeck);)}},
-
-  {"inc_wave_range", [](double velocity){ifvelocity(interface.waveform->double_range();)}},
-  {"dec_wave_range", [](double velocity){ifvelocity(interface.waveform->half_range();)}},
-};
-
-const int len_actionToFuncMap = sizeof(actionToFuncMap)/sizeof(actionToFuncMap[0]);
-
 
 MidiToAction xdj_xz[] = {
   {0xb4, 17, "DeckA-gain"},
@@ -157,7 +101,60 @@ MidiToAction launchkey[] = {
   {0xbf, 105, "dec_wave_range"},
 };
 
-void midi_handler(int len, unsigned char buf[]) {
+#define valfunc(exp) ([&](double val){exp})
+#define velocityfunc(exp) ([&](double velocity){exp})
+
+Controller::Controller() {
+  actionToFuncMap = {
+    {"DeckA-gain", valfunc(set_gain(*adeck, val);)},
+    {"DeckA-gain0", valfunc(set_gain0(*adeck, val);)},
+    {"DeckA-gain1", valfunc(set_gain1(*adeck, val);)},
+    {"DeckA-gain0_1", valfunc(set_gain0_1(*adeck, val);)},
+    {"DeckA-eqlow", valfunc(set_bqGainLow(*adeck, val);)},
+    {"DeckA-delay", valfunc(delay(*adeck, val);)},
+    {"DeckA-press_cue", velocityfunc(press_cue_velocity(*adeck, velocity);)},
+    {"DeckA-toggle_playing", velocityfunc(toggle_playing_velocity(*adeck, velocity);)},
+    {"DeckA-inc_index", velocityfunc(inc_index(*adeck, velocity);)},
+    {"DeckA-dec_index", velocityfunc(dec_index(*adeck, velocity);)},
+    {"DeckA-inc_delta_index", velocityfunc(inc_delta_index(*adeck, velocity);)},
+    {"DeckA-dec_delta_index", velocityfunc(dec_delta_index(*adeck, velocity);)},
+    {"DeckA-loop_in", velocityfunc(ifvelocity(loop_in_now(*adeck);))},
+    {"DeckA-loop_out", velocityfunc(ifvelocity(loop_out_now(*adeck);))},
+    {"DeckA-loop_deactivate", velocityfunc(ifvelocity(loop_deactivate(*adeck);))},
+    {"DeckA-sync_bpm", velocityfunc(ifvelocity(sync_bpm(*adeck);))},
+    {"DeckA-inc_speed", velocityfunc(ifvelocity(inc_speed(*adeck);))},
+    {"DeckA-dec_speed", velocityfunc(ifvelocity(dec_speed(*adeck);))},
+    {"DeckA-toggle_delay", velocityfunc(ifvelocity(toggle_delay(*adeck);))},
+    {"DeckA-toggle_mute_gain0", velocityfunc(ifvelocity(toggle_mute0(*adeck);))},
+    {"DeckA-toggle_master", velocityfunc(ifvelocity(toggle_master(*adeck);))},
+
+    {"DeckB-gain", valfunc(set_gain(*bdeck, val);)},
+    {"DeckB-gain0", valfunc(set_gain0(*bdeck, val);)},
+    {"DeckB-gain1", valfunc(set_gain1(*bdeck, val);)},
+    {"DeckB-gain0_1", valfunc(set_gain0_1(*bdeck, val);)},
+    {"DeckB-eqlow", valfunc(set_bqGainLow(*bdeck, val);)},
+    {"DeckB-delay", valfunc(delay(*bdeck, val);)},
+    {"DeckB-press_cue", velocityfunc(press_cue_velocity(*bdeck, velocity);)},
+    {"DeckB-toggle_playing", velocityfunc(toggle_playing_velocity(*bdeck, velocity);)},
+    {"DeckB-inc_index", velocityfunc(inc_index(*bdeck, velocity);)},
+    {"DeckB-dec_index", velocityfunc(dec_index(*bdeck, velocity);)},
+    {"DeckB-inc_delta_index", velocityfunc(inc_delta_index(*bdeck, velocity);)},
+    {"DeckB-dec_delta_index", velocityfunc(dec_delta_index(*bdeck, velocity);)},
+    {"DeckB-loop_in", velocityfunc(ifvelocity(loop_in_now(*bdeck);))},
+    {"DeckB-loop_out", velocityfunc(ifvelocity(loop_out_now(*bdeck);))},
+    {"DeckB-loop_deactivate", velocityfunc(ifvelocity(loop_deactivate(*bdeck);))},
+    {"DeckB-sync_bpm", velocityfunc(ifvelocity(sync_bpm(*bdeck);))},
+    {"DeckB-inc_speed", velocityfunc(ifvelocity(inc_speed(*bdeck);))},
+    {"DeckB-dec_speed", velocityfunc(ifvelocity(dec_speed(*bdeck);))},
+    {"DeckB-toggle_delay", velocityfunc(ifvelocity(toggle_delay(*bdeck);))},
+    {"DeckB-toggle_mute_gain0", velocityfunc(ifvelocity(toggle_mute0(*bdeck);))},
+
+    {"inc_wave_range", velocityfunc(ifvelocity(gApp.interface->waveform->double_range();))},
+    {"dec_wave_range", velocityfunc(ifvelocity(gApp.interface->waveform->half_range();))}
+  };
+}
+
+void Controller::handle_midi(int len, unsigned char buf[]) {
   if (len < 3) {
     return; //TODO for now
   }
@@ -196,7 +193,7 @@ void slide_right(finyl_track* t) {
 }
 
 //n = 0 means load an original file
-void load_track_nstems(finyl_track** dest, int tid, finyl_deck_type deck, int n) {
+void Controller::load_track_nstems(finyl_track** dest, int tid, finyl_deck_type deck, int n) {
   finyl_track* before = *dest;
   
   auto t = std::make_unique<finyl_track>();
@@ -221,7 +218,7 @@ void load_track_nstems(finyl_track** dest, int tid, finyl_deck_type deck, int n)
     filepaths[0] = t->meta.filepath;
   }
   
-  if (auto err = finyl_read_stems_from_files(filepaths, *t)) {
+  if (auto err = gApp.audio->read_stems_from_files(filepaths, *t)) {
     print_err(err);
     return;
   }
@@ -230,17 +227,17 @@ void load_track_nstems(finyl_track** dest, int tid, finyl_deck_type deck, int n)
 
   *dest = t.release();
   if (deck == finyl_a) {
-    interface.waveform->render_adeck = true;
+    gApp.interface->waveform->render_adeck = true;
   } else if (deck == finyl_b) {
-    interface.waveform->render_bdeck = true;
+    gApp.interface->waveform->render_bdeck = true;
   }
 
   if (before != nullptr) {
-    interface.add_track_to_free(before);
+    gApp.interface->add_track_to_free(before);
   }
 }
 
-void load_track(finyl_track** dest, int tid, finyl_deck_type deck) {
+void Controller::load_track(finyl_track** dest, int tid, finyl_deck_type deck) {
   load_track_nstems(dest, tid, deck, 0);
 }
 
@@ -501,154 +498,154 @@ void load_track(finyl_track** dest, int tid, finyl_deck_type deck) {
 //   {'-', (void*)&a_exist, }
 // }
 
-void handle_key(char x) {
-  if (adeck.pTrack != nullptr) {
+void Controller::handle_key(char x) {
+  if (adeck->pTrack != nullptr) {
     switch (x) {
     case '-': {
-      set_bqGainLow(adeck, adeck.bqisoState->bqGainLow+0.1);
+      set_bqGainLow(*adeck, adeck->bqisoState->bqGainLow+0.1);
       return;
     }
     case '=': {
-      set_bqGainLow(adeck, adeck.bqisoState->bqGainLow-0.1);
+      set_bqGainLow(*adeck, adeck->bqisoState->bqGainLow-0.1);
       return;
     }
     case 'z':
-      toggle_delay(adeck);
+      toggle_delay(*adeck);
       return;
     case 'g':
-      toggle_playing(adeck);
+      toggle_playing(*adeck);
       return;
     case 'G':
-      set_speed(adeck, 1);
+      set_speed(*adeck, 1);
       return;
     case 'N':
-      set_gain0(adeck, 0);
+      set_gain0(*adeck, 0);
       return;
     case 'J':
-      set_gain0(adeck, 1);
+      set_gain0(*adeck, 1);
       return;
     case 'n':
-      set_gain1(adeck, max(adeck.gain1-0.05, 0.0));
+      set_gain1(*adeck, max(adeck->gain1-0.05, 0.0));
       return;
     case 'j':
-      set_gain1(adeck, min(adeck.gain1+0.05, 1.0));
+      set_gain1(*adeck, min(adeck->gain1+0.05, 1.0));
       return;
     case 'c':
-      jump_cue(adeck);
+      jump_cue(*adeck);
       return;
     case 'a': {
-      set_speed(adeck, adeck.pTrack->get_speed()+0.01);
+      set_speed(*adeck, adeck->pTrack->get_speed()+0.01);
       return;
     }
     case 's': {
-      set_speed(adeck, adeck.pTrack->get_speed() - 0.01);
+      set_speed(*adeck, adeck->pTrack->get_speed() - 0.01);
       return;
     }
     case 't': {
-      add_active_cue(adeck);
+      add_active_cue(*adeck);
       return;
     }
     case '1':
       /* mark loop in */
-      loop_in_now(adeck);
+      loop_in_now(*adeck);
       return;
     case '!':
-      loop_deactivate(adeck);
+      loop_deactivate(*adeck);
       return;
     case '2': {
-      loop_out_now(adeck);
+      loop_out_now(*adeck);
       return;
     }
     case 'v':
-      adeck.pTrack->set_index(adeck.pTrack->get_refindex() + 300);
+      adeck->pTrack->set_index(adeck->pTrack->get_refindex() + 300);
       return;
     case 'V':
-      adeck.pTrack->set_index(adeck.pTrack->get_refindex() - 300);
+      adeck->pTrack->set_index(adeck->pTrack->get_refindex() - 300);
       return;
     case '5':
-      adeck.pTrack->set_index(adeck.pTrack->get_refindex() + 3000);
+      adeck->pTrack->set_index(adeck->pTrack->get_refindex() + 3000);
       return;
     case '%':
-      adeck.pTrack->set_index(adeck.pTrack->get_refindex() - 3000);
+      adeck->pTrack->set_index(adeck->pTrack->get_refindex() - 3000);
       return;
 
     }
   }
   
-  if (bdeck.pTrack != nullptr) {
+  if (bdeck->pTrack != nullptr) {
     switch (x) {
     case 'x':
-      toggle_delay(bdeck);
+      toggle_delay(*bdeck);
       return;
     case 'h':
-      toggle_playing(bdeck);
+      toggle_playing(*bdeck);
       return;
     case 'H':
-      set_speed(bdeck, 1);
+      set_speed(*bdeck, 1);
       return;
     case 'M':
-      set_gain0(bdeck, 0);
+      set_gain0(*bdeck, 0);
       return;
     case 'K':
-      set_gain0(bdeck, 1);
+      set_gain0(*bdeck, 1);
       return;
     case 'm':
-      set_gain1(bdeck, max(bdeck.gain1-0.05, 0.0));
+      set_gain1(*bdeck, max(bdeck->gain1-0.05, 0.0));
       return;
     case 'k':
-      set_gain1(bdeck, min(bdeck.gain1+0.05, 1.0));
+      set_gain1(*bdeck, min(bdeck->gain1+0.05, 1.0));
       return;
     case 'C':
-      jump_cue(bdeck);
+      jump_cue(*bdeck);
       return;
     case 'A':
-      set_speed(bdeck, bdeck.pTrack->get_speed() + 0.01);
+      set_speed(*bdeck, bdeck->pTrack->get_speed() + 0.01);
       return;
     case 'S':
-      set_speed(bdeck, bdeck.pTrack->get_speed() - 0.01);
+      set_speed(*bdeck, bdeck->pTrack->get_speed() - 0.01);
       return;
     case 'y': {
-      add_active_cue(bdeck);
+      add_active_cue(*bdeck);
       return;
     }
     case '9':
-      loop_in_now(bdeck);
+      loop_in_now(*bdeck);
       return;
     case '{':
-      loop_deactivate(bdeck);
+      loop_deactivate(*bdeck);
       return;
     case '0': {
-      loop_out_now(bdeck);
+      loop_out_now(*bdeck);
       return;
     }
     case 'b':
-      bdeck.pTrack->set_index(bdeck.pTrack->get_refindex() + 300);
+      bdeck->pTrack->set_index(bdeck->pTrack->get_refindex() + 300);
       return;
     case 'B':
-      bdeck.pTrack->set_index(bdeck.pTrack->get_refindex() - 300);
+      bdeck->pTrack->set_index(bdeck->pTrack->get_refindex() - 300);
       return;
     case '6':
-      bdeck.pTrack->set_index(bdeck.pTrack->get_refindex() + 3000);
+      bdeck->pTrack->set_index(bdeck->pTrack->get_refindex() + 3000);
       return;
     case '&':
-      bdeck.pTrack->set_index(bdeck.pTrack->get_refindex() - 3000);
+      bdeck->pTrack->set_index(bdeck->pTrack->get_refindex() - 3000);
       return;
 
     }
   }
   
-  if (adeck.pTrack != NULL && bdeck.pTrack != NULL) {
+  if (adeck->pTrack != NULL && bdeck->pTrack != NULL) {
     switch (x) {
     case 'p':
-      print_track(*adeck.pTrack);
-      print_track(*bdeck.pTrack);
+      print_track(*adeck->pTrack);
+      print_track(*bdeck->pTrack);
       return;
     case 'q': {
-      set_speed(bdeck, adeck.pTrack->get_speed() * ((double)adeck.pTrack->meta.bpm / bdeck.pTrack->meta.bpm));
+      sync_bpm(*adeck);
       return;
     }
     case 'Q': {
-      set_speed(adeck, bdeck.pTrack->get_speed() * ((double)bdeck.pTrack->meta.bpm / adeck.pTrack->meta.bpm));
+      sync_bpm(*bdeck);
       return;
     }
     }
@@ -656,7 +653,7 @@ void handle_key(char x) {
   
   switch (x) {
   case 'X':
-    finyl_running = false;
+    gApp.stop_running();
     break;
   case 'L':
     printPlaylists(usbs[0]);
@@ -670,14 +667,14 @@ void handle_key(char x) {
     break;
   }
   case '4':
-    interface.free_tracks();
+    gApp.interface->free_tracks();
     break;
   case 'i': {
     int tid;
     printf("tid:");
     scanf("%d", &tid);
     printf("loading...%d\n", tid);
-    load_track_nstems(&adeck.pTrack, tid, finyl_a, 2);
+    load_track_nstems(&adeck->pTrack, tid, finyl_a, 2);
     break;
   }
   case 'o': {
@@ -685,7 +682,7 @@ void handle_key(char x) {
     printf("tid:");
     scanf("%d", &tid);
     printf("loading...%d\n", tid);
-    load_track_nstems(&bdeck.pTrack, tid, finyl_b, 2);
+    load_track_nstems(&bdeck->pTrack, tid, finyl_b, 2);
     break;
   }
   case 'I': {
@@ -693,7 +690,7 @@ void handle_key(char x) {
     printf("tid:");
     scanf("%d", &tid);
     printf("loading...%d\n", tid);
-    load_track(&adeck.pTrack, tid, finyl_a);
+    load_track(&adeck->pTrack, tid, finyl_a);
     break;
   }
   case 'O': {
@@ -701,7 +698,7 @@ void handle_key(char x) {
     printf("tid:");
     scanf("%d", &tid);
     printf("loading...%d\n", tid);
-    load_track(&bdeck.pTrack, tid, finyl_b);
+    load_track(&bdeck->pTrack, tid, finyl_b);
     break;
   }
   // case '3':{
@@ -709,7 +706,7 @@ void handle_key(char x) {
   //   break;
   // }
   case '#': {
-    interface.free_tracks();
+    gApp.interface->free_tracks();
     break;
   }
   case '$': {
@@ -717,49 +714,51 @@ void handle_key(char x) {
     break;
   }
   case '7': {
-    interface.waveform->double_range();
+    gApp.interface->waveform->double_range();
     break;
   }
   case '\'': {
-    interface.waveform->half_range();
+    gApp.interface->waveform->half_range();
     break;
   }
   }
 }
 
-void key_input() {
+void Controller::keyboard_handler() {
   static struct termios oldt, newt;
   
   tcgetattr(STDIN_FILENO, &oldt);
   newt = oldt;
   newt.c_lflag &= ~(ICANON);          
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-  while(finyl_running) {
-    handle_key(getchar());                 
+  while(gApp.is_running()) {
+    handle_key(getchar());
   }
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
   printf("key_input closed\n");
   return;
 }
 
-void* controller() {
-  std::thread([&](){interface.run();}).detach();
-  std::thread(key_input).detach();
+void Controller::run() {
+  std::thread([&](){gApp.interface->run();}).detach();
+  std::thread([&](){keyboard_handler();}).detach();
   
-  auto mp = MidiParser();
-  int err = mp.open_device("hw:1,0,0");
-  if (err) {
-    return NULL;
-  }
-  std::thread([&]() {
-    mp.handle(midi_handler);
-  }).detach();
+  // auto mp = MidiParser();
+  // int err = mp.open_device("hw:1,0,0");
+  // if (err) {
+  //   return;
+  // }
   
-  auto mp2 = MidiParser();
-  err = mp2.open_device("hw:2,0,0");
-  if (err) {
-    return NULL;
-  }
-  mp2.handle(midi_handler);
-  return NULL;
+  // std::thread([&]() {
+  //   auto f = std::bind(&Controller::handle_midi, this, std::placeholders::_1, std::placeholders::_2);
+  //   mp.handle(f);
+  // }).detach();
+  
+  // auto mp2 = MidiParser();
+  // err = mp2.open_device("hw:2,0,0");
+  // if (err) {
+  //   return;
+  // }
+  // auto f = std::bind(&Controller::handle_midi, this, std::placeholders::_1, std::placeholders::_2);
+  // mp2.handle(f);
 }

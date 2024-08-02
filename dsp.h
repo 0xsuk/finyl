@@ -2,7 +2,7 @@
 #define DSP_H
 
 #include <cstring>
-#include "extern.h"
+#include "finyl.h"
 #include "fidlib.h"
 
 #define MAX_DELAY_SEC 10
@@ -129,7 +129,7 @@ class EngineFilterIIR {
         // Copy the old coefficients into m_oldCoef
         memcpy(m_oldCoef, m_coef, sizeof(m_coef));
 
-        m_coef[0] = fid_design_coef(m_coef + 1, SIZE, spec_d, sample_rate, freq0, freq1, adj);
+        m_coef[0] = fid_design_coef(m_coef + 1, SIZE, spec_d, gApp.audio->get_sample_rate(), freq0, freq1, adj);
 
         initBuffers();
 

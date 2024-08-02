@@ -1,6 +1,7 @@
 #include "dsp.h"
 #include <thread>
 #include <chrono>
+#include <cmath>
 
 void delay(finyl_buffer& buffer, Delay& d) {
   for (int i = 0; i<buffer.size(); i=i+2) {
@@ -158,10 +159,11 @@ void BiquadFullKillEQEffect::process(BiquadFullKillEQEffectGroupState *pState,
       pState->m_lowBoost->setFrequencyCorners(lowCenter, kQBoost, bqGainLow);
       pState->m_oldLowBoost = bqGainLow;
     }
+
     if (bqGainLow > 0.0) {
-      pState->m_lowBoost->process(pInput, pOutput, period_size_2);
+      pState->m_lowBoost->process(pInput, pOutput, gApp.audio->get_period_size_2());
     } else {
-      pState->m_lowBoost->processAndPauseFilter(pInput, pOutput, period_size_2);
+      pState->m_lowBoost->processAndPauseFilter(pInput, pOutput, gApp.audio->get_period_size_2());
     }
   } else {
     pState->m_lowBoost->pauseFilter();
@@ -174,9 +176,9 @@ void BiquadFullKillEQEffect::process(BiquadFullKillEQEffectGroupState *pState,
       pState->m_oldLowKill = bqGainLow;
     }
     if (bqGainLow < 0.0) {
-      pState->m_lowKill->process(pInput, pOutput, period_size_2);
+      pState->m_lowKill->process(pInput, pOutput, gApp.audio->get_period_size_2());
     } else {
-      pState->m_lowKill->processAndPauseFilter(pInput, pOutput, period_size_2);
+      pState->m_lowKill->processAndPauseFilter(pInput, pOutput, gApp.audio->get_period_size_2());
     }
   } else {
     pState->m_lowKill->pauseFilter();

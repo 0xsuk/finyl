@@ -4,12 +4,10 @@
 #include "finyl.h"
 #include <SDL2/SDL.h>
 #include "waveform.h"
-
-class WaveForm;
+#include "controller.h"
 
 class Interface {
 public:
-  Interface(){};
   int run();
 
   int win_width = 1000;
@@ -22,9 +20,13 @@ public:
   void add_track_to_free(finyl_track* t);
   //interface frees track when done with it
   void free_tracks();
+  void set_fps(int _fps) {
+    fps = _fps;
+  }
+
 private:
+  int fps = 30;
   finyl_track* tracks_to_free[2];
   int tracks_to_free_tail = 0;
-  
 };
 #endif

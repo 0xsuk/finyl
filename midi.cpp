@@ -124,8 +124,8 @@ void MidiParser::handle(std::function<void (int, unsigned char *)> handler) {
 void MidiLearn::learn() {
   printf("press 1 to retry, 0 to proceed\n");
   
-  for (int i = 0; i<len_actionToFuncMap; i++) {
-    auto& ent = actionToFuncMap[i];
+  for (int i = 0; i<gApp.controller->actionToFuncMap.size(); i++) {
+    auto& ent = gApp.controller->actionToFuncMap[i];
     printf("\n%s:\n", ent.base_action);
     int d;
     auto t = std::thread([this](){listen();});

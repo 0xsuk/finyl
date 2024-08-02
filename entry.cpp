@@ -2,12 +2,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <thread>
-#include "finyl.h"
-#include "rekordbox.h"
-#include "dev.h"
-#include "controller.h"
-#include "extern.h"
-
+#include "interface.h"
 
 int main(int argc, char **argv) {
   if (argc < 2) {
@@ -19,32 +14,25 @@ int main(int argc, char **argv) {
   if (err == 1) {
     return 1;
   }
-  device = "default";
-  sample_rate = 44100;
-  snd_pcm_t* handle;
-  period_size = 128;
+  char* device = "default";
+  
   if (argc >= 3) {
     device = argv[2];
   }
+  
   if (argc >= 4) {
-    period_size = std::stoi(argv[3]);
+    int period_size = std::stoi(argv[3]);
+    gApp.audio->set_period_size(period_size);
+    printf("bruh\n");
   }
+  
   if (argc >=5) {
-    fps = std::stoi(argv[4]);
+    int fps = std::stoi(argv[4]);
+    gApp.interface->set_fps(fps);
   }
   
-  snd_pcm_uframes_t buffer_size = period_size * 2;
-
   
-  printf("want: %d %d\n", (int)buffer_size, (int)period_size);
+  gApp.audio->setup_alsa(device);
   
-  finyl_setup_alsa(&handle, &buffer_size, &period_size);
-  period_size_2 = period_size*2;
-  printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
-  
-  auto th = std::thread(controller);
-  
-  finyl_run(handle);
-  
-  th.join();
+  gApp.run();
 }

@@ -1,5 +1,4 @@
 #include "rekordbox.h"
-#include "extern.h"
 #include "dev.h"
 std::string root = "/run/media/null/71CD-A534/";
 

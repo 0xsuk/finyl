@@ -5,8 +5,6 @@
 #include "finyl.h"
 #include <SDL2/SDL.h>
 
-class Interface;
-
 class WaveForm : public IWidget {
  public:
   WaveForm(Interface& _interface);

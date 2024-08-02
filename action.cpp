@@ -2,21 +2,15 @@
 #include "dsp.h"
 #include <thread>
 #include <functional>
+#include "controller.h"
+#include "dev.h"
 
 //if deck is adeck, return bdeck, vice versa
-Deck& get_pair(Deck& deck) {
+std::unique_ptr<Deck>& get_pair(Deck& deck) {
   if (deck.type == finyl_a) {
-    return bdeck;
+    return gApp.controller->bdeck;
   }
-  return adeck;
-}
-
-void print_deck_name(Deck& deck) {
-  if (deck.type == finyl_a) {
-    printf("A ");
-  } else if (deck.type == finyl_b) {
-    printf("B ");
-  }
+  return gApp.controller->adeck;
 }
 
 void toggle_playing(Deck& deck) {
@@ -130,7 +124,7 @@ void dec_delta_index(Deck& deck, double velocity) {
 }
 
 double millisec_to_index(double time) {
- return time * (sample_rate / 1000.0); 
+ return time * (gApp.audio->get_sample_rate() / 1000.0); 
 }
 
 static void deactivate_memory_cues(Deck& deck) {
@@ -151,7 +145,7 @@ void add_active_cue(Deck& deck) {
   loop_in_now(deck);
   deck.pTrack->set_index(deck.pTrack->loop_in); //quantize refindex
   
-  deck.pTrack->cues.push_back({.type=CUE::ACTIVE_MEMORY_CUE, .time=deck.pTrack->get_refindex()*(1.0/sample_rate)*1000.0});
+  deck.pTrack->cues.push_back({.type=CUE::ACTIVE_MEMORY_CUE, .time=deck.pTrack->get_refindex()*(1.0/gApp.audio->get_sample_rate())*1000.0});
   print_deck_name(deck);
   printf("cue add %lf\n", deck.pTrack->get_refindex());
 }
@@ -306,8 +300,8 @@ static double calc_bpm(Deck& sync, Deck& master) {
 }
 
 void sync_bpm(Deck& deck) {
-  auto pair_deck = get_pair(deck);
-  set_speed(deck, calc_bpm(deck, pair_deck));
+  auto& pair_deck = get_pair(deck);
+  set_speed(deck, calc_bpm(deck, *pair_deck));
 }
 
 void inc_speed(Deck& deck) {
@@ -334,7 +328,7 @@ void set_delay_on(Deck& deck) {
   //bpm beats is 44100*60 samples
   //1 beat is 44100*60/bpm samples 
   double bpm = (deck.pTrack->meta.bpm/100.0)*deck.pTrack->get_speed();
-  deck.delay->setMsize((sample_rate*60)/bpm*1.0);
+  deck.delay->setMsize((gApp.audio->get_sample_rate()*60)/bpm*1.0);
   deck.delay->on = true;
   
   print_deck_name(deck);

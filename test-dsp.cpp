@@ -7,7 +7,6 @@
 #include "dsp.h"
 #include <alsa/asoundlib.h>
 #include <algorithm>
-#include "extern.h"
 #include "RubberBandStretcher.h"
 bool running = true;
 

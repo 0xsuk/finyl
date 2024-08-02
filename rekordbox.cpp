@@ -7,10 +7,9 @@
 #include <algorithm>
 #include "util.h"
 #include "dev.h"
-#include "extern.h"
 #include "rekordbox.h"
-
-std::vector<Usb> usbs;
+#include "finyl.h"
+#include "controller.h"
 
 template<typename Base, typename T>
 inline bool instanceof (const T* ptr) {
@@ -150,17 +149,17 @@ rekordbox_pdb_t::page_type_t tableOrder[totalTables] = {
 
 
 void unplug(Usb& usb) {
-  for (auto it = usbs.begin(); it!=usbs.end();it++) {
+  for (auto it = gApp.controller->usbs.begin(); it!=gApp.controller->usbs.end();it++) {
     if (usb.root == it->root) {
       printf("unplugged %s\n", it->root.data());
-      usbs.erase(it);
+      gApp.controller->usbs.erase(it);
     }
   }
 }
 
 
 int plug(const std::string& root) {
-  for (auto& u: usbs) {
+  for (auto& u: gApp.controller->usbs) {
     if (u.root == root) {
       printf("already plugged\n");
       return 0;
@@ -191,7 +190,7 @@ int plug(const std::string& root) {
     }
   }
 
-  usbs.push_back(std::move(usb));
+  gApp.controller->usbs.push_back(std::move(usb));
   return 0;
 }
 
@@ -318,7 +317,7 @@ static void readCueTags(finyl_track& t, rekordbox_anlz_t::cue_tag_t* cuesTag) {
   if (t.cues.size() > 0) {
     // 1000 milisec = 44100 samples
     // time milisec = 44100 / 1000 * time samples
-    t.loop_in = (sample_rate / 1000.0) * (double)t.cues[0].time;
+    t.loop_in = (gApp.audio->get_sample_rate() / 1000.0) * (double)t.cues[0].time;
     t.cues[0].type = CUE::ACTIVE_MEMORY_CUE;
   }
 }

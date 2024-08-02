@@ -3,9 +3,6 @@
 #include "finyl.h"
 #include "interface.h"
 #include <X11/Xlib.h>
-#include "extern.h"
-
-Interface interface;
 
 int get_window_size(int& width, int& height) {
   Display* disp = XOpenDisplay(NULL);
@@ -61,7 +58,7 @@ int Interface::run() {
   
   SDL_Event event;
   int desired_delta = 1000 / fps;
-  while (finyl_running) {
+  while (gApp.is_running()) {
     int start_msec = SDL_GetTicks();
     
     while (SDL_PollEvent(&event)) {

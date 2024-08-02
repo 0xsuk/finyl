@@ -1,5 +1,5 @@
 #include "waveform.h"
-#include "extern.h"
+#include "interface.h"
 
 WaveForm::WaveForm(Interface& _itf):
   render_adeck(false),
@@ -125,7 +125,7 @@ void WaveForm::draw_waveform(SDL_Texture* texture, finyl_track& t, int starti, i
   int prev_pcmi = starti+idraw_offset;
   
   int beati = finyl_get_quantized_beat_index(t, prev_pcmi);
-  if (beati != -1 && t.beats[beati].time * (sample_rate/1000.0) < prev_pcmi) {
+  if (beati != -1 && t.beats[beati].time * (gApp.audio->get_sample_rate() /1000.0) < prev_pcmi) {
     beati++;
   }
 
@@ -142,7 +142,7 @@ void WaveForm::draw_waveform(SDL_Texture* texture, finyl_track& t, int starti, i
     
     //beat grid
     if (beati != -1) {
-      int beat_pcmi = t.beats[beati].time * (sample_rate/1000.0);
+      int beat_pcmi = t.beats[beati].time * (gApp.audio->get_sample_rate()/1000.0);
       if (prev_pcmi <= beat_pcmi && beat_pcmi < pcmi) {
         SDL_Rect rect = {x, 0, 0, wave_height};
         if (t.beats[beati].number == 1) {
@@ -160,7 +160,7 @@ void WaveForm::draw_waveform(SDL_Texture* texture, finyl_track& t, int starti, i
     
     //cue
     for (auto cue = t.cues.begin(); cue!=t.cues.end(); cue++) {
-      auto cuei = cue->time*(sample_rate/ 1000.0);
+      auto cuei = cue->time*(gApp.audio->get_sample_rate()/ 1000.0);
       if (prev_pcmi < cuei  && cuei < pcmi) {
         SDL_SetRenderDrawColor(itf.renderer, 255, 71, 0, 255);
         SDL_RenderDrawLine(itf.renderer, x, 0, x, 10);
@@ -225,7 +225,7 @@ void WaveForm::draw_static_grids(finyl_track* t) {
   SDL_SetRenderDrawColor(itf.renderer, 100, 0, 100, 255);
 
   int dur = t->beats[1].time - t->beats[0].time; //msec
-  int samples = dur * (sample_rate / 1000.0);
+  int samples = dur * (gApp.audio->get_sample_rate() / 1000.0);
 
   int i = 1;
   while (1) {
@@ -272,16 +272,16 @@ void WaveForm::update_deck(Deck &deck, int &previ, SDL_Texture* wavetx, SDL_Text
 
 void WaveForm::draw() {
   if (render_adeck) {
-    render_deck(adeck, previ_adeck, tx_awave, 0);
+    render_deck(*gApp.controller->adeck, previ_adeck, tx_awave, 0);
     render_adeck = false;
-  } else if (adeck.pTrack != nullptr) {
-    update_deck(adeck, previ_adeck, tx_awave, tx_asg, 0);
+  } else if (gApp.controller->adeck->pTrack != nullptr) {
+    update_deck(*gApp.controller->adeck, previ_adeck, tx_awave, tx_asg, 0);
   }
     
   if (render_bdeck) {
-    render_deck(bdeck, previ_bdeck, tx_bwave, wave_height + 10);
+    render_deck(*gApp.controller->bdeck, previ_bdeck, tx_bwave, wave_height + 10);
     render_bdeck = false;
-  } else if (bdeck.pTrack != nullptr) {
-    update_deck(bdeck, previ_bdeck, tx_bwave, tx_bsg, wave_height + 10);
+  } else if (gApp.controller->bdeck->pTrack != nullptr) {
+    update_deck(*gApp.controller->bdeck, previ_bdeck, tx_bwave, tx_bsg, wave_height + 10);
   }
 }

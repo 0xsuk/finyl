@@ -216,11 +216,12 @@ enum finyl_deck_type{
   finyl_d,
 };
 
-struct Test;
 struct Delay;
 class BiquadFullKillEQEffectGroupState;
+class BiquadFullKillEQEffect;
 struct ActionState;
-struct Deck {
+class Deck { //Should be initialized after audio is ready
+public:
   finyl_deck_type type;
   finyl_track* pTrack;
   finyl_buffer buffer;
@@ -233,22 +234,88 @@ struct Deck {
   double filter1;
   bool quantize;
   bool master;
-  Delay* delay;
-  Test* test;
-  BiquadFullKillEQEffectGroupState* bqisoState;
+
+  //TODO: these effects is sensitive to sample_rate. Effects reset function should be hooked to on_change_sample_rate
+  std::unique_ptr<Delay> delay;
+  std::unique_ptr<BiquadFullKillEQEffectGroupState> bqisoState;
 
   Deck(finyl_deck_type _type);
 };
 
+
+class Controller;
+class Interface;
+class App;
+
+class Audio {
+public:
+  Audio();
+  void run();
+
+  void set_period_size(int _period_size);
+  
+  snd_pcm_uframes_t get_period_size() {return period_size;}
+  snd_pcm_uframes_t get_period_size_2() {return period_size_2;}
+  int get_sample_rate() {return sample_rate;}
+  
+  void setup_alsa_params();
+  void setup_alsa(const char* device);
+  
+  error read_stems_from_files(const std::vector<std::string>& files, finyl_track& t);
+  int max_process_size = 2048;
+
+private:
+  void on_period_size_change();
+  int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, rb& stretcher, finyl_stem& stem, int index, std::mutex& mutex);
+  int wav_valid(char* addr);
+  bool try_mmap(const std::string& file, std::unique_ptr<finyl_stem>& stem);
+  error read_stem(const std::string& file, std::unique_ptr<finyl_stem>& stem);
+  void gain_effect(finyl_buffer& buf, double gain);
+  void make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_buffers);
+  void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t);
+  void add_and_clip_two_buffers(finyl_buffer& dest, finyl_buffer& src1, finyl_buffer& src2);
+  void eq_effect(finyl_buffer& buf, BiquadFullKillEQEffectGroupState* state);
+  void signedshortToFloat(signed short* in, float* out);
+  void floatToSignedshort(float* in, signed short* out);
+  void mute_effect(finyl_buffer& buf, bool mute);
+  void handle_deck(Deck& deck);
+  void handle_audio();
+  
+  snd_pcm_uframes_t buffer_size = 256;
+  snd_pcm_uframes_t period_size = 128;
+  snd_pcm_uframes_t period_size_2 = 256;
+  int sample_rate = 44100;
+  finyl_buffer buffer;
+  snd_pcm_t* handle;
+
+  std::unique_ptr<BiquadFullKillEQEffect> bqisoProcessor;
+};
+
+class App {
+public:
+  App();
+  void stop_running() {
+    running = false;
+  }
+  
+  bool is_running() {
+    return running;
+  }
+
+  void run();
+
+  std::shared_ptr<Audio> audio;
+  std::shared_ptr<Controller> controller;
+  std::shared_ptr<Interface> interface;
+private:
+  std::atomic<bool> running = true;
+};
 
 finyl_sample clip_sample(int32_t s);
 bool file_exist(std::string_view file);
 int finyl_get_quantized_beat_index(finyl_track& t, int index);
 int finyl_get_quantized_time(finyl_track& t, int index);
 double finyl_get_quantized_index(finyl_track& t, int index);
-error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_track& t);
-error read_stem(const std::string& file, std::unique_ptr<finyl_stem>& stem);
-void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size);
-void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t);
-void finyl_run(snd_pcm_t* handle);
+
+extern App gApp;
 #endif

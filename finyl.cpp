@@ -3,7 +3,6 @@
 #include "util.h"
 #include "dsp.h"
 #include "dev.h"
-#include "extern.h"
 #include <thread>
 #include <alsa/asoundlib.h>
 #include <math.h>
@@ -15,6 +14,10 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include "action.h"
+#include "controller.h"
+#include "interface.h"
+
+App gApp;
 
 Deck::Deck(finyl_deck_type _type): type(_type),
                                    pTrack(nullptr),
@@ -28,19 +31,15 @@ Deck::Deck(finyl_deck_type _type): type(_type),
                                    master(true),
                                    delay(new Delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5}),
                                    bqisoState(new BiquadFullKillEQEffectGroupState()) //cant initialize until sample_rate is set
-                                   {}
+{
+  buffer.resize(gApp.audio->get_period_size_2());
+  for (size_t i = 0; i<MAX_STEMS_SIZE; i++) {
+    stem_buffers[i].resize(gApp.audio->get_period_size_2());
+  }
 
-std::string device;
-int fps = 30;
-snd_pcm_uframes_t period_size;
-snd_pcm_uframes_t period_size_2;
-int sample_rate = 44100;
-int max_process_size = 2048;
-bool finyl_running = true;
-finyl_buffer buffer;
-BiquadFullKillEQEffect bqisoProcessor{};
-Deck adeck(finyl_a);
-Deck bdeck(finyl_b);
+  print_deck_name(*this);
+  printf("Deck initialized\n");
+}
 
 finyl_track_meta::finyl_track_meta(): id(0),
                                       bpm(0),
@@ -56,8 +55,8 @@ finyl_track::finyl_track(): meta(),
                             loop_out(-1) {
   std::fill(indxs, indxs + MAX_STEMS_SIZE, 0);
   for (auto&p : stretchers) {
-    p = std::make_unique<rb>(sample_rate, 2, rb::OptionProcessRealTime | rb::OptionEngineFiner, 1.0);
-    p->setMaxProcessSize(max_process_size);
+    p = std::make_unique<rb>(gApp.audio->get_sample_rate(), 2, rb::OptionProcessRealTime | rb::OptionEngineFiner, 1.0);
+    p->setMaxProcessSize(gApp.audio->max_process_size);
   }
 };
 
@@ -72,7 +71,7 @@ int finyl_get_quantized_beat_index(finyl_track& t, int index) {
   //44100 samples = 1sec
   //index samples = 1 / 44100 * index sec
   //= 1 / 44100 * index * 1000 millisec
-  double nowtime = (1000.0 / sample_rate) * index;
+  double nowtime = (1000.0 / gApp.audio->get_sample_rate()) * index;
 
   if (nowtime < t.beats[0].time) {
     return 0;
@@ -107,7 +106,7 @@ int finyl_get_quantized_time(finyl_track& t, int index) {
 }
 
 double finyl_get_quantized_index(finyl_track& t, int index) {
-  double v =  (sample_rate / 1000.0) * finyl_get_quantized_time(t, index);
+  double v =  (gApp.audio->get_sample_rate() / 1000.0) * finyl_get_quantized_time(t, index);
 
   return v;
 }
@@ -126,7 +125,7 @@ static error open_pcm(FILE** fp, const std::string& filename) {
   }
   char command[1000];
   //opens interleaved pcm data stream
-  snprintf(command, sizeof(command), "ffmpeg -i \"%s\" -f s16le -ar %d -ac 2 -v quiet -", filename.data(), sample_rate);
+  snprintf(command, sizeof(command), "ffmpeg -i \"%s\" -f s16le -ar %d -ac 2 -v quiet -", filename.data(), gApp.audio->get_sample_rate());
   *fp = popen(command, "r");
   if (fp == nullptr) {
     printf(" %s\n", filename.data());
@@ -154,7 +153,11 @@ static error read_stem_from(FILE* fp, finyl_cstem& stem) {
   return noerror;
 }
 
-static int wav_valid(char* addr) {
+Audio::Audio() {
+  bqisoProcessor = std::make_unique<BiquadFullKillEQEffect>();
+}
+
+int Audio::wav_valid(char* addr) {
   if (addr == MAP_FAILED) {
     return -1;
   }
@@ -182,7 +185,7 @@ static int wav_valid(char* addr) {
   return data_offset;
 }
 
-static bool try_mmap(const std::string& file, std::unique_ptr<finyl_stem>& stem) {
+bool Audio::try_mmap(const std::string& file, std::unique_ptr<finyl_stem>& stem) {
   int fd = open(file.data(), O_RDONLY);
   struct stat sb;
   if (fstat(fd, &sb) == -1) {
@@ -208,7 +211,7 @@ static bool try_mmap(const std::string& file, std::unique_ptr<finyl_stem>& stem)
   return true;
 }
 
-error read_stem(const std::string& file, std::unique_ptr<finyl_stem>& stem) {
+error Audio::read_stem(const std::string& file, std::unique_ptr<finyl_stem>& stem) {
   //For wav file, its much faster to use mmap
   if (!file_exist(file)) {
     return error(ERR::NO_SUCH_FILE);
@@ -232,7 +235,7 @@ error read_stem(const std::string& file, std::unique_ptr<finyl_stem>& stem) {
 }
 
 //each file corresponding to each stem
-error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_track& t) {
+error Audio::read_stems_from_files(const std::vector<std::string>& files, finyl_track& t) {
   if (files.size() > MAX_STEMS_SIZE) {
     return error("too many stems. MAX_STEMS_SIZE is " + std::to_string(MAX_STEMS_SIZE), ERR::TOO_MANY_STEMS);
   }
@@ -270,7 +273,7 @@ error finyl_read_stems_from_files(const std::vector<std::string>& files, finyl_t
 //TODO: one file has many stems (eg. flac)
 void read_stems_from_file(char* file);
 
-static void gain_effect(finyl_buffer& buf, double gain) {
+void Audio::gain_effect(finyl_buffer& buf, double gain) {
   for (int i = 0; i<period_size_2;i=i+2) {
     buf[i] = gain * buf[i];
     buf[i+1] = gain * buf[i+1];
@@ -280,7 +283,7 @@ static void gain_effect(finyl_buffer& buf, double gain) {
 //rubberband
 //stretcher keeps storing "reqd" number of samples of samples in its internal buffer until output buffer can be fully prepared, leaving unused samples in the internal buffer.
 //return new t.index. writes stretched samples to stem_buffer
-static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, rb& stretcher, finyl_stem& stem, int index, std::mutex& mutex) {
+int Audio::make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, rb& stretcher, finyl_stem& stem, int index, std::mutex& mutex) {
   int available;
   while ((available = stretcher.available()) < period_size) {
     int reqd = int(ceil(double(period_size - available) / stretcher.getTimeRatio()));
@@ -332,7 +335,7 @@ static int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, r
 }
 
 //TODO slow, takes 500 microsecs
-void make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_buffers) {
+void Audio::make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_buffers) {
   std::vector<std::thread> threads;
   
   for (int i = 0; i<t.stems_size; i++) {
@@ -350,7 +353,7 @@ void make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_buffers)
 }
 
 //without time stretch
-void make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) {
+void Audio::make_stem_buffers(finyl_stem_buffers& stem_buffers, finyl_track& t) {
   for (int i = 0; i < period_size_2; i=i+2) {
     t.set_index(t.get_refindex() + t.get_speed());
 
@@ -385,32 +388,32 @@ finyl_sample clip_sample(int32_t s) {
   return s;
 }
 
-static void add_and_clip_two_buffers(finyl_buffer& dest, finyl_buffer& src1, finyl_buffer& src2) {
+void Audio::add_and_clip_two_buffers(finyl_buffer& dest, finyl_buffer& src1, finyl_buffer& src2) {
   for (int i = 0; i<period_size_2; i++) {
     int32_t sample = src1[i] + src2[i];
     dest[i] = clip_sample(sample);
   }
 }
 
-void signedshortToFloat(signed short* in, float* out) {
+void Audio::signedshortToFloat(signed short* in, float* out) {
   for (int i = 0; i<period_size_2; i++) {
     out[i] = in[i] / 32768.0;
   }
 }
 
-void floatToSignedshort(float* in, signed short* out) {
+void Audio::floatToSignedshort(float* in, signed short* out) {
   for (int i = 0; i<period_size_2; i++) {
     out[i] = in[i] * 32768.0;
   }
 }
 
-static void eq_effect(finyl_buffer& buf, BiquadFullKillEQEffectGroupState* state) {
+void Audio::eq_effect(finyl_buffer& buf, BiquadFullKillEQEffectGroupState* state) {
   float in[period_size_2];
   float out[period_size_2];
 
   signedshortToFloat(buf.data(), in);
   
-  bqisoProcessor.process(state, in, out);
+  bqisoProcessor->process(state, in, out);
 
   floatToSignedshort(out, buf.data());
 }
@@ -422,7 +425,7 @@ static void reset_stretchers(Deck& deck) {
 }
 
 //NOTE: mute is implemented per buffer basis (simpler), contrary to per sample basis (better)
-static void mute_effect(finyl_buffer& buf, bool mute) {
+void Audio::mute_effect(finyl_buffer& buf, bool mute) {
   if (!mute) return;
   for (int i = 0; i<period_size_2;i=i+2) {
     buf[i] = 0;
@@ -430,7 +433,7 @@ static void mute_effect(finyl_buffer& buf, bool mute) {
   }
 }
 
-void handle_deck(Deck& deck) {
+void Audio::handle_deck(Deck& deck) {
   if (deck.pTrack == nullptr) return;
   if (deck.pTrack->jump_lock) {
     deck.pTrack->jump_lock = false;
@@ -450,33 +453,36 @@ void handle_deck(Deck& deck) {
     mute_effect(deck.stem_buffers[0], deck.mute0);
     add_and_clip_two_buffers(deck.buffer, deck.stem_buffers[0], deck.stem_buffers[1]);
       
-    eq_effect(deck.buffer, deck.bqisoState);
+    eq_effect(deck.buffer, deck.bqisoState.get());
       
     gain_effect(deck.buffer, deck.gain);
   }
   delay(deck.buffer, *deck.delay);
+
 }
 
-static void finyl_handle() {
+void Audio::handle_audio() {
+      auto s =NOW;
   std::fill(buffer.begin(), buffer.end(), 0);
-  std::fill(adeck.buffer.begin(), adeck.buffer.end(), 0);
-  std::fill(bdeck.buffer.begin(), bdeck.buffer.end(), 0);
-  std::fill(adeck.stem_buffers[0].begin(), adeck.stem_buffers[0].end(), 0);
-  std::fill(adeck.stem_buffers[1].begin(), adeck.stem_buffers[1].end(), 0);
-  std::fill(bdeck.stem_buffers[0].begin(), bdeck.stem_buffers[0].end(), 0);
-  std::fill(bdeck.stem_buffers[1].begin(), bdeck.stem_buffers[1].end(), 0);
+  std::fill(gApp.controller->adeck->buffer.begin(), gApp.controller->adeck->buffer.end(), 0);
+  std::fill(gApp.controller->bdeck->buffer.begin(), gApp.controller->bdeck->buffer.end(), 0);
+  std::fill(gApp.controller->adeck->stem_buffers[0].begin(), gApp.controller->adeck->stem_buffers[0].end(), 0);
+  std::fill(gApp.controller->adeck->stem_buffers[1].begin(), gApp.controller->adeck->stem_buffers[1].end(), 0);
+  std::fill(gApp.controller->bdeck->stem_buffers[0].begin(), gApp.controller->bdeck->stem_buffers[0].end(), 0);
+  std::fill(gApp.controller->bdeck->stem_buffers[1].begin(), gApp.controller->bdeck->stem_buffers[1].end(), 0);
   
+      duration(s);
   auto t = std::thread([&](){
-    handle_deck(adeck);
+    handle_deck(*gApp.controller->adeck);
   });
-  
-  handle_deck(bdeck);
+
+  handle_deck(*gApp.controller->bdeck);
   
   t.join();
-  add_and_clip_two_buffers(buffer, adeck.buffer, bdeck.buffer);
+  add_and_clip_two_buffers(buffer, gApp.controller->adeck->buffer, gApp.controller->bdeck->buffer);
 }
 
-static void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
+void Audio::setup_alsa_params() {
   snd_pcm_hw_params_t* hw_params;
   snd_pcm_hw_params_malloc(&hw_params);
   snd_pcm_hw_params_any(handle, hw_params);
@@ -484,10 +490,10 @@ static void setup_alsa_params(snd_pcm_t* handle, snd_pcm_uframes_t* buffer_size,
   snd_pcm_hw_params_set_format(handle, hw_params, SND_PCM_FORMAT_S16_LE);
   snd_pcm_hw_params_set_rate(handle, hw_params, sample_rate, 0);
   snd_pcm_hw_params_set_channels(handle, hw_params, 2);
-  snd_pcm_hw_params_set_period_size_near(handle, hw_params, period_size, 0); //first set period
-  snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, buffer_size); //then buffer. (NOTE: when device is set to default, buffer_size became period_size*3 although peirod_size*2 is requested)
+  snd_pcm_hw_params_set_period_size_near(handle, hw_params, &period_size, 0); //first set period
+  snd_pcm_hw_params_set_buffer_size_near(handle, hw_params, &buffer_size); //then buffer. (NOTE: when device is set to default, buffer_size became period_size*3 although peirod_size*2 is requested)
   snd_pcm_hw_params(handle, hw_params);
-  snd_pcm_get_params(handle, buffer_size, period_size);
+  snd_pcm_get_params(handle, &buffer_size, &period_size);
   snd_pcm_hw_params_free(hw_params);
 }
 
@@ -500,34 +506,35 @@ static void cleanup_alsa(snd_pcm_t* handle) {
   printf("alsa closed\n");
 }
 
-void finyl_setup_alsa(snd_pcm_t** handle, snd_pcm_uframes_t* buffer_size, snd_pcm_uframes_t* period_size) {
+void Audio::on_period_size_change() {
+  buffer.resize(period_size_2);
+  gApp.controller->adeck.reset(new Deck(finyl_a));
+  gApp.controller->bdeck.reset(new Deck(finyl_b));
+}
+
+void Audio::setup_alsa(const char* device) {
   int err;
-  if ((err = snd_pcm_open(handle, device.data(), SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+  if ((err = snd_pcm_open(&handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
     printf("Playback open error!: %s\n", snd_strerror(err));
     exit(1);
   }
-  setup_alsa_params(*handle, buffer_size, period_size);
-  printf("buffer_size %ld, period_size %ld\n", *buffer_size, *period_size);
+  setup_alsa_params();
+  printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
+  set_period_size(period_size);
 }
 
-static void resize_buffers() {
-  buffer.resize(period_size_2);
-  adeck.buffer.resize(period_size_2);
-  bdeck.buffer.resize(period_size_2);
-  
-  for (size_t i = 0; i<MAX_STEMS_SIZE; i++) {
-    adeck.stem_buffers[i].resize(period_size_2);
-    bdeck.stem_buffers[i].resize(period_size_2);
-  }
+void Audio::set_period_size(int _period_size) {
+  period_size = _period_size;
+  period_size_2 = period_size * 2;
+  buffer_size = period_size*2; //dont care if its 2 or 3
+  on_period_size_change();
 }
 
-void finyl_run(snd_pcm_t* handle) {
+void Audio::run() {
   int err = 0;
-  resize_buffers();
   
-  while (finyl_running) {
-    finyl_handle();
-    
+  while (gApp.is_running()) {
+    handle_audio();
     err = snd_pcm_writei(handle, buffer.data(), period_size);
     if (err == -EPIPE) {
       printf("Underrun occurred: %s\n", snd_strerror(err));
@@ -536,11 +543,25 @@ void finyl_run(snd_pcm_t* handle) {
       printf("eagain\n");
     } else if (err < 0) {
       printf("error %s\n", snd_strerror(err));
-      finyl_running = false;
+      gApp.stop_running();
       return;
     }
   }
   
   cleanup_alsa(handle);
   profile();
+}
+
+App::App() {
+  audio = std::make_shared<Audio>();
+  controller = std::make_shared<Controller>();
+  interface = std::make_shared<Interface>();
+}
+
+void App::run() {
+  auto t = std::thread([&](){
+    audio->run();
+  });
+  controller->run();
+  t.join();
 }

@@ -1,7 +1,7 @@
 #include "dev.h"
 #include <fstream>
 
-std::vector<double> TIMES;
+std::vector<int> TIMES;
 
 void print_track_meta(finyl_track_meta& tm) {
   printf("id is %d\n", tm.id);
@@ -84,4 +84,13 @@ void profile() {
   }
 
   printf("average: %d microsec\n", sum/(int)TIMES.size());
+}
+
+
+void print_deck_name(Deck &deck){
+  if (deck.type == finyl_a) {
+    printf("A ");
+  } else if (deck.type == finyl_b) {
+    printf("B ");
+  }
 }
