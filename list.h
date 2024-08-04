@@ -6,11 +6,15 @@
 #include <vector>
 #include <string>
 
+
+#include "sdl.h"
+
 class List : public IWidget {
 public:
-  List();
+  List(int _x, int _y, int _w, int _h, int _font_size);
   
   void draw();
+  void set_items(std::vector<std::string> _items);
   void select_down();
   void select_up();
   int get_selected();
@@ -35,9 +39,10 @@ private:
   int visible_items = 0;
 
   std::vector<std::string> items;
-  std::vector<SDL_Surface*> item_surfs;
-  std::vector<SDL_Texture*> item_txs;
-  SDL_Texture* select_tx; //indicates item is selected
+  std::vector<Surface> item_surfs;
+  std::vector<Texture> item_txs;
+  Texture select_tx; //indicates item is selected
+  TTF_Font* font;
 };
 
 

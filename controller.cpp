@@ -701,10 +701,6 @@ void Controller::handle_key(char x) {
     load_track(&bdeck->pTrack, tid, finyl_b);
     break;
   }
-  // case '3':{
-  //   std::thread(run_interface).detach();
-  //   break;
-  // }
   case '#': {
     gApp.interface->free_tracks();
     break;
@@ -719,6 +715,22 @@ void Controller::handle_key(char x) {
   }
   case '\'': {
     gApp.interface->waveform->half_range();
+    break;
+  }
+  case 'w': {
+    gApp.interface->explorer->select_up();
+    break;
+  }
+  case 'e': {
+    gApp.interface->explorer->select_down();
+    break;
+  }
+  case 'r': {
+    gApp.interface->explorer->select();
+    break;
+  }
+  case 'R': {
+    gApp.interface->explorer->back();
     break;
   }
   }

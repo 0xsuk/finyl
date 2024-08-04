@@ -4,52 +4,41 @@
 
 void List::init_select_tx() {
   select_tx = SDL_CreateTexture(gApp.interface->renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, w, 1000);
-  SDL_SetTextureBlendMode(select_tx, SDL_BLENDMODE_BLEND);
+  SDL_SetTextureBlendMode(select_tx.get(), SDL_BLENDMODE_BLEND);
 
-  SDL_SetRenderTarget(gApp.interface->renderer, select_tx);
+  SDL_SetRenderTarget(gApp.interface->renderer, select_tx.get());
   SDL_SetRenderDrawColor(gApp.interface->renderer, 162, 162, 255, 100);
   SDL_RenderClear(gApp.interface->renderer);
   
   SDL_SetRenderTarget(gApp.interface->renderer, NULL);
 }
 
-List::List(): x(300), y(250), w(400), h(200), space(4), font_size(17) {
-  items.push_back("Am 102 aimyon");
-  items.push_back("Am1");
-  items.push_back("Am2 104 aimyon");
-  items.push_back("Am3 102 aimyon");
-  items.push_back("Am4");
-  items.push_back("Am5 104 aimyon");
-  items.push_back("Am6 102 aimyon");
-  items.push_back("Am7");
-  items.push_back("Am8 104 aimyon");
-  items.push_back("Am9 102 aimyon");
-  items.push_back("Am");
-  items.push_back("Am 104 aimyon");
-  items.push_back("Am11 102 aimyon");
-  items.push_back("Am");
-  items.push_back("Am 104 aimyon");
-  items.push_back("Am12 102 aimyon");
-  items.push_back("Am");
-  items.push_back("Am 104 aimyon");
-  
-  if ( TTF_Init() < 0 ) {
-		printf("Error intializing SDL_ttf: %s", TTF_GetError());
-		return;
-	}
-  TTF_Font *font = TTF_OpenFont("DejaVuSans.ttf", font_size);
+List::List(int _x, int _y, int _w, int _h, int _font_size):
+  x(_x), y(_y), w(_w), h(_h),
+  space(4),
+  font_size(_font_size)
+{
+  font = TTF_OpenFont("DejaVuSans.ttf", font_size);
   if (font == nullptr) {
     printf("bad %s\n", TTF_GetError());
     return; 
   }
+}
+
+void List::set_items(std::vector<std::string> _items) {
+  head = 0;
+  selected = 0;
+  item_surfs.clear();
+  item_txs.clear();
   
+  items = std::move(_items);
+
   SDL_Color color = {255,255,255, 255};
   for (int i = 0; i<items.size(); i++) {
-    item_surfs.push_back( TTF_RenderText_Solid(font, items[i].data(), color) );
-
-    item_txs.push_back( SDL_CreateTextureFromSurface(gApp.interface->renderer, item_surfs[i]) );
-    SDL_SetTextureBlendMode(item_txs[i], SDL_BLENDMODE_BLEND);
-
+    item_surfs.push_back(TTF_RenderText_Solid(font, items[i].data(), color));
+    
+    item_txs.push_back(SDL_CreateTextureFromSurface(gApp.interface->renderer, item_surfs[i].get()));
+    SDL_SetTextureBlendMode(item_txs[i].get(), SDL_BLENDMODE_BLEND);
   }
 
   init_select_tx();
@@ -60,6 +49,7 @@ List::List(): x(300), y(250), w(400), h(200), space(4), font_size(17) {
       break;
     }
   }
+
 }
 
 void List::draw_item(SDL_Surface* surf, SDL_Texture* tx, int height_offset) {
@@ -81,7 +71,7 @@ void List::draw_select(int height_offset) {
   dest.w = w;
   dest.h = font_size+space;
   
-  SDL_RenderCopy(gApp.interface->renderer, select_tx, NULL, &dest);
+  SDL_RenderCopy(gApp.interface->renderer, select_tx.get(), NULL, &dest);
 }
 
 void List::draw() {
@@ -92,7 +82,7 @@ void List::draw() {
     
     auto height_offset = get_height_offset(i);
     
-    draw_item(item_surfs[i], item_txs[i], height_offset);
+    draw_item(item_surfs[i].get(), item_txs[i].get(), height_offset);
     if (i == selected) {
       draw_select(height_offset);
     }

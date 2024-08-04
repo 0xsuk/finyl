@@ -33,16 +33,21 @@ void Interface::free_tracks() {
 
 
 int Interface::run() {
-  // if (get_window_size(win_width, win_height) == -1) {
-  //   return 1;
-  // }
+  if (get_window_size(win_width, win_height) == -1) {
+    return 1;
+  }
   
   if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
     printf("SDL initialization failed: %s\n", SDL_GetError());
     return 1;
   }
+  
+  if ( TTF_Init() < 0 ) {
+		printf("Error intializing SDL_ttf: %s", TTF_GetError());
+		return 1;
+	}
 
-  window = SDL_CreateWindow("PCM Waveform Display", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, win_width, win_height, SDL_WINDOW_SHOWN);
+  window = SDL_CreateWindow("finyl", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, win_width, win_height, SDL_WINDOW_SHOWN);
   if (window == nullptr) {
     printf("Window creation failed: %s\n", SDL_GetError());
     return 1;
