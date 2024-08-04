@@ -33,11 +33,11 @@ void Interface::free_tracks() {
 
 
 int Interface::run() {
-  if (get_window_size(win_width, win_height) == -1) {
-    return 1;
-  }
+  // if (get_window_size(win_width, win_height) == -1) {
+  //   return 1;
+  // }
   
-  if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+  if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
     printf("SDL initialization failed: %s\n", SDL_GetError());
     return 1;
   }
@@ -48,6 +48,8 @@ int Interface::run() {
     return 1;
   }
 
+  SDL_SetWindowOpacity(window, 0.8);
+  
   renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
   if (renderer == nullptr) {
     printf("Renderer creation failed: %s\n", SDL_GetError());
@@ -55,6 +57,7 @@ int Interface::run() {
   }
 
   waveform = std::make_unique<WaveForm>(*this);
+  explorer = std::make_unique<Explorer>();
   
   SDL_Event event;
   int desired_delta = 1000 / fps;
@@ -67,14 +70,14 @@ int Interface::run() {
       }
     }
 
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_SetRenderDrawColor(renderer, 0,0,0,255);
     SDL_RenderClear(renderer);
 
 
     free_tracks();
     
     waveform->draw();
-    
+    explorer->draw();
         
     SDL_RenderPresent(renderer);
     

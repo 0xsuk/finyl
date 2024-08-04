@@ -5,6 +5,8 @@
 #include "interface.h"
 
 int main(int argc, char **argv) {
+  srand (static_cast <unsigned> (time(0)));
+
   if (argc < 2) {
     printf("usage ./finyl <path to rekordbox usb: example /media/null/22BC-F655/ > [<soundcard name (default is \"default\")> <period_size (default is 128)> <fps (default 30)]\n inside [] are optional\n");
     return 0;
@@ -23,7 +25,6 @@ int main(int argc, char **argv) {
   if (argc >= 4) {
     int period_size = std::stoi(argv[3]);
     gApp.audio->set_period_size(period_size);
-    printf("bruh\n");
   }
   
   if (argc >=5) {

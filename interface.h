@@ -4,6 +4,7 @@
 #include "finyl.h"
 #include <SDL2/SDL.h>
 #include "waveform.h"
+#include "explorer.h"
 #include "controller.h"
 
 class Interface {
@@ -13,6 +14,8 @@ public:
   int win_width = 1000;
   int win_height = 500;
   std::unique_ptr<WaveForm> waveform;
+  std::unique_ptr<Explorer> explorer;
+  
   SDL_Renderer* renderer;
   SDL_Window* window;
   
