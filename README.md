@@ -2,7 +2,7 @@
 finyl is a rekordbox USB compatible multi-stems DJ system for Linux 64 bits that lets you mix audio sources separately. (vocal, instrumental, etc)  
 It is designed to run fast on Raspberry pi 3b+ RAM 1GB.
 
-![finyl](preview.png)
+![](finyl.mp4)
 
 
 ## build
