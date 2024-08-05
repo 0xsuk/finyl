@@ -6,6 +6,7 @@
 #include "waveform.h"
 #include "explorer.h"
 #include "controller.h"
+#include "gif.h"
 
 
 class Interface {
@@ -16,6 +17,8 @@ public:
   int win_height = 500;
   std::unique_ptr<WaveForm> waveform;
   std::unique_ptr<Explorer> explorer;
+  std::unique_ptr<GIF> cat;
+  std::unique_ptr<GIF> pikachu;
   
   SDL_Renderer* renderer;
   SDL_Window* window;

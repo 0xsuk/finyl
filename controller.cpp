@@ -501,14 +501,6 @@ void Controller::load_track(finyl_track** dest, int tid, finyl_deck_type deck) {
 void Controller::handle_key(char x) {
   if (adeck->pTrack != nullptr) {
     switch (x) {
-    case '-': {
-      set_bqGainLow(*adeck, adeck->bqisoState->bqGainLow+0.1);
-      return;
-    }
-    case '=': {
-      set_bqGainLow(*adeck, adeck->bqisoState->bqGainLow-0.1);
-      return;
-    }
     case 'z':
       toggle_delay(*adeck);
       return;
@@ -733,6 +725,20 @@ void Controller::handle_key(char x) {
     gApp.interface->explorer->back();
     break;
   }
+  case '-': {
+    // bpm beat in 60 sec
+    // 4 beat in  60 / (bpm/4) * 1000 msec
+    double d = 60 / (adeck->pTrack->get_effective_bpm() / 1.0) * 1000;
+    gApp.interface->cat->set_effective_loop_duration(d);
+    gApp.interface->pikachu->set_effective_loop_duration(d*2);
+    return;
+  }
+  case '=': {
+    set_bqGainLow(*adeck, adeck->bqisoState->bqGainLow-0.1);
+    return;
+  }
+
+  
   }
 }
 

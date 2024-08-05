@@ -45,7 +45,7 @@ struct finyl_playlist{
 
 struct finyl_track_meta {
   int id;
-  int bpm;
+  int bpm; //bpm * 100 (int)
   int musickeyid;
   int filesize;
   std::string title;
@@ -193,6 +193,9 @@ struct finyl_track{
   }
   double get_speed() {
     return 1.0/get_reftimeratio();
+  }
+  double get_effective_bpm() {
+    return (meta.bpm/100.0) * get_speed();
   }
   double get_reftimeratio() {
     return stretchers[0]->getTimeRatio();
