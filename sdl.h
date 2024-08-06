@@ -50,8 +50,11 @@ class Container {
   }
 };
 
+
+void a(SDL_Texture* p);
+
 using Surface = Container<SDL_Surface, SDL_FreeSurface>;
-using Texture = Container<SDL_Texture, SDL_DestroyTexture>;
+using Texture = Container<SDL_Texture, a>;
 
 #endif
 

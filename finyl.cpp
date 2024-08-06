@@ -553,9 +553,9 @@ void Audio::run() {
 }
 
 App::App() {
-  audio = std::make_shared<Audio>();
-  controller = std::make_shared<Controller>();
-  interface = std::make_shared<Interface>();
+  audio = std::make_unique<Audio>();
+  controller = std::make_unique<Controller>();
+  interface = std::make_unique<Interface>();
 }
 
 void App::run() {

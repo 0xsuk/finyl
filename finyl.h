@@ -307,9 +307,9 @@ public:
 
   void run();
 
-  std::shared_ptr<Audio> audio;
-  std::shared_ptr<Controller> controller;
-  std::shared_ptr<Interface> interface;
+  std::unique_ptr<Audio> audio;
+  std::unique_ptr<Controller> controller;
+  std::unique_ptr<Interface> interface;
 private:
   std::atomic<bool> running = true;
 };

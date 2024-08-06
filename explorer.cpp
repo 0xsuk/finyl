@@ -5,8 +5,8 @@
 Explorer::Explorer():
   x(300),
   y(300),
-  w(500),
-  h(400),
+  w(1000),
+  h(700),
   usb_list{x, y+20, w, h, font_size},
   playlist_list(x,y+20,w,h, font_size),
   song_list(x,y+20,w,h, font_size) {
@@ -34,11 +34,17 @@ void Explorer::select() {
     std::advance(it, active_list->get_selected());
     playlist_id = it->first;
     show_song();
-  } else if (active_list == &song_list) {
-    int track_id = songs_meta[active_list->get_selected()].id;
-    gApp.controller->load_track_nstems(&gApp.controller->adeck->pTrack, track_id, finyl_a, 2);
   }
 }
+
+void Explorer::load_track_2(Deck& deck) {
+  if (active_list != &song_list) {
+    return;
+  }
+  int track_id = songs_meta[active_list->get_selected()].id;
+  gApp.controller->load_track_nstems(&deck.pTrack, track_id, deck.type, 2);
+}
+
 void Explorer::back() {
   if (active_list == &usb_list) return;
   else if (active_list == &playlist_list) show_usb();
@@ -84,7 +90,7 @@ void Explorer::list_song() {
   getPlaylistTrackMetas(songs_meta, *usb, playlist_id);
 
   for (auto& meta: songs_meta) {
-    songs.push_back(std::to_string(meta.bpm) + " " + meta.title);
+    songs.push_back(std::to_string(meta.bpm) + " " + meta.filename);
   }
 
   song_list.set_items(songs);

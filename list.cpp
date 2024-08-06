@@ -23,6 +23,8 @@ List::List(int _x, int _y, int _w, int _h, int _font_size):
     printf("bad %s\n", TTF_GetError());
     return; 
   }
+  init_select_tx();
+
 }
 
 void List::set_items(std::vector<std::string> _items) {
@@ -40,8 +42,6 @@ void List::set_items(std::vector<std::string> _items) {
     item_txs.push_back(SDL_CreateTextureFromSurface(gApp.interface->renderer, item_surfs[i].get()));
     SDL_SetTextureBlendMode(item_txs[i].get(), SDL_BLENDMODE_BLEND);
   }
-
-  init_select_tx();
 
   for (;;visible_items++) {
     auto height_offset = (font_size+space)*visible_items;

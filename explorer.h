@@ -17,7 +17,7 @@ public:
   void select_up();
   void select();
   void back();
-
+  void load_track_2(Deck& deck);
 private:
   void draw_title();
   

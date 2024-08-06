@@ -75,6 +75,9 @@ int Interface::run() {
       if (event.type == SDL_QUIT) {
         goto cleanup;
       }
+      if (event.type == SDL_KEYDOWN) {
+        gApp.controller->handle_sdl_key(event);
+      }
     }
 
     SDL_SetRenderDrawColor(renderer, 0,0,0,255);

@@ -7,6 +7,7 @@
 #include "util.h"
 #include "dev.h"
 #include "rekordbox.h"
+#include "controller.h"
 #include <stdlib.h>
 #include <libgen.h>
 #include <utility>
@@ -119,7 +120,7 @@ int main(int argc, char **argv) {
   if (err == 1) {
     return 1;
   }
-  Usb& usb = usbs[0];
+  Usb& usb = gApp.controller->usbs[0];
   
   char* op = argv[2];
 

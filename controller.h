@@ -4,6 +4,7 @@
 #include <functional>
 #include "action.h"
 #include "rekordbox.h"
+#include <SDL2/SDL.h>
 
 struct ActionToFunc {
   char* base_action;
@@ -20,6 +21,7 @@ class Controller {
   void run();
   void load_track_nstems(finyl_track** dest, int tid, finyl_deck_type deck, int n);
   void load_track(finyl_track** dest, int tid, finyl_deck_type deck);
+  void handle_sdl_key(const SDL_Event& event);
 
   std::vector<Usb> usbs;
   std::unique_ptr<Deck> adeck; //initialized when on_period_size_change

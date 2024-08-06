@@ -2,7 +2,7 @@ CPPFLAGS = -Wall -Wno-unused-result -Wno-write-strings -Wno-sign-compare -Wno-de
 LDFLAGS = -lasound -lm -lSDL2 -lSDL2_ttf -lX11 -lcrypto -lstdc++ -lgif
 
 ENTRY = entry.o
-BUT_ENTRY = finyl.o midi.o controller.o dev.o interface.o util.o action.o rekordbox.o kaitaistream.o rekordbox_pdb.o rekordbox_anlz.o dsp.o waveform.o list.o explorer.o gif.o external/rubberband/single/RubberBandSingle.o external/fidlib/fidlib.o
+BUT_ENTRY = finyl.o midi.o controller.o dev.o interface.o util.o action.o rekordbox.o kaitaistream.o rekordbox_pdb.o rekordbox_anlz.o dsp.o waveform.o list.o explorer.o gif.o  sdl.o external/rubberband/single/RubberBandSingle.o external/fidlib/fidlib.o
 OBJS = $(ENTRY) $(BUT_ENTRY)
 TEST_OBJS = $(addsuffix .o,$(TESTS))
 

@@ -99,6 +99,8 @@ MidiToAction launchkey[] = {
 
   {0xbf, 104, "inc_wave_range"},
   {0xbf, 105, "dec_wave_range"},
+  {0xbf, 115, "DeckA-load_track"},
+  {0xbf, 117, "DeckB-load_track"},
 };
 
 #define valfunc(exp) ([&](double val){exp})
@@ -127,6 +129,7 @@ Controller::Controller() {
     {"DeckA-toggle_delay", velocityfunc(ifvelocity(toggle_delay(*adeck);))},
     {"DeckA-toggle_mute_gain0", velocityfunc(ifvelocity(toggle_mute0(*adeck);))},
     {"DeckA-toggle_master", velocityfunc(ifvelocity(toggle_master(*adeck);))},
+    {"DeckA-load_track", velocityfunc(ifvelocity(gApp.interface->explorer->load_track_2(*adeck);))},
 
     {"DeckB-gain", valfunc(set_gain(*bdeck, val);)},
     {"DeckB-gain0", valfunc(set_gain0(*bdeck, val);)},
@@ -148,6 +151,7 @@ Controller::Controller() {
     {"DeckB-dec_speed", velocityfunc(ifvelocity(dec_speed(*bdeck);))},
     {"DeckB-toggle_delay", velocityfunc(ifvelocity(toggle_delay(*bdeck);))},
     {"DeckB-toggle_mute_gain0", velocityfunc(ifvelocity(toggle_mute0(*bdeck);))},
+    {"DeckB-load_track", velocityfunc(ifvelocity(gApp.interface->explorer->load_track_2(*bdeck);))},
 
     {"inc_wave_range", velocityfunc(ifvelocity(gApp.interface->waveform->double_range();))},
     {"dec_wave_range", velocityfunc(ifvelocity(gApp.interface->waveform->half_range();))}
@@ -719,11 +723,11 @@ void Controller::handle_key(char x) {
   }
   case 'r': {
     gApp.interface->explorer->select();
-    break;
+    return;
   }
   case 'R': {
     gApp.interface->explorer->back();
-    break;
+    return;
   }
   case '-': {
     // bpm beat in 60 sec
@@ -739,6 +743,27 @@ void Controller::handle_key(char x) {
   }
 
   
+  }
+}
+
+void Controller::handle_sdl_key(const SDL_Event& event) {
+  switch (event.key.keysym.sym) {
+  case SDLK_DOWN: {
+    gApp.interface->explorer->select_down();
+    break;
+  }
+  case SDLK_UP: {
+    gApp.interface->explorer->select_up();
+    break;
+  }
+  case SDLK_LEFT: {
+    gApp.interface->explorer->back();
+    break;
+  }
+  case SDLK_RIGHT: {
+    gApp.interface->explorer->select();
+    break;
+  }
   }
 }
 
@@ -761,22 +786,22 @@ void Controller::run() {
   std::thread([&](){gApp.interface->run();}).detach();
   std::thread([&](){keyboard_handler();}).detach();
   
-  // auto mp = MidiParser();
-  // int err = mp.open_device("hw:1,0,0");
-  // if (err) {
-  //   return;
-  // }
+  auto mp = MidiParser();
+  int err = mp.open_device("hw:1,0,0");
+  if (err) {
+    return;
+  }
   
-  // std::thread([&]() {
-  //   auto f = std::bind(&Controller::handle_midi, this, std::placeholders::_1, std::placeholders::_2);
-  //   mp.handle(f);
-  // }).detach();
+  std::thread([&]() {
+    auto f = std::bind(&Controller::handle_midi, this, std::placeholders::_1, std::placeholders::_2);
+    mp.handle(f);
+  }).detach();
   
-  // auto mp2 = MidiParser();
-  // err = mp2.open_device("hw:2,0,0");
-  // if (err) {
-  //   return;
-  // }
-  // auto f = std::bind(&Controller::handle_midi, this, std::placeholders::_1, std::placeholders::_2);
-  // mp2.handle(f);
+  auto mp2 = MidiParser();
+  err = mp2.open_device("hw:2,0,0");
+  if (err) {
+    return;
+  }
+  auto f = std::bind(&Controller::handle_midi, this, std::placeholders::_1, std::placeholders::_2);
+  mp2.handle(f);
 }
