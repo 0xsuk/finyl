@@ -8,10 +8,11 @@
 
 
 #include "sdl.h"
+#include "text.h"
 
 class List : public IWidget {
 public:
-  List(int _x, int _y, int _w, int _h, int _font_size);
+  List(int _x, int _y, int _w, int _h, TTF_Font* font, int _font_size);
   
   void draw();
   void set_items(std::vector<std::string> _items);
@@ -20,6 +21,7 @@ public:
   int get_selected();
   
 private:
+  void update_items();
   void draw_item(SDL_Surface* surf, SDL_Texture* tx, int height_offset);
   void draw_select(int height_offset);
   void init_select_tx();
@@ -31,18 +33,19 @@ private:
   int w;
   int h;
   int space; //between lines
+  TTF_Font* font;
   int font_size;
-  SDL_Rect dest;
+  SDL_Rect dst;
   SDL_Rect src;
   int selected = 0;
   int head = 0; //head of visible list
   int visible_items = 0;
 
-  std::vector<std::string> items;
-  std::vector<Surface> item_surfs;
-  std::vector<Texture> item_txs;
+  bool update_items_ = false;
+  
+  std::vector<std::string> strings;
+  std::vector<Text> texts;
   Texture select_tx; //indicates item is selected
-  TTF_Font* font;
 };
 
 

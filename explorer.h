@@ -38,10 +38,8 @@ private:
   
   SDL_Rect dest;
   
-  Texture title_tx;
-  Surface title_surf;
-  TTF_Font* font;
   int font_size = 20;
+  TTF_Font* font = TTF_OpenFont("NotoSansCJK-Regular.ttc", font_size);
   
   Usb* usb;
   int playlist_id;
@@ -49,6 +47,8 @@ private:
   List usb_list;
   List playlist_list;
   List song_list;
+  
+  Text title;
   
   std::vector<std::string> usbs;
   std::map<int, std::string> playlists_map;

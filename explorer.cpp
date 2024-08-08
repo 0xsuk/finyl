@@ -7,10 +7,10 @@ Explorer::Explorer():
   y(300),
   w(1000),
   h(700),
-  usb_list{x, y+20, w, h, font_size},
-  playlist_list(x,y+20,w,h, font_size),
-  song_list(x,y+20,w,h, font_size) {
-  font = TTF_OpenFont("DejaVuSans.ttf", font_size);
+  usb_list{x, y+20, w, h, font, font_size},
+  playlist_list(x,y+20,w,h, font, font_size),
+  song_list(x,y+20,w,h, font, font_size),
+  title(font, font_size, "") {
   if (font == nullptr) {
     printf("bad %s\n", TTF_GetError());
     return; 
@@ -63,7 +63,7 @@ void Explorer::list_usb() {
 
 void Explorer::show_usb() {
   if (usbs.size()==0) list_usb();
-  set_title("usb:");
+  title.set_text("usb");
   active_list = &usb_list;
 }
 
@@ -80,7 +80,7 @@ void Explorer::list_playlist() {
 
 void Explorer::show_playlist() {
   if (playlists_map.size() == 0) list_playlist();
-  set_title("playlist:");
+  title.set_text("playlists");
   active_list = &playlist_list;
 }
 
@@ -99,27 +99,21 @@ void Explorer::list_song() {
 void Explorer::show_song() {
   list_song();
 
-  set_title("song:");
+  auto it = playlists_map.find(playlist_id);
+  title.set_text(it->second);
   active_list = &song_list;
 }
 
 
-void Explorer::set_title(std::string title) {
-  SDL_Color color = {255,255,255, 255};
-  title_surf = Surface(TTF_RenderText_Solid(font, title.data(), color));
-  title_tx = SDL_CreateTextureFromSurface(gApp.interface->renderer, title_surf.get());
-}
-
-void Explorer::draw_title() {
-  dest.x = x;
-  dest.y = y;
-  dest.w = std::min(title_surf.get()->w, w);
-  dest.h = title_surf.get()->h;
-  
-  SDL_RenderCopy(gApp.interface->renderer, title_tx.get(), NULL, &dest);
-}
-
 void Explorer::draw() {
-  draw_title();
+  title.update();
+  if (title.ready()) {
+    dest.x = x;
+    dest.y = y;
+    dest.w = std::min(title.get_surf()->w, w);
+    dest.h = title.get_surf()->h;
+    title.draw(NULL, &dest);
+  }
+  
   active_list->draw();
 }

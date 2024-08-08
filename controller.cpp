@@ -55,6 +55,8 @@ MidiToAction xdj_xz[] = {
 
   {0xb4, 107, "inc_wave_range"},
   {0xb4, 105, "dec_wave_range"},
+  {0xb4, 76, "DeckA-load_track"},
+  {0xb4, 77, "DeckB-load_track"},
 };
 
 MidiToAction launchkey[] = {
@@ -167,7 +169,7 @@ void Controller::handle_midi(int len, unsigned char buf[]) {
   //search func by action name from actionToFunc
   //call it
   
-  for (auto& ent: launchkey) {
+  for (auto& ent: xdj_xz) {
     if (ent.status == buf[0] && ent.control == buf[1]) {
       for (auto& atf: actionToFuncMap) {
         if (atf.base_action == ent.action_name) {
