@@ -15,7 +15,7 @@ public:
 
   int win_width = 1000;
   int win_height = 500;
-  std::unique_ptr<WaveForm> waveform;
+  std::unique_ptr<Waveform> waveform;
   std::unique_ptr<Explorer> explorer;
   std::unique_ptr<GIF> cat;
   std::unique_ptr<GIF> pikachu;

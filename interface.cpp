@@ -61,7 +61,7 @@ int Interface::run() {
     return 1;
   }
 
-  waveform = std::make_unique<WaveForm>(*this);
+  waveform = std::make_unique<Waveform>();
   explorer = std::make_unique<Explorer>();
   cat = std::make_unique<GIF>("assets/dance-cat.gif", 0, win_height - 350, 250, 250);
   pikachu = std::make_unique<GIF>("assets/pikachu-pokemon.gif", win_width - 350 , win_height - 400, 400, 300);

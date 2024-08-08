@@ -4,10 +4,11 @@
 #include "IWidget.h"
 #include "finyl.h"
 #include <SDL2/SDL.h>
+#include "sdl.h"
 
-class WaveForm : public IWidget {
+class Waveform {
  public:
-  WaveForm(Interface& _interface);
+  Waveform();
   void draw();
   void set_range(int _range);
   void double_range();
@@ -20,7 +21,7 @@ class WaveForm : public IWidget {
   void slide(SDL_Texture* texture, int xdiff);
   void draw_wave(finyl_track& t, int x, int mindex);
   void draw_waveform(SDL_Texture* texture, finyl_track& t, int starti, int nowi, int draw_range);
-  int plus_waveform(SDL_Texture* texture, finyl_track& t, int nowi, int wave_y, int previ);
+  int update_waveform(SDL_Texture* texture, finyl_track& t, int nowi, int wave_y, int previ);
   void render_waveform(SDL_Texture* texture, finyl_track& t, int nowi, int wave_y);
   void draw_center_line();
   void draw_static_grids(finyl_track* t);
@@ -37,11 +38,12 @@ class WaveForm : public IWidget {
   int wave_height;
   int wave_height_half;
   int wave_iteration_margin;
-  SDL_Texture* tx_awave;
-  SDL_Texture* tx_bwave;
-  SDL_Texture* tx_asg; //static grid for A
-  SDL_Texture* tx_bsg; //for B
-  Interface& itf;
+  Texture tx_awave;
+  Texture tx_bwave;
+  Texture tx_asg; //static grid for A
+  Texture tx_bsg; //for B
+  Texture tx_aloop;
+  Texture tx_loop;
 };
 
 
