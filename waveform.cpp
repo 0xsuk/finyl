@@ -1,24 +1,26 @@
 #include "waveform.h"
 #include "interface.h"
 
-Waveform::Waveform():
-  render_adeck(false),
-  render_bdeck(false),
-  wave_range(1000000),
-  wave_height(100),
-  wave_height_half(50),
-  wave_iteration_margin(100)
-  {
-  tx_awave = SDL_CreateTexture(gApp.interface->renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, gApp.interface->win_width, wave_height);
-  tx_bwave = SDL_CreateTexture(gApp.interface->renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, gApp.interface->win_width, wave_height);
-  tx_asg = SDL_CreateTexture(gApp.interface->renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, gApp.interface->win_width, wave_height);
-  SDL_SetTextureBlendMode(tx_asg.get(), SDL_BLENDMODE_BLEND);
-  tx_bsg = SDL_CreateTexture(gApp.interface->renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, gApp.interface->win_width, wave_height);
-  SDL_SetTextureBlendMode(tx_bsg.get(), SDL_BLENDMODE_BLEND);
+int get_index(int wave_width, int starti, int x, int range) {
+  return starti + (int)((x / (float)wave_width) * range);
+}
+int get_pixel(int ioffset, int range, int window_width) {
+  return (ioffset / (float)range) * window_width;
+}
+float get_scaled_left_sample(finyl_stem& s, int mindex) {
+  auto left = s[mindex*2];
+  return left / 32768.0;
+}
 
-};
 
-void Waveform::set_range(int _range) {
+void Wave::double_range() {
+  set_range(wave_range*2);
+}
+void Wave::half_range() {
+  set_range(wave_range/2);
+}
+
+void Wave::set_range(int _range) {
   if (_range < 130000) {
     return;
   } else if (_range > 4000000){
@@ -26,54 +28,27 @@ void Waveform::set_range(int _range) {
   }
   wave_range = _range;
   wave_iteration_margin = _range / 10000;
-  render_adeck = true;
-  render_bdeck = true;
+  init = true;
   printf("wave_range %d\n", _range);
   printf("wave_iteration_margin %d\n", wave_iteration_margin);
 }
 
-void Waveform::double_range() {
-  set_range(wave_range*2);
+Wave::Wave(Deck& deck, int wave_width, int wave_y, int wave_range, int wave_height, int wave_iteration_margin):
+  wave_width(wave_width),
+  wave_y(wave_y),
+  wave_range(wave_range),
+  wave_height(wave_height),
+  wave_height_half(wave_height/2),
+  wave_iteration_margin(wave_iteration_margin),
+  deck(deck)
+{
+  
+  tx_wave = SDL_CreateTexture(gApp.interface->renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, wave_width, wave_height);
+  tx_sg = SDL_CreateTexture(gApp.interface->renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, wave_width, wave_height);
+  SDL_SetTextureBlendMode(tx_sg.get(), SDL_BLENDMODE_BLEND);
 }
 
-void Waveform::half_range() {
-  set_range(wave_range/2);
-}
-void Waveform::erase_edge(int xdiff) {
-  SDL_SetRenderDrawColor(gApp.interface->renderer, 0, 0, 0, 255);
-  if (xdiff > 0) {
-    SDL_Rect rect = {gApp.interface->win_width-xdiff, 0, xdiff, wave_height}; //right edge
-    SDL_RenderFillRect(gApp.interface->renderer, &rect);
-  } else if (xdiff == 0) {
-      
-  } else {
-    SDL_Rect rect = {0, 0, -xdiff, wave_height}; //left edge
-    SDL_RenderFillRect(gApp.interface->renderer, &rect);
-  }
-}
-
-void Waveform::slide(SDL_Texture* texture, int xdiff) {
-  if (xdiff > 0) {
-    //slide to left by xdiff pixel
-    SDL_Rect src = {xdiff, 0, gApp.interface->win_width-xdiff, wave_height};
-    SDL_Rect dst = {0, 0, gApp.interface->win_width-xdiff, wave_height};
-
-    SDL_RenderCopy(gApp.interface->renderer, texture, &src, &dst);
-  } else {
-    //slide to right by -xdiff pixel
-    SDL_Rect src = {0, 0, gApp.interface->win_width+xdiff, wave_height};
-    SDL_Rect dst = {-xdiff, 0, gApp.interface->win_width+xdiff, wave_height};
-    SDL_RenderCopy(gApp.interface->renderer, texture, &src, &dst);
-  }
-}
-
-float get_scaled_left_sample(finyl_stem& s, int mindex) {
-  auto left = s[mindex*2];
-  return left / 32768.0;
-}
-
-
-void Waveform::draw_wave(finyl_track& t, int x, int mindex) {
+void Wave::draw_sample(finyl_track& t, int x, int mindex) {
   if (t.stems_size == 1) {
     float sample = get_scaled_left_sample(*t.stems[0], mindex);
     int y = wave_height/2.0 - sample*wave_height_half;
@@ -105,14 +80,10 @@ void Waveform::draw_wave(finyl_track& t, int x, int mindex) {
       SDL_RenderDrawLine(gApp.interface->renderer, x, y, x, wave_height_half);
     }
   }
+  
 }
 
-int get_pixel(int ioffset, int range, int window_width) {
-  return (ioffset / (float)range) * window_width;
-}
-
-
-void Waveform::draw_waveform(SDL_Texture* texture, finyl_track& t, int starti, int nowi, int draw_range) {
+void Wave::draw_wave(finyl_track& t, int starti, int nowi, int draw_range) {
   SDL_SetRenderDrawColor(gApp.interface->renderer, 100, 100, 250, 255); // Waveform color
 
   int idraw_offset = wave_range-draw_range;
@@ -130,7 +101,7 @@ void Waveform::draw_waveform(SDL_Texture* texture, finyl_track& t, int starti, i
   }
 
   for (int i = idraw_offset; i < idraw_offset_end; i=i+wave_iteration_margin) {
-    int x = get_pixel(i, wave_range, gApp.interface->win_width);
+    int x = get_pixel(i, wave_range, wave_width);
     int pcmi = i+starti;
     
     //horizontal line
@@ -168,120 +139,163 @@ void Waveform::draw_waveform(SDL_Texture* texture, finyl_track& t, int starti, i
       }
     }
     
-    draw_wave(t, x, pcmi);
+    draw_sample(t, x, pcmi);
     
     prev_pcmi = pcmi;
   }
+
 }
 
-int get_index(int win_width, int starti, int x, int range) {
-  return starti + (int)((x / (float)win_width) * range);
+void Wave::erase_edge(int xdiff) {
+  SDL_SetRenderDrawColor(gApp.interface->renderer, 0, 0, 0, 255);
+  if (xdiff > 0) {
+    SDL_Rect rect = {wave_width-xdiff, 0, xdiff, wave_height}; //right edge
+    SDL_RenderFillRect(gApp.interface->renderer, &rect);
+  } else if (xdiff == 0) {
+      
+  } else {
+    SDL_Rect rect = {0, 0, -xdiff, wave_height}; //left edge
+    SDL_RenderFillRect(gApp.interface->renderer, &rect);
+  }
 }
 
-int Waveform::update_waveform(SDL_Texture* texture, finyl_track& t, int nowi, int wave_y, int previ) {
-  SDL_SetRenderTarget(gApp.interface->renderer, texture);
+void Wave::update_wave(finyl_track& t) {
+  int nowi = t.get_refindex();
+  
+  SDL_SetRenderTarget(gApp.interface->renderer, tx_wave.get());
   int starti = nowi - (int)wave_range/2;
   int draw_range = starti - previ;
-  int xdiff = (draw_range / (float)wave_range) * gApp.interface->win_width;
-  int newprevi = get_index(gApp.interface->win_width, previ, xdiff, wave_range);
+  int xdiff = (draw_range / (float)wave_range) * wave_width;
+  int newprevi = get_index(wave_width, previ, xdiff, wave_range);
   
-  slide(texture, xdiff);
+  slide(tx_wave.get(), xdiff);
   erase_edge(xdiff);
   
-  draw_waveform(texture, t, starti, nowi, draw_range);
+  draw_wave(t, starti, nowi, draw_range);
   
   SDL_SetRenderTarget(gApp.interface->renderer, NULL);
-  SDL_Rect dst = {0, wave_y, gApp.interface->win_width, wave_height};
-  SDL_RenderCopy(gApp.interface->renderer, texture, NULL, &dst);
+  SDL_Rect dst = {0, wave_y, wave_width, wave_height};
+  SDL_RenderCopy(gApp.interface->renderer, tx_wave.get(), NULL, &dst);
   
-  return newprevi;
+  previ = newprevi;
 }
 
-void Waveform::render_waveform(SDL_Texture* texture, finyl_track& t, int nowi, int wave_y) {
-  SDL_SetRenderTarget(gApp.interface->renderer, texture);
+void Wave::init_wave(finyl_track& t) {
+  int nowi = (int)t.get_refindex();
+
+  printf("txwave%p\n", tx_wave.get());
+  
+  SDL_SetRenderTarget(gApp.interface->renderer, tx_wave.get());
   int starti = nowi - (int)wave_range/2;
 
   SDL_SetRenderDrawColor(gApp.interface->renderer, 0, 0, 0, 0);
   SDL_RenderClear(gApp.interface->renderer);
   
-  draw_waveform(texture, t, starti, nowi, wave_range);
+  draw_wave(t, starti, nowi, wave_range);
   
   SDL_SetRenderTarget(gApp.interface->renderer, NULL);
-  SDL_Rect dst = {0, wave_y, gApp.interface->win_width, wave_height};
-  SDL_RenderCopy(gApp.interface->renderer, texture, NULL, &dst);
+  SDL_Rect dst = {0, wave_y, wave_width, wave_height};
+  SDL_RenderCopy(gApp.interface->renderer, tx_wave.get(), NULL, &dst);
+
+  previ = nowi - (int)wave_range/2;
 }
 
-void Waveform::draw_center_line() {
+void Wave::draw() {
+  if (init) {
+    init_wave(*deck.pTrack);
+    init=false;
+  } else if (deck.pTrack != nullptr) {
+    update_wave(*deck.pTrack);
+    draw_static_grids(*deck.pTrack);
+  }
+}
+
+Waveform::Waveform():
+  a_wave(*gApp.controller->adeck.get(), gApp.interface->win_width-500, 0, 1000000, 110, 100),
+  b_wave(*gApp.controller->bdeck.get(), gApp.interface->win_width-500, 120, 1000000, 110, 100)
+  {
+};
+
+void Waveform::set_range(int _range) {
+  a_wave.set_range(_range);
+  b_wave.set_range(_range);
+}
+
+void Waveform::double_range() {
+  a_wave.double_range();
+  b_wave.double_range();
+}
+
+void Waveform::half_range() {
+  a_wave.half_range();
+  b_wave.half_range();
+}
+
+void Wave::slide(SDL_Texture* texture, int xdiff) {
+  if (xdiff > 0) {
+    //slide to left by xdiff pixel
+    SDL_Rect src = {xdiff, 0, wave_width-xdiff, wave_height};
+    SDL_Rect dst = {0, 0, wave_width-xdiff, wave_height};
+
+    SDL_RenderCopy(gApp.interface->renderer, texture, &src, &dst);
+  } else {
+    //slide to right by -xdiff pixel
+    SDL_Rect src = {0, 0, wave_width+xdiff, wave_height};
+    SDL_Rect dst = {-xdiff, 0, wave_width+xdiff, wave_height};
+    SDL_RenderCopy(gApp.interface->renderer, texture, &src, &dst);
+  }
+}
+
+void Wave::draw_center_line() {
   SDL_SetRenderDrawColor(gApp.interface->renderer, 255, 0, 250, 255); // Waveform color
-  SDL_Rect rect = {gApp.interface->win_width / 2 - 1, 0, 2, wave_height};
+  SDL_Rect rect = {wave_width / 2 - 1, 0, 2, wave_height};
   SDL_RenderFillRect(gApp.interface->renderer, &rect);
 }
 
-void Waveform::draw_static_grids(finyl_track* t) {
-  if (t->beats.size() < 2) {
+void Wave::draw_static_grids_(finyl_track& t) {
+  if (t.beats.size() < 2) {
     return;
   }
   
   SDL_SetRenderDrawColor(gApp.interface->renderer, 100, 0, 100, 255);
 
-  int dur = t->beats[1].time - t->beats[0].time; //msec
+  int dur = t.beats[1].time - t.beats[0].time; //msec
   int samples = dur * (gApp.audio->get_sample_rate() / 1000.0);
 
   int i = 1;
   while (1) {
-    int xl = get_pixel(wave_range/2 - 32*i*samples, wave_range, gApp.interface->win_width);
-    if (xl>gApp.interface->win_width || xl<0) {
+    int xl = get_pixel(wave_range/2 - 32*i*samples, wave_range, wave_width);
+    if (xl>wave_width || xl<0) {
       break;
     }
     SDL_Rect rectl = {xl-1, 0, 2, wave_height};
     SDL_RenderFillRect(gApp.interface->renderer, &rectl);
     
-    int xr = get_pixel(wave_range/2 + 32*i*samples, wave_range, gApp.interface->win_width);
+    int xr = get_pixel(wave_range/2 + 32*i*samples, wave_range, wave_width);
     
     SDL_Rect rectr = {xr-1, 0, 2, wave_height};
     SDL_RenderFillRect(gApp.interface->renderer, &rectr);
     i++;
-
   }
 }
 
-void Waveform::render_static_grids(SDL_Texture* texture, finyl_track* t, int wave_y) {
-  SDL_SetRenderTarget(gApp.interface->renderer, texture);
+void Wave::draw_static_grids(finyl_track& t) {
+  SDL_SetRenderTarget(gApp.interface->renderer, tx_sg.get());
   
   SDL_SetRenderDrawColor(gApp.interface->renderer, 0, 0, 0, 0);
   SDL_RenderClear(gApp.interface->renderer);
 
   draw_center_line();
-  draw_static_grids(t);
+  draw_static_grids_(t);
   
   SDL_SetRenderTarget(gApp.interface->renderer, NULL);
-  SDL_Rect dst = {0, wave_y, gApp.interface->win_width, wave_height};
-  SDL_RenderCopy(gApp.interface->renderer, texture, NULL, &dst);
-}
-
-void Waveform::render_deck(Deck& deck, int& previ, SDL_Texture* wavetx, int wave_y) {
-  int nowi = (int)deck.pTrack->get_refindex();
-  render_waveform(wavetx, *deck.pTrack, nowi, wave_y);
-  previ = nowi - (int)wave_range/2;
-}
-
-void Waveform::update_deck(Deck &deck, int &previ, SDL_Texture* wavetx, SDL_Texture* sgtx, int wave_y) {
-  previ = update_waveform(wavetx, *deck.pTrack, (int)deck.pTrack->get_refindex(), wave_y, previ);
-  render_static_grids(sgtx, deck.pTrack, wave_y);
+  SDL_Rect dst = {0, wave_y, wave_width, wave_height};
+  SDL_RenderCopy(gApp.interface->renderer, tx_sg.get(), NULL, &dst);
 }
 
 void Waveform::draw() {
-  if (render_adeck) {
-    render_deck(*gApp.controller->adeck, previ_adeck, tx_awave.get(), 0);
-    render_adeck = false;
-  } else if (gApp.controller->adeck->pTrack != nullptr) {
-    update_deck(*gApp.controller->adeck, previ_adeck, tx_awave.get(), tx_asg.get(), 0);
-  }
-    
-  if (render_bdeck) {
-    render_deck(*gApp.controller->bdeck, previ_bdeck, tx_bwave.get(), wave_height + 10);
-    render_bdeck = false;
-  } else if (gApp.controller->bdeck->pTrack != nullptr) {
-    update_deck(*gApp.controller->bdeck, previ_bdeck, tx_bwave.get(), tx_bsg.get(), wave_height + 10);
-  }
+  a_wave.draw();
+  b_wave.draw();
 }
+
+

@@ -233,9 +233,9 @@ void Controller::load_track_nstems(finyl_track** dest, int tid, finyl_deck_type 
 
   *dest = t.release();
   if (deck == finyl_a) {
-    gApp.interface->waveform->render_adeck = true;
+    gApp.interface->waveform->a_wave.init = true;
   } else if (deck == finyl_b) {
-    gApp.interface->waveform->render_bdeck = true;
+    gApp.interface->waveform->b_wave.init = true;
   }
 
   if (before != nullptr) {
