@@ -749,12 +749,35 @@ void Controller::handle_key(char x) {
 }
 
 void Controller::handle_sdl_key(const SDL_Event& event) {
+  bool is_shift = event.key.keysym.mod & KMOD_SHIFT;
+  bool is_alt = event.key.keysym.mod & KMOD_ALT;
+  
   switch (event.key.keysym.sym) {
   case SDLK_DOWN: {
+    if (is_shift) {
+      gApp.interface->explorer->load_track_2(*bdeck);
+      break;
+    }
+    
+    if (is_alt) {
+      gApp.interface->explorer->load_track(*bdeck);
+      break;
+    }
+    
     gApp.interface->explorer->select_down();
     break;
   }
   case SDLK_UP: {
+    if (is_shift) {
+      gApp.interface->explorer->load_track_2(*adeck);
+      break;
+    }
+    
+    if (is_alt) {
+      gApp.interface->explorer->load_track(*adeck);
+      break;
+    }
+
     gApp.interface->explorer->select_up();
     break;
   }
