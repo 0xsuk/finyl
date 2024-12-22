@@ -37,12 +37,24 @@ void Explorer::select() {
   }
 }
 
-void Explorer::load_track_2(Deck& deck) {
+void Explorer::load_track_2(Deck &deck) {
+  load_track_n(deck, 2);
+}
+
+void Explorer::load_track_n(Deck& deck, int n) {
   if (active_list != &song_list) {
     return;
   }
   int track_id = songs_meta[active_list->get_selected()].id;
-  gApp.controller->load_track_nstems(&deck.pTrack, track_id, deck.type, 2);
+  gApp.controller->load_track_nstems(&deck.pTrack, track_id, deck.type, n);
+}
+
+void Explorer::load_track(Deck &deck) {
+  if (active_list != &song_list) {
+    return;
+  }
+  int track_id = songs_meta[active_list->get_selected()].id;
+  gApp.controller->load_track(&deck.pTrack, track_id, deck.type);
 }
 
 void Explorer::back() {

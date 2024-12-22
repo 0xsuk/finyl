@@ -17,7 +17,9 @@ public:
   void select_up();
   void select();
   void back();
-  void load_track_2(Deck& deck);
+  void load_track_n(Deck& deck, int n);
+  void load_track_2(Deck &deck);
+  void load_track(Deck& deck);
 private:
   void draw_title();
   
