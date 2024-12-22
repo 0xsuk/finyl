@@ -5,7 +5,7 @@
 Explorer::Explorer():
   x(300),
   y(300),
-  w(1000),
+  w(700),
   h(700),
   usb_list{x, y+20, w, h, font, font_size},
   playlist_list(x,y+20,w,h, font, font_size),

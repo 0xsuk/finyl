@@ -211,8 +211,8 @@ void Wave::draw() {
 }
 
 Waveform::Waveform():
-  a_wave(*gApp.controller->adeck.get(), gApp.interface->win_width-500, 0, 1000000, 110, 100),
-  b_wave(*gApp.controller->bdeck.get(), gApp.interface->win_width-500, 120, 1000000, 110, 100)
+  a_wave(*gApp.controller->adeck.get(), gApp.interface->win_width, 0, 1000000, 110, 100),
+  b_wave(*gApp.controller->bdeck.get(), gApp.interface->win_width, 120, 1000000, 110, 100)
   {
 };
 

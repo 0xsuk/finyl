@@ -37,6 +37,9 @@ int Interface::run() {
     return 1;
   }
   
+  win_width = 1500;
+  win_height = 1000;
+  
   if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
     printf("SDL initialization failed: %s\n", SDL_GetError());
     return 1;
