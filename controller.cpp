@@ -105,6 +105,54 @@ MidiToAction launchkey[] = {
   {0xbf, 117, "DeckB-load_track"},
 };
 
+MidiToAction ddj400[] = {
+  {0xb0, 19, "DeckA-gain"},
+  // {0xb0, 7, "DeckA-gain0"},
+  // {0xb0, 4, "DeckA-gain1"},
+  {0xb0, 4, "DeckA-gain0_1"},
+  {0xb0, 15, "DeckA-eqlow"},
+  {0xb6, 23, "DeckA-delay"},
+  {0x90, 12, "DeckA-press_cue"},
+  {0x90, 11, "DeckA-toggle_playing"},
+  {0x97, 0, "DeckA-inc_index"},
+  {0x97, 4, "DeckA-dec_index"},
+  {0x97, 1, "DeckA-inc_delta_index"},
+  {0x97, 5, "DeckA-dec_delta_index"},
+  {0x90, 16, "DeckA-loop_in"},
+  {0x90, 17, "DeckA-loop_out"},
+  {0x90, 77, "DeckA-loop_deactivate"},
+  {0x90, 88, "DeckA-sync_bpm"},
+  {0x97, 2, "DeckA-inc_speed"},
+  {0x97, 6, "DeckA-dec_speed"},
+  {0x90, 84, "DeckA-toggle_delay"},
+  // {0xb0, 34, "DeckA-toggle_mute_gain0"},
+  // {0xb0, 34, "DeckA-toggle_master"},
+  {0x96, 70, "DeckA-load_track"},
+  {0xb1, 19, "DeckB-gain"},
+  // {0xb1, 4, "DeckB-gain0"},
+  // {0xb1, 4, "DeckB-gain1"},
+  {0xb1, 4, "DeckB-gain0_1"},
+  {0xb1, 15, "DeckB-eqlow"},
+  {0xb6, 24, "DeckB-delay"},
+  {0x91, 12, "DeckB-press_cue"},
+  {0x91, 11, "DeckB-toggle_playing"},
+  {0x99, 0, "DeckB-inc_index"},
+  {0x99, 4, "DeckB-dec_index"},
+  {0x99, 1, "DeckB-inc_delta_index"},
+  {0x99, 5, "DeckB-dec_delta_index"},
+  {0x91, 16, "DeckB-loop_in"},
+  {0x91, 17, "DeckB-loop_out"},
+  {0x91, 77, "DeckB-loop_deactivate"},
+  {0x91, 88, "DeckB-sync_bpm"},
+  {0x99, 2, "DeckB-inc_speed"},
+  {0x99, 6, "DeckB-dec_speed"},
+  {0x91, 84, "DeckB-toggle_delay"},
+  // {0xb1, 34, "DeckB-toggle_mute_gain0"},
+  {0x96, 71, "DeckB-load_track"},
+  {0x94, 75, "inc_wave_range"},
+  {0x94, 74, "dec_wave_range"},
+};
+
 #define valfunc(exp) ([&](double val){exp})
 #define velocityfunc(exp) ([&](double velocity){exp})
 
@@ -169,7 +217,7 @@ void Controller::handle_midi(int len, unsigned char buf[]) {
   //search func by action name from actionToFunc
   //call it
   
-  for (auto& ent: xdj_xz) {
+  for (auto& ent: ddj400) {
     if (ent.status == buf[0] && ent.control == buf[1]) {
       for (auto& atf: actionToFuncMap) {
         if (atf.base_action == ent.action_name) {

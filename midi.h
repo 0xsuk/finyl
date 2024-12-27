@@ -3,6 +3,7 @@
 
 #include <alsa/asoundlib.h>
 #include <functional>
+#include <atomic>
 
 struct MidiToAction {
   unsigned char status;
@@ -39,7 +40,7 @@ private:
   void memo(int _val);
   void print_map();
 
-  bool stop = false;
+  std::atomic<bool> stop = false;
   
   snd_rawmidi_t *handle_in; 
   char* device_in;
@@ -51,7 +52,7 @@ private:
 
 class MidiParser {
 public:
-  bool stop;
+  std::atomic<bool> stop;
   MidiParser();
   int open_device(char* _device_in);
   void handle(std::function<void(int len, unsigned char buf[])>);

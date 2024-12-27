@@ -56,7 +56,7 @@ void MidiLearn::print_map() {
 }
 
 void MidiLearn::listen() {
-  while (!stop) {
+  while (!stop.load()) {
     ssize_t ret = snd_rawmidi_read(handle_in, buf, sizeof(buf));
     if (ret <= 0) {
       fprintf(stderr, "read error: %d - %s\n", (int)ret, snd_strerror(ret));
@@ -92,7 +92,7 @@ void MidiLearn::listen() {
 
 void MidiLearn::stop_listening() {
   // pthread_cancel;
-  stop = true;
+  stop.store(true);
 }
 
 MidiParser::MidiParser(): stop(false), handle_in(0) {
@@ -122,16 +122,15 @@ void MidiParser::handle(std::function<void (int, unsigned char *)> handler) {
 }
 
 void MidiLearn::learn() {
-  printf("press 1 to retry, 0 to proceed\n");
-  
   for (int i = 0; i<gApp.controller->actionToFuncMap.size(); i++) {
     auto& ent = gApp.controller->actionToFuncMap[i];
     printf("\n%s:\n", ent.base_action);
     int d;
-    auto t = std::thread([this](){listen();});
+    auto t = std::thread([&](){listen();}); //NOTE: this
     scanf("%d", &d);
     stop_listening();
     t.join();
+    printf("joined\n");
 
     if (d == 1) {
       i--;
@@ -146,7 +145,7 @@ void MidiLearn::learn() {
 
 int test_midi() {
   MidiLearn ml{};
-  int err = ml.open_device("hw:1,0,0");
+  int err = ml.open_device("hw:CARD=DDJ400");
   // int err = ml.open_device("hw:2,0,0");
   if (err) {
     fprintf(stderr,"snd_rawmidi_open failed: %d\n", err);
