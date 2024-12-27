@@ -1,4 +1,4 @@
-CPPFLAGS = -Wall -Wno-unused-result -Wno-write-strings -Wno-sign-compare -Wno-deprecated-declarations -std=c++20 -g -O3 -Iexternal/rubberband/rubberband -Iexternal/fidlib -DT_LINUX
+CPPFLAGS = -Wall -Wno-unused-result -Wno-write-strings -Wno-sign-compare -Wno-deprecated-declarations -std=c++20 -g -O3 -Iexternal/rubberband/rubberband -Iexternal/fidlib -Iexternal/reverb -DT_LINUX
 LDFLAGS = -lasound -lm -lSDL2 -lSDL2_ttf -lX11 -lcrypto -lstdc++ -lgif
 
 ENTRY = entry.o

@@ -4,6 +4,7 @@
 #include <cstring>
 #include "finyl.h"
 #include "fidlib.h"
+#include "Reverb.h"
 
 #define MAX_DELAY_SEC 10
 #define MAX_DELAY_SAMPLES 44100*MAX_DELAY_SEC*2
@@ -424,4 +425,26 @@ private:
 };
 
 
+class ReverbGroupState : public EffectState {
+public:
+  ReverbGroupState() : sendPrevious(0) {
+  }
+  ~ReverbGroupState() override = default;
+
+  // void engineParametersChanged(const mixxx::EngineParameters& engineParameters) {
+  //   sampleRate = engineParameters.sampleRate();
+  //   sendPrevious = 0;
+  // }
+
+  float sampleRate;
+  float sendPrevious;
+  MixxxPlateX2 reverb;
+};
+
+
+class ReverbEffect : public EffectProcessor<ReverbGroupState> {
+public:
+  ReverbEffect();
+  ~ReverbEffect() override = default;
+};
 #endif
