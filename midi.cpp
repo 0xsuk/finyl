@@ -134,6 +134,8 @@ void MidiLearn::learn() {
 
     if (d == 1) {
       i--;
+    } else if (d==2) {
+      break;
     } else {
       save(ent.base_action);
     }
