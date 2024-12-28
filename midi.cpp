@@ -104,6 +104,7 @@ int MidiParser::open_device(char *_device_in) {
 }
 
 void MidiParser::handle(std::function<void (int, unsigned char *)> handler) {
+  printf("reading midi %s\n", device_in);
   while (!stop) {
     ssize_t ret = snd_rawmidi_read(handle_in, buf, sizeof(buf));
     if (ret <= 0) {
@@ -141,17 +142,4 @@ void MidiLearn::learn() {
   }
 
   print_map();
-}
-
-int test_midi() {
-  MidiLearn ml{};
-  int err = ml.open_device("hw:CARD=DDJ400");
-  // int err = ml.open_device("hw:2,0,0");
-  if (err) {
-    fprintf(stderr,"snd_rawmidi_open failed: %d\n", err);
-  }
-  printf("opened\n");
-  ml.learn();
-
-  return 0;
 }

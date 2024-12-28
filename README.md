@@ -45,4 +45,8 @@ By default, the stem file extension is wav, because it is not compressed, thus f
 In theory, you could use any other audio separation program, or other demucs model. To do that, you just need to replace all occurence of `demucs` or `hdemucs_mmi` to something else in the source. However, in my opinion now, demucs performs better and faster than other programs (tried UVR, spleeter), so not going to provide option for them.
 
 
+## note
+- how to list midi device names
+`amidi -l`
+
 </details>
