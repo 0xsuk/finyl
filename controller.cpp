@@ -201,6 +201,7 @@ Controller::Controller() {
     {"DeckB-dec_speed", velocityfunc(ifvelocity(dec_speed(*bdeck);))},
     {"DeckB-toggle_delay", velocityfunc(ifvelocity(toggle_delay(*bdeck);))},
     {"DeckB-toggle_mute_gain0", velocityfunc(ifvelocity(toggle_mute0(*bdeck);))},
+    {"DeckB-toggle_master", velocityfunc(ifvelocity(toggle_master(*bdeck);))},
     {"DeckB-load_track", velocityfunc(ifvelocity(gApp.interface->explorer->load_track_2(*bdeck);))},
 
     {"inc_wave_range", velocityfunc(ifvelocity(gApp.interface->waveform->double_range();))},

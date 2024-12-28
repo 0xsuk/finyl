@@ -131,7 +131,6 @@ void MidiLearn::learn() {
     scanf("%d", &d);
     stop_listening();
     t.join();
-    printf("joined\n");
 
     if (d == 1) {
       i--;
