@@ -218,7 +218,7 @@ void Controller::handle_midi(int len, unsigned char buf[]) {
   //search func by action name from actionToFunc
   //call it
   
-  for (auto& ent: ddj400) {
+  for (auto& ent: launchkey) {
     if (ent.status == buf[0] && ent.control == buf[1]) {
       for (auto& atf: actionToFuncMap) {
         if (atf.base_action == ent.action_name) {
@@ -861,21 +861,21 @@ void Controller::run() {
   std::thread([&](){keyboard_handler();}).detach();
   
   auto mp = MidiParser();
-  int err = mp.open_device("hw:1,0,0");
+  int err = mp.open_device("hw:1");
   if (err) {
     return;
   }
   
-  std::thread([&]() {
+  // std::thread([&]() {
     auto f = std::bind(&Controller::handle_midi, this, std::placeholders::_1, std::placeholders::_2);
     mp.handle(f);
-  }).detach();
+  // }).detach();
   
-  auto mp2 = MidiParser();
-  err = mp2.open_device("hw:2,0,0");
-  if (err) {
-    return;
-  }
-  auto f = std::bind(&Controller::handle_midi, this, std::placeholders::_1, std::placeholders::_2);
-  mp2.handle(f);
+  // auto mp2 = MidiParser();
+  // err = mp2.open_device("hw:2,0,0");
+  // if (err) {
+  //   return;
+  // }
+  // auto f = std::bind(&Controller::handle_midi, this, std::placeholders::_1, std::placeholders::_2);
+  // mp2.handle(f);
 }
