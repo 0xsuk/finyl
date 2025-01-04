@@ -314,3 +314,53 @@ void ReverbEffect::process(ReverbGroupState *pState, const CSAMPLE *pInput, CSAM
   // }
 
 }
+
+
+void deinterleave_to_float(finyl_sample* input, float *left, float *right, int period_size) {
+    for (size_t i = 0; i < period_size; ++i) {
+        left[i] = input[2 * i] / 32768.0;
+        right[i] = input[2 * i + 1] / 32768.0;
+    }
+}
+void float_to_interleave(float *left, float *right, finyl_sample *output, int period_size) {
+  for (size_t i = 0; i < period_size; ++i) {
+    output[2 * i] = (finyl_sample)(left[i] * 32768.0);
+    output[2 * i + 1] = (finyl_sample)(right[i] * 32768.0);
+  }
+}
+
+FFTState::FFTState() {
+  left_in = (float*)malloc(gApp.audio->get_period_size()*sizeof(float));
+  right_in = (float*)malloc(gApp.audio->get_period_size()*sizeof(float));
+  left_out = (fftwf_complex*)fftwf_malloc(sizeof(fftw_complex) * (gApp.audio->get_period_size() / 2 + 1));
+  right_out = (fftwf_complex*)fftwf_malloc(sizeof(fftw_complex) * (gApp.audio->get_period_size() / 2 + 1));
+
+  left_fplan = fftwf_plan_dft_r2c_1d(gApp.audio->get_period_size(), left_in, left_out, FFTW_ESTIMATE);
+  right_fplan = fftwf_plan_dft_r2c_1d(gApp.audio->get_period_size(), right_in, right_out, FFTW_ESTIMATE);
+
+  left_iplan = fftwf_plan_dft_c2r_1d(gApp.audio->get_period_size(), left_out, left_in, FFTW_ESTIMATE);
+  right_iplan = fftwf_plan_dft_c2r_1d(gApp.audio->get_period_size(), right_out, right_in, FFTW_ESTIMATE);
+}
+
+void FFTState::set_target(finyl_buffer &_buffer) {
+  buffer = &_buffer;
+}
+void FFTState::forward() {
+  deinterleave_to_float(buffer->data(), left_in, right_in, gApp.audio->get_period_size());
+  fftwf_execute(left_fplan);
+  fftwf_execute(right_fplan);
+}
+void fft_normalize(float* in, int period_size) {
+  for (int i = 0; i<period_size; i++) {
+    in[i] /= period_size;
+  }
+}
+void FFTState::inverse() {
+  fftwf_execute(left_iplan);
+  fftwf_execute(right_iplan);
+
+  fft_normalize(left_in, gApp.audio->get_period_size());
+  fft_normalize(right_in, gApp.audio->get_period_size());
+  float_to_interleave(left_in, right_in, buffer->data(), gApp.audio->get_period_size());
+}
+

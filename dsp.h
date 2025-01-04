@@ -5,6 +5,7 @@
 #include "finyl.h"
 #include "fidlib.h"
 #include "Reverb.h"
+#include <fftw3.h>
 
 #define MAX_DELAY_SEC 10
 #define MAX_DELAY_SAMPLES 44100*MAX_DELAY_SEC*2
@@ -459,5 +460,27 @@ public:
                       
 };
 
+
+struct FFTState {
+public:
+  FFTState();
+  
+  float* left_in;
+  float* right_in;
+  fftwf_complex* left_out;
+  fftwf_complex* right_out;
+  fftwf_plan left_fplan;
+  fftwf_plan right_fplan;
+  fftwf_plan left_iplan;
+  fftwf_plan right_iplan;
+
+  finyl_buffer* buffer;
+
+  void set_target(finyl_buffer& _buffer); 
+  
+  void forward();
+
+  void inverse();
+};
 
 #endif

@@ -30,7 +30,8 @@ Deck::Deck(finyl_deck_type _type): type(_type),
                                    quantize(true),
                                    master(true),
                                    delayState(new DelayState{.wetmix=0.5, .drymix=1.0, .feedback=0.5}),
-                                   bqisoState(new BiquadFullKillEQEffectGroupState()) //cant initialize until sample_rate is set
+                                   bqisoState(new BiquadFullKillEQEffectGroupState()), //cant initialize until sample_rate is set
+                                   fftState(new FFTState())
 {
   buffer.resize(gApp.audio->get_period_size_2());
   for (size_t i = 0; i<MAX_STEMS_SIZE; i++) {
@@ -457,6 +458,12 @@ void Audio::handle_deck(Deck& deck) {
       
     gain_effect(deck.buffer, deck.gain);
   }
+  
+  deck.fftState->set_target(deck.buffer);
+  deck.fftState->forward();
+  //do stuff here!
+  deck.fftState->inverse();
+  
   delay(deck.buffer, *deck.delayState);
 
 }

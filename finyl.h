@@ -222,8 +222,9 @@ enum finyl_deck_type{
 struct DelayState;
 class BiquadFullKillEQEffectGroupState;
 class BiquadFullKillEQEffect;
+struct FFTState;
 struct ActionState;
-class Deck { //Should be initialized after audio is ready
+class Deck { //Should be initialized after audio is ready (= period size , sample rate is set)
 public:
   finyl_deck_type type;
   finyl_track* pTrack;
@@ -241,6 +242,7 @@ public:
   //TODO: these effects is sensitive to sample_rate. Effects reset function should be hooked to on_change_sample_rate
   std::unique_ptr<DelayState> delayState;
   std::unique_ptr<BiquadFullKillEQEffectGroupState> bqisoState;
+  std::unique_ptr<FFTState> fftState;
 
   Deck(finyl_deck_type _type);
 };
