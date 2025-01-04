@@ -30,8 +30,11 @@ List::List(int _x, int _y, int _w, int _h, TTF_Font* font, int _font_size):
 void List::set_items(std::vector<std::string> _strings) {
   strings = std::move(_strings);
   update_items_ = true;
+
+  no_item = strings.size() == 0;
 }
 
+//should NOT be called during draw() do stuff with texts, because update_items modify texts
 void List::update_items() {
   head = 0;
   selected = 0;
@@ -105,6 +108,7 @@ bool List::is_visible(int index) {
 }
 
 void List::select_up() {
+  if (no_item) return;
   if (selected > 0) {
     selected--;
     if (!is_visible(selected)) {
@@ -114,6 +118,7 @@ void List::select_up() {
 }
 
 void List::select_down() {
+  if (no_item) return;
   if (selected < texts.size()-1) {
     selected++;
     if (!is_visible(selected)) {
@@ -122,6 +127,11 @@ void List::select_down() {
   }
 }
 
+bool List::has_item() {
+  return !no_item;
+}
+
 int List::get_selected() {
+  if (no_item) return -1;
   return selected;
 }

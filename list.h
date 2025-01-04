@@ -19,6 +19,7 @@ public:
   void select_down();
   void select_up();
   int get_selected();
+  bool has_item();
   
 private:
   void update_items();
@@ -28,6 +29,7 @@ private:
   bool is_visible(int index);
   int get_height_offset(int index);
   
+  bool no_item = false;
   int x;
   int y;
   int w;

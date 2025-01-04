@@ -11,6 +11,7 @@
 
 class Interface {
 public:
+  Interface();
   int run();
 
   int win_width = 1000;
@@ -32,7 +33,7 @@ public:
   }
 
 private:
-  int fps = 30;
+  int fps;
   finyl_track* tracks_to_free[2];
   int tracks_to_free_tail = 0;
 };

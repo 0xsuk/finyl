@@ -148,16 +148,6 @@ rekordbox_pdb_t::page_type_t tableOrder[totalTables] = {
   rekordbox_pdb_t::PAGE_TYPE_HISTORY};
 
 
-void unplug(Usb& usb) {
-  for (auto it = gApp.controller->usbs.begin(); it!=gApp.controller->usbs.end();it++) {
-    if (usb.root == it->root) {
-      printf("unplugged %s\n", it->root.data());
-      gApp.controller->usbs.erase(it);
-    }
-  }
-}
-
-
 int plug(const std::string& root) {
   for (auto& u: gApp.controller->usbs) {
     if (u.root == root) {
@@ -170,14 +160,12 @@ int plug(const std::string& root) {
   
   std::string filepath = join_path(usb.root.data(), "/PIONEER/rekordbox/export.pdb");
   std::ifstream ifs(filepath, std::ifstream::binary);
-  if (!ifs) {
-    printf("usb does not exist\n");
+  if (!ifs) { //check if usb has rekordbox data
+    printf("usb does not have rekordbox data\n");
     return 1;
   }
   kaitai::kstream ks(&ifs);
-
   rekordbox_pdb_t rekordboxDB = rekordbox_pdb_t(&ks);
-
   for (int tableOrderIndex = 0; tableOrderIndex < totalTables; tableOrderIndex++) {
     for (std::vector<rekordbox_pdb_t::table_t*>::iterator table = rekordboxDB.tables()->begin();
          table != rekordboxDB.tables()->end();

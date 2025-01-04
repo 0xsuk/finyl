@@ -12,6 +12,7 @@
 #include "rekordbox.h"
 #include "midi.h"
 #include "controller.h"
+#include "usb.h"
 
 MidiToAction xdj_xz[] = {
   {0xb4, 17, "DeckA-gain"},
@@ -252,8 +253,9 @@ void Controller::load_track_nstems(finyl_track** dest, int tid, finyl_deck_type 
   finyl_track* before = *dest;
   
   auto t = std::make_unique<finyl_track>();
-  getTrackMeta(t->meta, usbs[0], tid);
-  readAnlz(usbs[0], *t, tid);
+  auto& usb = gApp.interface->explorer->get_selected_usb();
+  getTrackMeta(t->meta, usb, tid);
+  readAnlz(usb, *t, tid);
   
   printf("file: %s\n", t->meta.filename.data());
   
@@ -702,17 +704,6 @@ void Controller::handle_key(char x) {
   case 'X':
     gApp.stop_running();
     break;
-  case 'L':
-    printPlaylists(usbs[0]);
-    break;
-  case 'l': {
-    int pid;
-    printf("pid:");
-    scanf("%d", &pid);
-    printf("listing...\n");
-    printPlaylistTracks(usbs[0], pid);
-    break;
-  }
   case '4':
     gApp.interface->free_tracks();
     break;
@@ -854,6 +845,50 @@ void Controller::keyboard_handler() {
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
   printf("key_input closed\n");
   return;
+}
+
+bool is_already_plugged(std::string& path) {
+  for (auto& u: gApp.controller->usbs) {
+    if (u.root == path) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// void unplug(Usb& usb) {
+//   for (auto it = gApp.controller->usbs.begin(); it!=gApp.controller->usbs.end();it++) {
+//     if (usb.root == it->root) {
+//       printf("unplugged %s\n", it->root.data());
+//       gApp.controller->usbs.erase(it);
+//     }
+//   }
+// }
+
+//for path A, which belongs to controller->usbs, but doesnt belong to new_paths, A should be unplugged
+void unplug_old_usb(std::vector<std::string>& new_paths) {
+  for (auto it = gApp.controller->usbs.begin(); it!=gApp.controller->usbs.end();) {
+    auto included = std::find(new_paths.begin(), new_paths.end(), it->root);
+    bool not_included = included == new_paths.end();
+    if (not_included) {
+      it = gApp.controller->usbs.erase(it);
+    } else {
+      it++;
+    }
+  }
+}
+
+void Controller::scan_usbs() {
+  auto paths = listMountedUSBPaths();
+
+  unplug_old_usb(paths);
+  for (auto& p: paths) {
+    if (!is_already_plugged(p)) {
+      plug(p);
+    }
+  }
+  
 }
 
 void Controller::run() {

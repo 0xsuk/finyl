@@ -6,17 +6,21 @@ Explorer::Explorer():
   x(300),
   y(300),
   w(700),
-  h(700),
-  usb_list{x, y+20, w, h, font, font_size},
-  playlist_list(x,y+20,w,h, font, font_size),
-  song_list(x,y+20,w,h, font, font_size),
+  h(600),
+  list_h{h-header_margin},
+  device_list{x, y+header_margin, w, list_h, font, font_size},
+  usb_list{x, y+header_margin, w, list_h, font, font_size},
+  playlist_list(x,y+header_margin,w, list_h, font, font_size),
+  song_list(x,y+header_margin,w, list_h, font, font_size),
   title(font, font_size, "") {
+  devices.push_back("usbs");
+  
   if (font == nullptr) {
     printf("bad %s\n", TTF_GetError());
     return; 
   }
 
-  show_usb();
+  list_device();
 }
 
 void Explorer::select_up() {
@@ -26,14 +30,25 @@ void Explorer::select_down() {
   active_list->select_down();
 }
 void Explorer::select() {
-  if (active_list == &usb_list) {
+  if (!active_list->has_item()) {
+    return;
+  }
+  
+  if (active_list == &device_list) {
+    std::string device_name = devices[active_list->get_selected()];
+    if (device_name == "usbs") {
+      list_usb();
+    }
+  } else if (active_list == &usb_list) {
+    printf("selected %d\n", (int)active_list->get_selected());
+    printf("len %d\n", (int)gApp.controller->usbs.size());
     usb = &gApp.controller->usbs[active_list->get_selected()];
-    show_playlist();
+    list_playlist();
   } else if (active_list == &playlist_list) {
     auto it = playlists_map.begin();
     std::advance(it, active_list->get_selected());
     playlist_id = it->first;
-    show_song();
+    list_song();
   }
 }
 
@@ -58,29 +73,32 @@ void Explorer::load_track(Deck &deck) {
 }
 
 void Explorer::back() {
-  if (active_list == &usb_list) return;
-  else if (active_list == &playlist_list) show_usb();
-  else if (active_list == &song_list) show_playlist();
+  if (active_list == &device_list) list_device();
+  else if (active_list == &usb_list) list_device();
+  else if (active_list == &playlist_list) list_usb();
+  else if (active_list == &song_list) list_playlist();
+}
+
+void Explorer::list_device() {
+  title.set_text("devices");
+  active_list = &device_list;
+  device_list.set_items(devices);
 }
 
 void Explorer::list_usb() {
+  gApp.controller->scan_usbs();
   usbs.clear();
-  
   for (auto& usb: gApp.controller->usbs) {
+    printf("usbroot:%s\n", usb.root.data());
     usbs.push_back(usb.root);
   }
-
   usb_list.set_items(usbs);
-}
 
-void Explorer::show_usb() {
-  if (usbs.size()==0) list_usb();
   title.set_text("usb");
   active_list = &usb_list;
 }
 
 void Explorer::list_playlist() {
-  
   std::vector<std::string> playlists;
   for (auto it = usb->playlistNamesMap.begin(); it != usb->playlistNamesMap.end(); it++) {
     playlists_map[it->first] = it->second.data();
@@ -88,11 +106,8 @@ void Explorer::list_playlist() {
   }
 
   playlist_list.set_items(playlists);
-}
 
-void Explorer::show_playlist() {
-  if (playlists_map.size() == 0) list_playlist();
-  title.set_text("playlists");
+  title.set_text("playlists <" + usb->root);
   active_list = &playlist_list;
 }
 
@@ -106,16 +121,11 @@ void Explorer::list_song() {
   }
 
   song_list.set_items(songs);
-}
-
-void Explorer::show_song() {
-  list_song();
-
+  
   auto it = playlists_map.find(playlist_id);
-  title.set_text(it->second);
+  title.set_text(it->second + " <" + usb->root);
   active_list = &song_list;
 }
-
 
 void Explorer::draw() {
   title.update();

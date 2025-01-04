@@ -19,6 +19,10 @@ int get_window_size(int& width, int& height) {
   return 0;
 }
 
+Interface::Interface(): fps(33) {
+  
+}
+
 void Interface::add_track_to_free(finyl_track* t) {
   tracks_to_free[tracks_to_free_tail] = t;
   tracks_to_free_tail++;

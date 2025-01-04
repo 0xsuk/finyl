@@ -33,7 +33,6 @@ struct Usb {
 
 void printPlaylists(const Usb& usb);
 void printPlaylistTracks(const Usb& usb, int playlistid);
-void unplug(Usb& usb);
 int plug(const std::string& root);
 void getPlaylistTrackMetas(std::vector<finyl_track_meta>& tms, const Usb& usb, int playlistid);
 void getTrackMeta1(finyl_track_meta& tm, const Usb& usb, int trackId);
