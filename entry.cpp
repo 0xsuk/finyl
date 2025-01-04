@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
   }
   
   
-  gApp.audio->setup_alsa(device);
+  gApp.audio->setup(device);
   
   gApp.run();
 }

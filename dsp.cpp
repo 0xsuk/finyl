@@ -3,7 +3,7 @@
 #include <chrono>
 #include <cmath>
 
-void delay(finyl_buffer& buffer, Delay& d) {
+void delay(finyl_buffer& buffer, DelayState& d) {
   for (int i = 0; i<buffer.size(); i=i+2) {
     auto left = d.buf[d.index];
     auto right = d.buf[d.index+1];

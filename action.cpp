@@ -328,22 +328,22 @@ void set_delay_on(Deck& deck) {
   //bpm beats is 44100*60 samples
   //1 beat is 44100*60/bpm samples 
   double bpm = (deck.pTrack->meta.bpm/100.0)*deck.pTrack->get_speed();
-  deck.delay->setMsize((gApp.audio->get_sample_rate()*60)/bpm*1.0);
-  deck.delay->on = true;
+  deck.delayState->setMsize((gApp.audio->get_sample_rate()*60)/bpm*1.0);
+  deck.delayState->on = true;
   
   print_deck_name(deck);
-  printf("delay on: %lf %lf\n", deck.delay->drymix, deck.delay->feedback);
+  printf("delay on: %lf %lf\n", deck.delayState->drymix, deck.delayState->feedback);
 
 }
 
 void set_delay_off(Deck& deck) {
-  deck.delay->on = false;
+  deck.delayState->on = false;
   print_deck_name(deck);
   printf("delay off\n");
 }
 
 void toggle_delay(Deck& deck) {
-  if (deck.delay->on) {
+  if (deck.delayState->on) {
     set_delay_off(deck);
   } else {
     set_delay_on(deck);
@@ -351,7 +351,7 @@ void toggle_delay(Deck& deck) {
 }
 
 void delay(Deck& deck, double val) {
-  deck.delay->wetmix = val;
+  deck.delayState->wetmix = val;
   print_deck_name(deck);
   printf("delay wet %lf\n", val);
 }

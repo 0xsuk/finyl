@@ -11,7 +11,7 @@
 #define FIDSPEC_LENGTH 40
 typedef float CSAMPLE;
 
-struct Delay {
+struct DelayState {
   finyl_sample buf[MAX_DELAY_SAMPLES] = {0};
   bool on = false;
   int ssize = 0;
@@ -29,7 +29,7 @@ struct Delay {
     }
   }
 };
-void delay(finyl_buffer& buffer, Delay& d);
+void delay(finyl_buffer& buffer, DelayState& d);
 
 class EffectState {
  public:

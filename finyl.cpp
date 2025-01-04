@@ -29,7 +29,7 @@ Deck::Deck(finyl_deck_type _type): type(_type),
                                    filter1(1.0),
                                    quantize(true),
                                    master(true),
-                                   delay(new Delay{.wetmix=0.5, .drymix=1.0, .feedback=0.5}),
+                                   delayState(new DelayState{.wetmix=0.5, .drymix=1.0, .feedback=0.5}),
                                    bqisoState(new BiquadFullKillEQEffectGroupState()) //cant initialize until sample_rate is set
 {
   buffer.resize(gApp.audio->get_period_size_2());
@@ -457,7 +457,7 @@ void Audio::handle_deck(Deck& deck) {
       
     gain_effect(deck.buffer, deck.gain);
   }
-  delay(deck.buffer, *deck.delay);
+  delay(deck.buffer, *deck.delayState);
 
 }
 
@@ -510,6 +510,12 @@ void Audio::on_period_size_change() {
   gApp.controller->bdeck.reset(new Deck(finyl_b));
 }
 
+void Audio::setup(const char* device) {
+  setup_alsa(device);
+  set_period_size(period_size);
+  on_period_size_change();
+}
+
 void Audio::setup_alsa(const char* device) {
   int err;
   if ((err = snd_pcm_open(&handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
@@ -518,14 +524,12 @@ void Audio::setup_alsa(const char* device) {
   }
   setup_alsa_params();
   printf("buffer_size %ld, period_size %ld\n", buffer_size, period_size);
-  set_period_size(period_size);
 }
 
 void Audio::set_period_size(int _period_size) {
   period_size = _period_size;
   period_size_2 = period_size * 2;
   buffer_size = period_size*2; //dont care if its 2 or 3
-  on_period_size_change();
 }
 
 void Audio::run() {

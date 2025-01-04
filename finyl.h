@@ -219,7 +219,7 @@ enum finyl_deck_type{
   finyl_d,
 };
 
-struct Delay;
+struct DelayState;
 class BiquadFullKillEQEffectGroupState;
 class BiquadFullKillEQEffect;
 struct ActionState;
@@ -239,7 +239,7 @@ public:
   bool master;
 
   //TODO: these effects is sensitive to sample_rate. Effects reset function should be hooked to on_change_sample_rate
-  std::unique_ptr<Delay> delay;
+  std::unique_ptr<DelayState> delayState;
   std::unique_ptr<BiquadFullKillEQEffectGroupState> bqisoState;
 
   Deck(finyl_deck_type _type);
@@ -261,13 +261,15 @@ public:
   snd_pcm_uframes_t get_period_size_2() {return period_size_2;}
   int get_sample_rate() {return sample_rate;}
   
-  void setup_alsa_params();
-  void setup_alsa(const char* device);
+  void setup(const char* device);
   
+  //TODO should be in controller
   error read_stems_from_files(const std::vector<std::string>& files, finyl_track& t);
   int max_process_size = 2048;
 
 private:
+  void setup_alsa_params();
+  void setup_alsa(const char* device);
   void on_period_size_change();
   int make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, rb& stretcher, finyl_stem& stem, int index, std::mutex& mutex);
   int wav_valid(char* addr);
