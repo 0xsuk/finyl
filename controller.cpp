@@ -248,8 +248,9 @@ void slide_right(finyl_track* t) {
   t->set_speed(backup);
 }
 
+//all kinds of load function calls this function 
 //n = 0 means load an original file
-void Controller::load_track_nstems(finyl_track** dest, int tid, finyl_deck_type deck, int n) {
+void Controller::_load_track_nstems(finyl_track** dest, int tid, finyl_deck_type deck, int n) {
   finyl_track* before = *dest;
   
   auto t = std::make_unique<finyl_track>();
@@ -292,6 +293,12 @@ void Controller::load_track_nstems(finyl_track** dest, int tid, finyl_deck_type 
   if (before != nullptr) {
     gApp.interface->add_track_to_free(before);
   }
+}
+
+void Controller::load_track_nstems(finyl_track **dest, int tid, finyl_deck_type deck, int n) {
+  std::thread([=, this](){
+    _load_track_nstems(dest, tid, deck, n);
+  }).detach();
 }
 
 void Controller::load_track(finyl_track** dest, int tid, finyl_deck_type deck) {

@@ -20,6 +20,7 @@ class Controller {
   Controller();
   void run();
   void load_track_nstems(finyl_track** dest, int tid, finyl_deck_type deck, int n);
+  void _load_track_nstems(finyl_track** dest, int tid, finyl_deck_type deck, int n);
   void load_track(finyl_track** dest, int tid, finyl_deck_type deck);
   void handle_sdl_key(const SDL_Event& event);
   void scan_usbs();
