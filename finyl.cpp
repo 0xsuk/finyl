@@ -462,7 +462,6 @@ void Audio::handle_deck(Deck& deck) {
 }
 
 void Audio::handle_audio() {
-      auto s =NOW;
   std::fill(buffer.begin(), buffer.end(), 0);
   std::fill(gApp.controller->adeck->buffer.begin(), gApp.controller->adeck->buffer.end(), 0);
   std::fill(gApp.controller->bdeck->buffer.begin(), gApp.controller->bdeck->buffer.end(), 0);
@@ -471,7 +470,6 @@ void Audio::handle_audio() {
   std::fill(gApp.controller->bdeck->stem_buffers[0].begin(), gApp.controller->bdeck->stem_buffers[0].end(), 0);
   std::fill(gApp.controller->bdeck->stem_buffers[1].begin(), gApp.controller->bdeck->stem_buffers[1].end(), 0);
   
-      duration(s);
   auto t = std::thread([&](){
     handle_deck(*gApp.controller->adeck);
   });

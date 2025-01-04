@@ -90,7 +90,6 @@ int Interface::run() {
     SDL_SetRenderDrawColor(renderer, 0,0,0,255);
     SDL_RenderClear(renderer);
 
-
     free_tracks();
     
     waveform->draw();
