@@ -276,3 +276,41 @@ void EngineFilterBiquad1Peaking::setFrequencyCorners(double centerFreq, double Q
 
   setCoefs(m_spec, sizeof(m_spec), centerFreq);
 }
+
+void ReverbEffect::process(ReverbGroupState *pState, const CSAMPLE *pInput, CSAMPLE *pOutput) {
+  // Q_UNUSED(groupFeatures);
+
+  // const auto decay = static_cast<sample_t>(m_pDecayParameter->value());
+  // const auto bandwidth = static_cast<sample_t>(m_pBandWidthParameter->value());
+  // const auto damping = static_cast<sample_t>(m_pDampingParameter->value());
+  // const auto sendCurrent = static_cast<sample_t>(m_pSendParameter->value());
+
+  // // Reinitialize the effect when turning it on to prevent replaying the old buffer
+  // // from the last time the effect was enabled.
+  // // Also, update the sample rate if it has changed.
+  // if (enableState == EffectEnableState::Enabling ||
+  //     pState->sampleRate != engineParameters.sampleRate()) {
+  //   pState->reverb.init(engineParameters.sampleRate());
+  //   pState->sampleRate = engineParameters.sampleRate();
+  // }
+
+  // pState->reverb.processBuffer(pInput,
+  //                              pOutput,
+  //                              engineParameters.samplesPerBuffer(),
+  //                              bandwidth,
+  //                              decay,
+  //                              damping,
+  //                              sendCurrent,
+  //                              pState->sendPrevious);
+
+  // // The ramping of the send parameter handles ramping when enabling, so
+  // // this effect must handle ramping to dry when disabling itself (instead
+  // // of being handled by EngineEffect::process).
+  // if (enableState == EffectEnableState::Disabling) {
+  //   SampleUtil::applyRampingGain(pOutput, 1.0, 0.0, engineParameters.samplesPerBuffer());
+  //   pState->sendPrevious = 0;
+  // } else {
+  //   pState->sendPrevious = sendCurrent;
+  // }
+
+}

@@ -446,5 +446,18 @@ class ReverbEffect : public EffectProcessor<ReverbGroupState> {
 public:
   ReverbEffect();
   ~ReverbEffect() override = default;
+
+  void process(
+               ReverbGroupState* pState,
+               const CSAMPLE* pInput,
+               CSAMPLE* pOutput
+               // const mixxx::EngineParameters& engineParameters,
+               // const EffectEnableState enableState,
+               // const GroupFeatureState& groupFeatures
+               ) override;
+
+                      
 };
+
+
 #endif
