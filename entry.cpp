@@ -7,10 +7,6 @@
 int main(int argc, char **argv) {
   srand (static_cast <unsigned> (time(0)));
 
-  if (argc < 1) {
-    printf("usage ./finyl [<soundcard name (default is \"default\")> <period_size (default is 128)> <fps (default 30)]\n inside [] are optional\n");
-    return 0;
-  }
   char* device = "default";
   
   if (argc >= 2) {

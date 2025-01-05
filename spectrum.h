@@ -10,6 +10,12 @@ class Spectrum {
   void draw();
 
  private:
+  void addMagnitude(double freq, float magnitude);
+  void calcMagnitudeAccs();
+  void calcDbs();
+  void drawDbs();
+  
+  int num_bars;
   int x;
   int y;
   int w;
@@ -18,6 +24,13 @@ class Spectrum {
   Texture texture;
   
   FFTState& fftState;
+
+
+  //log spaced freqs
+  const std::vector<double> freqs;
+  std::vector<float> magnitude_accs;
+  std::vector<double> dbs;
+
 };
 
 #endif
