@@ -183,8 +183,6 @@ void Wave::update_wave(finyl_track& t) {
 void Wave::init_wave(finyl_track& t) {
   int nowi = (int)t.get_refindex();
 
-  printf("txwave%p\n", tx_wave.get());
-  
   SDL_SetRenderTarget(gApp.interface->renderer, tx_wave.get());
   int starti = nowi - (int)wave_range/2;
 
@@ -202,7 +200,9 @@ void Wave::init_wave(finyl_track& t) {
 
 void Wave::draw() {
   if (init) {
-    init_wave(*deck.pTrack);
+    if (deck.pTrack!=nullptr) {
+      init_wave(*deck.pTrack);
+    }
     init=false;
   } else if (deck.pTrack != nullptr) {
     update_wave(*deck.pTrack);
