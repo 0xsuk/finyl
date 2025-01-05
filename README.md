@@ -16,9 +16,18 @@ Depends on...
 in debian: libasound2-dev ffmpeg libsdl2-dev libx11-dev libssl-dev libgif-dev libfftw3-dev  
 
 ## usage
-./finyl <path to rekordbox usb: example /media/null/22BC-F655/ >
+./finyl 
 
-read controller.cpp:handleKey() to guess how to control finyl from terminal;
+mount rekordbox usb.
+
+
+use following keys to navigate.
+left arrow: select
+right arrow: back
+alt + up arrow: load track to top deck
+alt + down arrow: load track to bottom deck
+shift + up arrow: load multi-stem track to top. nothing will happen if track has no stems
+shift + down arrow: load multi-stem track to bottom
 
 ### multi-stems mixing
 A song usually consists of vocal, and instrument. The idea of multi-stems mixing is to let the software retain these two or more different sources(=stems) of audio separately, so that you can apply audio effects (volume control, echos, filters, etc) separately. To do that, you need to create stem files from the original file beforehand.
