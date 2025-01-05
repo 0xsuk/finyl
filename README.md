@@ -1,6 +1,5 @@
 # finyl
 finyl is a rekordbox USB compatible multi-stems DJ system for Linux 64 bits that lets you mix audio sources separately. (vocal, instrumental, etc)  
-It is designed to run fast on Raspberry pi 3b+ RAM 1GB.
 
 https://github.com/user-attachments/assets/eeeece49-5b04-4cdb-a13c-80a7f2821625
 
@@ -21,13 +20,13 @@ in debian: libasound2-dev ffmpeg libsdl2-dev libx11-dev libssl-dev libgif-dev li
 mount rekordbox usb.
 
 
-use following keys to navigate.
-left arrow: select
-right arrow: back
-alt + up arrow: load track to top deck
-alt + down arrow: load track to bottom deck
-shift + up arrow: load multi-stem track to top. nothing will happen if track has no stems
-shift + down arrow: load multi-stem track to bottom
+use following keys to navigate explorer.  
+left arrow: select  
+right arrow: back  
+alt + up arrow: load track to top deck  
+alt + down arrow: load track to bottom deck  
+shift + up arrow: load multi-stem track to top. nothing will happen if track has no stems  
+shift + down arrow: load multi-stem track to bottom  
 
 ### multi-stems mixing
 A song usually consists of vocal, and instrument. The idea of multi-stems mixing is to let the software retain these two or more different sources(=stems) of audio separately, so that you can apply audio effects (volume control, echos, filters, etc) separately. To do that, you need to create stem files from the original file beforehand.
