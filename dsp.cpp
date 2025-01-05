@@ -330,10 +330,11 @@ void float_to_interleave(float *left, float *right, finyl_sample *output, int pe
 }
 
 FFTState::FFTState() {
+  out_size = gApp.audio->get_period_size() / 2 + 1;
   left_in = (float*)malloc(gApp.audio->get_period_size()*sizeof(float));
   right_in = (float*)malloc(gApp.audio->get_period_size()*sizeof(float));
-  left_out = (fftwf_complex*)fftwf_malloc(sizeof(fftw_complex) * (gApp.audio->get_period_size() / 2 + 1));
-  right_out = (fftwf_complex*)fftwf_malloc(sizeof(fftw_complex) * (gApp.audio->get_period_size() / 2 + 1));
+  left_out = (fftwf_complex*)fftwf_malloc(sizeof(fftw_complex) * out_size);
+  right_out = (fftwf_complex*)fftwf_malloc(sizeof(fftw_complex) * out_size);
 
   left_fplan = fftwf_plan_dft_r2c_1d(gApp.audio->get_period_size(), left_in, left_out, FFTW_ESTIMATE);
   right_fplan = fftwf_plan_dft_r2c_1d(gApp.audio->get_period_size(), right_in, right_out, FFTW_ESTIMATE);

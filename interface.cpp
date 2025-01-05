@@ -72,6 +72,8 @@ int Interface::run() {
   explorer = std::make_unique<Explorer>();
   cat = std::make_unique<GIF>("assets/dance-cat.gif", 0, win_height - 350, 250, 250);
   pikachu = std::make_unique<GIF>("assets/pikachu-pokemon.gif", win_width - 350 , win_height - 400, 400, 300);
+  a_spectrum = std::make_unique<Spectrum>(*gApp.controller->adeck->fftState);
+  // a_spectrum = std::make_unique<Spectrum>(*gApp.controller->adeck->fftState);
   
   SDL_Event event;
   int desired_delta = 1000 / fps;
@@ -93,6 +95,7 @@ int Interface::run() {
     free_tracks();
     
     waveform->draw();
+    a_spectrum->draw();
     explorer->draw();
     cat->draw();
     pikachu->draw();

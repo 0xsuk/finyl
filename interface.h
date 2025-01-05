@@ -7,6 +7,7 @@
 #include "explorer.h"
 #include "controller.h"
 #include "gif.h"
+#include "spectrum.h"
 
 
 class Interface {
@@ -20,6 +21,8 @@ public:
   std::unique_ptr<Explorer> explorer;
   std::unique_ptr<GIF> cat;
   std::unique_ptr<GIF> pikachu;
+  std::unique_ptr<Spectrum> a_spectrum;
+  std::unique_ptr<Spectrum> b_spectrum;
   
   SDL_Renderer* renderer;
   SDL_Window* window;

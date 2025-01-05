@@ -465,6 +465,7 @@ struct FFTState {
 public:
   FFTState();
   
+  int out_size;
   float* left_in;
   float* right_in;
   fftwf_complex* left_out;
