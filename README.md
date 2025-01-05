@@ -21,8 +21,8 @@ mount rekordbox usb.
 
 
 use following keys to navigate explorer.  
-left arrow: select  
-right arrow: back  
+left arrow: back  
+right arrow: select  
 alt + up arrow: load track to top deck  
 alt + down arrow: load track to bottom deck  
 shift + up arrow: load multi-stem track to top. nothing will happen if track has no stems  
