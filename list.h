@@ -19,20 +19,25 @@ public:
   void select_down();
   void select_up();
   int get_selected();
+  const std::vector<int>& get_marked();
+  void toggle_mark();
   bool has_item();
   
 private:
   void update_items();
   void draw_item(SDL_Surface* surf, SDL_Texture* tx, int height_offset);
   void draw_select(int height_offset);
+  void draw_mark(int height_offset);
   void init_select_tx();
   bool is_visible(int index);
   int get_height_offset(int index);
   
   bool no_item = false;
-  int x;
+  int x_mark;
+  int x_list;
   int y;
   int w;
+  int w_list;
   int h;
   int space; //between lines
   TTF_Font* font;
@@ -42,6 +47,7 @@ private:
   int selected = 0;
   int head = 0; //head of visible list
   int visible_items = 0;
+  std::vector<int> marked;
 
   bool update_items_ = false;
   
