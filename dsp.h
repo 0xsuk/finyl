@@ -502,11 +502,8 @@ public:
     processChannel(fftState->left_out, size, state->gateThreshold); 
     processChannel(fftState->right_out, size, state->gateThreshold);
   }
-
 private:
   static void processChannel(fftwf_complex* channel, int size, float threshold) {
-    const float linearThreshold = pow(10.0f, threshold/20.0f);
-    
     for (int i = 0; i < size; i++) {
       float re = channel[i][0];
       float im = channel[i][1];
@@ -514,7 +511,7 @@ private:
       float magnitude = sqrt(re * re + im * im);
       float phase = atan2(im, re);
 
-      if (magnitude < linearThreshold) {
+      if (magnitude < threshold) {
         magnitude = 0.0f;
       }
 
