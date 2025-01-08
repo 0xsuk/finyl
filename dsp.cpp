@@ -335,6 +335,9 @@ FFTState::FFTState() {
   right_in = (float*)malloc(gApp.audio->get_period_size()*sizeof(float));
   left_out = (fftwf_complex*)fftwf_malloc(sizeof(fftw_complex) * out_size);
   right_out = (fftwf_complex*)fftwf_malloc(sizeof(fftw_complex) * out_size);
+  memset(left_out, 0, sizeof(fftwf_complex) * out_size);
+  memset(right_out, 0, sizeof(fftwf_complex) * out_size);
+
 
   //FFTW_PRESERVE_INPUT is needed
   left_fplan = fftwf_plan_dft_r2c_1d(gApp.audio->get_period_size(), left_in, left_out, FFTW_ESTIMATE | FFTW_PRESERVE_INPUT);
