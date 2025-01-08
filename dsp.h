@@ -476,13 +476,15 @@ public:
   fftwf_plan left_iplan;
   fftwf_plan right_iplan;
 
+  // Add window arrays
+  float* window;
+  
   finyl_buffer* buffer;
 
-  void set_target(finyl_buffer& _buffer); 
-  
+  void set_target(finyl_buffer& _buffer);
   void forward();
-
   void inverse();
+  void init_window();
 };
 
 struct SpectralGateState {

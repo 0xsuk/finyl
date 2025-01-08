@@ -342,7 +342,7 @@ void Audio::make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_b
   
   for (int i = 0; i<t.stems_size; i++) {
     threads.push_back(std::thread([&, i](){
-      int newindex = make_stem_buffer_stretch(stem_buffers[i], t, *t.stretchers[i], *t.stems[i], t.indxs[i], t.mtxs[i]);
+      int newindex = make_stem_buffer_stretch(stem_buffers[i], t, *t.stretchers[i], *t.stems[i], t.mtxs[i]);
       if (!t.jump_lock) { //dont want to set index if jump happened during stretching
         t.indxs[i] = newindex;
       } else { //jump_lock was set to on during make_stem_buffer_stretch
@@ -578,4 +578,39 @@ void App::run() {
   });
   controller->run();
   t.join();
+}
+
+FFTState::FFTState() {
+  // ... existing initialization ...
+  
+  // Initialize window
+  window = fftwf_alloc_real(period_size_2);
+  init_window();
+}
+
+void FFTState::init_window() {
+  for (int i = 0; i < period_size_2; i++) {
+    window[i] = 0.5f * (1.0f - cos(2.0f * M_PI * i / (period_size_2 - 1)));
+  }
+}
+
+void FFTState::forward() {
+  for (int i = 0; i < period_size_2; i++) {
+    left_in[i] = buffer->data()[i*2] * window[i];
+    right_in[i] = buffer->data()[i*2+1] * window[i];
+  }
+
+  fftwf_execute(left_fplan);
+  fftwf_execute(right_fplan);
+}
+
+void FFTState::inverse() {
+  fftwf_execute(left_iplan);
+  fftwf_execute(right_iplan);
+
+  float scale = 1.0f / period_size_2;
+  for (int i = 0; i < period_size_2; i++) {
+    buffer->data()[i*2] = clip_sample(left_in[i] * window[i] * scale * 32768.0f);
+    buffer->data()[i*2+1] = clip_sample(right_in[i] * window[i] * scale * 32768.0f);
+  }
 }
