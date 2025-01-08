@@ -688,9 +688,12 @@ void Controller::handle_key(char x) {
       return;
     case '[':
       bdeck->spectralGateState->setThreshold(bdeck->spectralGateState->gateThreshold - 1.0f);
+      printf("%lf\n", bdeck->spectralGateState->gateThreshold);
       return;
     case ']':
       bdeck->spectralGateState->setThreshold(bdeck->spectralGateState->gateThreshold + 1.0f);
+      printf("%lf\n", bdeck->spectralGateState->gateThreshold);
+
       return;
 
     }

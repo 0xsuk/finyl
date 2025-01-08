@@ -223,6 +223,7 @@ struct DelayState;
 class BiquadFullKillEQEffectGroupState;
 class BiquadFullKillEQEffect;
 struct FFTState;
+struct SpectralGateState;
 struct ActionState;
 class Deck { //Should be initialized after audio is ready (= period size , sample rate is set)
 public:
