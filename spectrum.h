@@ -6,7 +6,7 @@
 
 class Spectrum {
  public:
-  Spectrum(FFTState& _fftState);
+  Spectrum(FFTState& _fftState, int _x, int _y, int _w, int _h);
   void draw();
 
  private:

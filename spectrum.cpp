@@ -19,7 +19,7 @@ std::vector<double> logspace(double start, double stop, int num) {
   return result;
 }
 
-Spectrum::Spectrum(FFTState& _fftState): num_bars(40), x(200), y(200), w(400), h(400), fftState(_fftState),
+Spectrum::Spectrum(FFTState& _fftState, int _x, int _y, int _w, int _h): num_bars(200), x(_x), y(_y), w(_w), h(_h), fftState(_fftState),
                                          freqs{logspace(std::log10(20), std::log10(20000), num_bars)} {
   magnitude_accs.resize(num_bars);
   dbs.resize(num_bars);
