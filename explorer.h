@@ -28,7 +28,7 @@ private:
   void draw_title();
   
   void set_title(std::string title);
-  void list_device();
+  void list_menu();
   void list_usb();
   void list_playlist();
   void list_song();
@@ -50,14 +50,14 @@ private:
   Usb* usb;
   int playlist_id;
   
-  List device_list;
+  List menu_list;
   List usb_list;
   List playlist_list;
   List song_list;
   
   Text title;
   
-  std::vector<std::string> devices;
+  std::vector<std::string> menus;
   std::vector<std::string> usbs;
   std::map<int, std::string> playlists_map;
   std::vector<finyl_track_meta> songs_meta;

@@ -6,21 +6,22 @@ Explorer::Explorer():
   x(300),
   y(300),
   w(700),
-  h(600),
+  h(400),
   list_h{h-header_margin},
-  device_list{x, y+header_margin, w, list_h, font, font_size},
+  menu_list{x, y+header_margin, w, list_h, font, font_size},
   usb_list{x, y+header_margin, w, list_h, font, font_size},
   playlist_list(x,y+header_margin,w, list_h, font, font_size),
   song_list(x,y+header_margin,w, list_h, font, font_size),
   title(font, font_size, "") {
-  devices.push_back("usbs");
+  menus.push_back("usbs");
+  menus.push_back("midi");
   
   if (font == nullptr) {
     printf("bad %s\n", TTF_GetError());
     return; 
   }
 
-  list_device();
+  list_menu();
 }
 
 void Explorer::select_up() {
@@ -34,10 +35,12 @@ void Explorer::select() {
     return;
   }
   
-  if (active_list == &device_list) {
-    std::string device_name = devices[active_list->get_selected()];
-    if (device_name == "usbs") {
+  if (active_list == &menu_list) {
+    std::string menu_name = menus[active_list->get_selected()];
+    if (menu_name == "usbs") {
       list_usb();
+    } else if (menu_name == "midi") {
+      // list_midi();
     }
   } else if (active_list == &usb_list) {
     printf("selected %d\n", (int)active_list->get_selected());
@@ -73,16 +76,16 @@ void Explorer::load_track(Deck &deck) {
 }
 
 void Explorer::back() {
-  if (active_list == &device_list) list_device();
-  else if (active_list == &usb_list) list_device();
+  if (active_list == &menu_list) list_menu();
+  else if (active_list == &usb_list) list_menu();
   else if (active_list == &playlist_list) list_usb();
   else if (active_list == &song_list) list_playlist();
 }
 
-void Explorer::list_device() {
-  title.set_text("devices");
-  active_list = &device_list;
-  device_list.set_items(devices);
+void Explorer::list_menu() {
+  title.set_text("menus");
+  active_list = &menu_list;
+  menu_list.set_items(menus);
 }
 
 void Explorer::list_usb() {
