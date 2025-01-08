@@ -243,6 +243,7 @@ public:
   std::unique_ptr<DelayState> delayState;
   std::unique_ptr<BiquadFullKillEQEffectGroupState> bqisoState;
   std::unique_ptr<FFTState> fftState;
+  std::unique_ptr<SpectralGateState> spectralGateState;
 
   Deck(finyl_deck_type _type);
 };

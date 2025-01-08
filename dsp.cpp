@@ -369,3 +369,10 @@ void FFTState::inverse() {
   float_to_interleave(left_in, right_in, buffer->data(), gApp.audio->get_period_size());
 }
 
+SpectralGateState createDefaultSpectralGate() {
+    SpectralGateState state;
+    state.setThreshold(-60.0f);
+    return state;
+}
+
+// Helper function to process a buffer through spectral gate with progress callback

@@ -2,6 +2,7 @@
 #define DSP_H
 
 #include <cstring>
+#include <cmath>
 #include "finyl.h"
 #include "fidlib.h"
 #include "Reverb.h"
@@ -484,4 +485,41 @@ public:
   void inverse();
 };
 
-#endif
+struct SpectralGateState {
+  float gateThreshold = -60.0f;
+  
+  SpectralGateState() = default;
+  
+  void setThreshold(float threshold) {
+    gateThreshold = threshold;
+  }
+};
+
+class SpectralGate {
+public:
+  static void process(FFTState* fftState, SpectralGateState* state) {
+    const int size = fftState->out_size;
+    processChannel(fftState->left_out, size, state->gateThreshold); 
+    processChannel(fftState->right_out, size, state->gateThreshold);
+  }
+
+private:
+  static void processChannel(fftwf_complex* channel, int size, float threshold) {
+    const float linearThreshold = pow(10.0f, threshold/20.0f);
+    
+    for (int i = 0; i < size; i++) {
+      float re = channel[i][0];
+      float im = channel[i][1];
+      
+      float magnitude = sqrt(re * re + im * im);
+      float phase = atan2(im, re);
+
+      if (magnitude < linearThreshold) {
+        magnitude = 0.0f;
+      }
+
+      channel[i][0] = magnitude * cos(phase);
+      channel[i][1] = magnitude * sin(phase);
+    }
+  }
+};

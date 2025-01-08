@@ -686,6 +686,12 @@ void Controller::handle_key(char x) {
     case '&':
       bdeck->pTrack->set_index(bdeck->pTrack->get_refindex() - 3000);
       return;
+    case '[':
+      bdeck->spectralGateState->setThreshold(bdeck->spectralGateState->gateThreshold - 1.0f);
+      return;
+    case ']':
+      bdeck->spectralGateState->setThreshold(bdeck->spectralGateState->gateThreshold + 1.0f);
+      return;
 
     }
   }
