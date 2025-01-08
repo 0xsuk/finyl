@@ -486,7 +486,7 @@ public:
 };
 
 struct SpectralGateState {
-  float gateThreshold = -60.0f;
+  float gateThreshold = 0.0f;
   
   SpectralGateState() = default;
   

@@ -371,7 +371,7 @@ void FFTState::inverse() {
 
 SpectralGateState createDefaultSpectralGate() {
     SpectralGateState state;
-    state.setThreshold(-60.0f);
+    state.setThreshold(0.0f);
     return state;
 }
 
