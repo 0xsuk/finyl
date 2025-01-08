@@ -420,7 +420,7 @@ void Audio::eq_effect(finyl_buffer& buf, BiquadFullKillEQEffectGroupState* state
   floatToSignedshort(out, buf.data());
 }
 
-void Audio::spectral_gate_effect(finyl_buffer& buf, FFTState& fft, SpectralGateState& state) {
+void spectral_gate_effect(finyl_buffer& buf, FFTState& fft, SpectralGateState& state) {
   SpectralGate::process(&fft, &state);
 }
 
