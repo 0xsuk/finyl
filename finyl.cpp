@@ -342,7 +342,7 @@ void Audio::make_stem_buffers_stretch(finyl_track& t, finyl_stem_buffers& stem_b
   
   for (int i = 0; i<t.stems_size; i++) {
     threads.push_back(std::thread([&, i](){
-      int newindex = make_stem_buffer_stretch(stem_buffers[i], t, *t.stretchers[i], *t.stems[i], t.mtxs[i]);
+      int newindex = make_stem_buffer_stretch(stem_buffers[i], t, *t.stretchers[i], *t.stems[i], t.indxs[i], t.mtxs[i]);
       if (!t.jump_lock) { //dont want to set index if jump happened during stretching
         t.indxs[i] = newindex;
       } else { //jump_lock was set to on during make_stem_buffer_stretch
