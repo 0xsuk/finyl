@@ -223,6 +223,7 @@ struct DelayState;
 class BiquadFullKillEQEffectGroupState;
 class BiquadFullKillEQEffect;
 struct FFTState;
+struct SpectralGateState;
 struct ActionState;
 class Deck { //Should be initialized after audio is ready (= period size , sample rate is set)
 public:
@@ -243,6 +244,7 @@ public:
   std::unique_ptr<DelayState> delayState;
   std::unique_ptr<BiquadFullKillEQEffectGroupState> bqisoState;
   std::unique_ptr<FFTState> fftState;
+  std::unique_ptr<SpectralGateState> spectralGateState;
 
   Deck(finyl_deck_type _type);
 };

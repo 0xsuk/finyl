@@ -338,8 +338,9 @@ FFTState::FFTState() {
   memset(left_out, 0, sizeof(fftwf_complex) * out_size);
   memset(right_out, 0, sizeof(fftwf_complex) * out_size);
 
+  window = (float*)malloc(gApp.audio->get_period_size()*sizeof(float));
+  init_window();
 
-  //FFTW_PRESERVE_INPUT is needed
   left_fplan = fftwf_plan_dft_r2c_1d(gApp.audio->get_period_size(), left_in, left_out, FFTW_ESTIMATE | FFTW_PRESERVE_INPUT);
   right_fplan = fftwf_plan_dft_r2c_1d(gApp.audio->get_period_size(), right_in, right_out, FFTW_ESTIMATE | FFTW_PRESERVE_INPUT);
 
@@ -347,11 +348,24 @@ FFTState::FFTState() {
   right_iplan = fftwf_plan_dft_c2r_1d(gApp.audio->get_period_size(), right_out, right_in, FFTW_ESTIMATE | FFTW_PRESERVE_INPUT);
 }
 
+void FFTState::init_window() {
+  int size = gApp.audio->get_period_size();
+  for (int i = 0; i < size; i++) {
+    window[i] = 0.5f * (1.0f - cos(2.0f * M_PI * i / (size - 1)));
+  }
+}
+
 void FFTState::set_target(finyl_buffer &_buffer) {
   buffer = &_buffer;
 }
 void FFTState::forward() {
   deinterleave_to_float(buffer->data(), left_in, right_in, gApp.audio->get_period_size());
+  
+  for (int i = 0; i < gApp.audio->get_period_size(); i++) {
+    left_in[i] *= window[i];
+    right_in[i] *= window[i];
+  }
+  
   fftwf_execute(left_fplan);
   fftwf_execute(right_fplan);
 }
@@ -364,8 +378,18 @@ void FFTState::inverse() {
   fftwf_execute(left_iplan);
   fftwf_execute(right_iplan);
 
-  fft_normalize(left_in, gApp.audio->get_period_size());
-  fft_normalize(right_in, gApp.audio->get_period_size());
+  float scale = 1.0f / (gApp.audio->get_period_size() * 0.375f);
+  for (int i = 0; i < gApp.audio->get_period_size(); i++) {
+    left_in[i] = left_in[i] * window[i] * scale;
+    right_in[i] = right_in[i] * window[i] * scale;
+  }
+
   float_to_interleave(left_in, right_in, buffer->data(), gApp.audio->get_period_size());
+}
+
+SpectralGateState createDefaultSpectralGate() {
+    SpectralGateState state;
+    state.setThreshold(0.0f);
+    return state;
 }
 

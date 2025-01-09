@@ -31,7 +31,8 @@ Deck::Deck(finyl_deck_type _type): type(_type),
                                    master(true),
                                    delayState(new DelayState{.wetmix=0.5, .drymix=1.0, .feedback=0.5}),
                                    bqisoState(new BiquadFullKillEQEffectGroupState()), //cant initialize until sample_rate is set
-                                   fftState(new FFTState())
+                                   fftState(new FFTState()),
+                                   spectralGateState(new SpectralGateState())
 {
   buffer.resize(gApp.audio->get_period_size_2());
   for (size_t i = 0; i<MAX_STEMS_SIZE; i++) {
@@ -419,6 +420,10 @@ void Audio::eq_effect(finyl_buffer& buf, BiquadFullKillEQEffectGroupState* state
   floatToSignedshort(out, buf.data());
 }
 
+void spectral_gate_effect(finyl_buffer& buf, FFTState& fft, SpectralGateState& state) {
+  SpectralGate::process(&fft, &state);
+}
+
 static void reset_stretchers(Deck& deck) {
   for (int i = 0; i<deck.pTrack->stems_size; i++) {
     deck.pTrack->stretchers[i]->reset();
@@ -461,7 +466,7 @@ void Audio::handle_deck(Deck& deck) {
   
   deck.fftState->set_target(deck.buffer);
   deck.fftState->forward();
-  //do stuff here!
+  spectral_gate_effect(deck.buffer, *deck.fftState, *deck.spectralGateState);
   deck.fftState->inverse();
   
   delay(deck.buffer, *deck.delayState);
@@ -574,3 +579,4 @@ void App::run() {
   controller->run();
   t.join();
 }
+
