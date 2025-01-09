@@ -476,7 +476,6 @@ public:
   fftwf_plan left_iplan;
   fftwf_plan right_iplan;
 
-  // Add window arrays
   float* window;
   
   finyl_buffer* buffer;
