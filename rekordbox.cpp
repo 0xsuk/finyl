@@ -221,7 +221,15 @@ void set_channels_filepaths(finyl_track_meta& tm, std::string_view root) {
   }
 }
 
-//execpt stemfiles
+std::string getMusicKeyName(int musickeyid, const std::map<int, std::string>& musickeysMap) {
+  auto it = musickeysMap.find(musickeyid);
+  if (it != musickeysMap.end()) {
+    return it->second;
+  }
+  return "-";
+}
+
+//except stemfiles
 void getTrackMeta1(finyl_track_meta& tm, const Usb& usb, int trackId) {
   const auto& trackRow = usb.tracksMap.find(trackId)->second;
   tm.id = trackId;
@@ -230,6 +238,7 @@ void getTrackMeta1(finyl_track_meta& tm, const Usb& usb, int trackId) {
   tm.filename = trackRow.filename;
   tm.filepath = join_path(usb.root.data(), trackRow.relativeFilepath.data());
   tm.musickeyid = trackRow.musickey;
+  tm.musickey = getMusicKeyName(trackRow.musickey, usb.musickeysMap);
 }
 
 //include stemfiles

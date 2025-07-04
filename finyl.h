@@ -49,6 +49,7 @@ struct finyl_track_meta {
   int bpm; //bpm * 100 (int)
   int musickeyid;
   int filesize;
+  std::string musickey;
   std::string title;
   std::string filename; //caution: filename is compelte. filepath is sometimes incomplete. just use filepath
   std::string filepath;
