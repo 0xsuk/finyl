@@ -4,6 +4,8 @@
 #include <functional>
 #include "controller.h"
 #include "dev.h"
+#include <cctype>
+#include <algorithm>
 
 //if deck is adeck, return bdeck, vice versa
 std::unique_ptr<Deck>& get_pair(Deck& deck) {
@@ -393,4 +395,119 @@ void set_key_shift_semitones(Deck& deck, int semitones) {
   deck.pTrack->set_key_shift_semitones(semitones);
   print_deck_name(deck);
   printf("key shift set to %d semitones\n", semitones);
+}
+
+// Key shift align functions
+int get_key_semitones_from_string(const std::string& key) {
+  if (key.empty() || key == "-") return 0;
+  
+  // Convert key string to semitone offset from C
+  // Common key formats: "C", "C#", "Db", "1A", "2B", etc.
+  
+  // Handle Camelot notation (1A-12B format)
+  if (key.length() >= 2 && isdigit(key[0]) && (key[1] == 'A' || key[1] == 'B')) {
+    int number = key[0] - '0';
+    if (key.length() >= 3 && isdigit(key[1])) {
+      number = number * 10 + (key[1] - '0');
+    }
+    
+    // Camelot wheel mapping to semitones
+    // 1A=Ab, 2A=Eb, 3A=Bb, 4A=F, 5A=C, 6A=G, 7A=D, 8A=A, 9A=E, 10A=B, 11A=F#, 12A=Db
+    // 1B=B, 2B=F#, 3B=Db, 4B=Ab, 5B=Eb, 6B=Bb, 7B=F, 8B=C, 9B=G, 10B=D, 11B=A, 12B=E
+    if (key.back() == 'A') {
+      int camelot_to_semitone[] = {8, 3, 10, 5, 0, 7, 2, 9, 4, 11, 6, 1}; // Ab, Eb, Bb, F, C, G, D, A, E, B, F#, Db
+      if (number >= 1 && number <= 12) {
+        return camelot_to_semitone[number - 1];
+      }
+    } else if (key.back() == 'B') {
+      int camelot_to_semitone[] = {11, 6, 1, 8, 3, 10, 5, 0, 7, 2, 9, 4}; // B, F#, Db, Ab, Eb, Bb, F, C, G, D, A, E
+      if (number >= 1 && number <= 12) {
+        return camelot_to_semitone[number - 1];
+      }
+    }
+    return 0;
+  }
+  
+  // Handle standard musical notation (C, C#, Db, etc.)
+  char root = toupper(key[0]);
+  int semitones = 0;
+  
+  switch (root) {
+    case 'C': semitones = 0; break;
+    case 'D': semitones = 2; break;
+    case 'E': semitones = 4; break;
+    case 'F': semitones = 5; break;
+    case 'G': semitones = 7; break;
+    case 'A': semitones = 9; break;
+    case 'B': semitones = 11; break;
+    default: return 0;
+  }
+  
+  // Handle sharps and flats
+  if (key.length() > 1) {
+    if (key[1] == '#' || key[1] == 's') {
+      semitones += 1;
+    } else if (key[1] == 'b' || key[1] == 'f') {
+      semitones -= 1;
+    }
+  }
+  
+  // Wrap around if necessary
+  if (semitones < 0) semitones += 12;
+  if (semitones >= 12) semitones -= 12;
+  
+  return semitones;
+}
+
+int calculate_key_difference(const std::string& key1, const std::string& key2) {
+  int semitones1 = get_key_semitones_from_string(key1);
+  int semitones2 = get_key_semitones_from_string(key2);
+  
+  int diff = semitones2 - semitones1;
+  
+  // Find the shortest path around the circle of fifths
+  if (diff > 6) {
+    diff -= 12;
+  } else if (diff < -6) {
+    diff += 12;
+  }
+  
+  return diff;
+}
+
+void align_key_to_other_deck(Deck& deck) {
+  if (deck.pTrack == nullptr) {
+    print_deck_name(deck);
+    printf("No track loaded on this deck\n");
+    return;
+  }
+  
+  // Get the other deck
+  std::unique_ptr<Deck>& other_deck = get_pair(deck);
+  if (other_deck->pTrack == nullptr) {
+    print_deck_name(deck);
+    printf("No track loaded on the other deck\n");
+    return;
+  }
+  
+  // Get the keys from both tracks
+  std::string current_key = deck.pTrack->meta.musickey;
+  std::string target_key = other_deck->pTrack->meta.musickey;
+  
+  if (current_key.empty() || current_key == "-" || target_key.empty() || target_key == "-") {
+    print_deck_name(deck);
+    printf("Key information not available for one or both tracks\n");
+    printf("Current track key: %s, Other track key: %s\n", current_key.c_str(), target_key.c_str());
+    return;
+  }
+  
+  // Calculate the key difference
+  int key_diff = calculate_key_difference(current_key, target_key);
+  
+  // Apply the key shift
+  set_key_shift_semitones(deck, key_diff);
+  
+  print_deck_name(deck);
+  printf("Key align: %s -> %s (shift: %+d semitones)\n", 
+         current_key.c_str(), target_key.c_str(), key_diff);
 }

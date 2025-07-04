@@ -181,6 +181,7 @@ Controller::Controller() {
     {"DeckA-toggle_mute_gain0", velocityfunc(ifvelocity(toggle_mute0(*adeck);))},
     {"DeckA-toggle_master", velocityfunc(ifvelocity(toggle_master(*adeck);))},
     {"DeckA-load_track", velocityfunc(ifvelocity(gApp.interface->explorer->load_track_2(*adeck);))},
+    {"DeckA-key_align", velocityfunc(ifvelocity(align_key_to_other_deck(*adeck);))},
 
     {"DeckB-gain", valfunc(set_gain(*bdeck, val);)},
     {"DeckB-gain0", valfunc(set_gain0(*bdeck, val);)},
@@ -204,6 +205,7 @@ Controller::Controller() {
     {"DeckB-toggle_mute_gain0", velocityfunc(ifvelocity(toggle_mute0(*bdeck);))},
     {"DeckB-toggle_master", velocityfunc(ifvelocity(toggle_master(*bdeck);))},
     {"DeckB-load_track", velocityfunc(ifvelocity(gApp.interface->explorer->load_track_2(*bdeck);))},
+    {"DeckB-key_align", velocityfunc(ifvelocity(align_key_to_other_deck(*bdeck);))},
 
     {"inc_wave_range", velocityfunc(ifvelocity(gApp.interface->waveform->double_range();))},
     {"dec_wave_range", velocityfunc(ifvelocity(gApp.interface->waveform->half_range();))}
@@ -633,6 +635,9 @@ void Controller::handle_key(char x) {
     case 'r':
       reset_key_shift(*adeck);
       return;
+    case 'R':
+      align_key_to_other_deck(*adeck);
+      return;
 
     }
   }
@@ -703,6 +708,9 @@ void Controller::handle_key(char x) {
       return;
     case 'u':
       reset_key_shift(*bdeck);
+      return;
+    case 'U':
+      align_key_to_other_deck(*bdeck);
       return;
 
     }

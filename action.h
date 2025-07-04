@@ -48,5 +48,10 @@ void dec_key_shift(Deck& deck);
 void reset_key_shift(Deck& deck);
 void set_key_shift_semitones(Deck& deck, int semitones);
 
+// Key shift align functions
+void align_key_to_other_deck(Deck& deck);
+int get_key_semitones_from_string(const std::string& key);
+int calculate_key_difference(const std::string& key1, const std::string& key2);
+
 #endif
 
