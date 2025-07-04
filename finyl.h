@@ -3,6 +3,7 @@
 #include <alsa/asoundlib.h>
 #include "error.h"
 #include <vector>
+#include <cmath>
 #include <memory>
 #include <sys/mman.h>
 #include <string>
@@ -48,6 +49,7 @@ struct finyl_track_meta {
   int bpm; //bpm * 100 (int)
   int musickeyid;
   int filesize;
+  std::string musickey;
   std::string title;
   std::string filename; //caution: filename is compelte. filepath is sometimes incomplete. just use filepath
   std::string filepath;
@@ -174,6 +176,10 @@ struct finyl_track{
   std::vector<finyl_cue> cues;
   std::vector<finyl_beat> beats;
 
+  // Key shift variables
+  std::atomic<double> pitch_scale; // 1.0 = no shift, 2.0 = +1 octave, 0.5 = -1 octave
+  std::atomic<int> key_shift_semitones; // semitone offset (-12 to +12)
+
   finyl_track();
   int get_refmsize() {
     return stems[0]->msize();
@@ -208,6 +214,48 @@ struct finyl_track{
       std::lock_guard<std::mutex> lock(mtxs[i]);
       stretchers[i]->setTimeRatio(ratio);
     }
+  }
+  
+  // Key shift methods
+  void set_pitch_scale(double scale) {
+    if (scale <= 0) {
+      return;
+    }
+    pitch_scale = scale;
+    for (int i = 0; i<stems_size; i++) {
+      std::lock_guard<std::mutex> lock(mtxs[i]);
+      stretchers[i]->setPitchScale(scale);
+    }
+  }
+
+  double get_pitch_scale() {
+    return pitch_scale;
+  }
+  
+  void set_key_shift_semitones(int semitones) {
+    // Clamp to reasonable range
+    if (semitones < -24) semitones = -24;
+    if (semitones > 24) semitones = 24;
+    
+    key_shift_semitones = semitones;
+    double scale = pow(2.0, semitones / 12.0);
+    set_pitch_scale(scale);
+  }
+  
+  int get_key_shift_semitones() {
+    return key_shift_semitones;
+  }
+ 
+  void inc_key_shift() {
+    set_key_shift_semitones(key_shift_semitones + 1);
+  }
+  
+  void dec_key_shift() {
+    set_key_shift_semitones(key_shift_semitones - 1);
+  }
+ 
+  void reset_key_shift() {
+    set_key_shift_semitones(0);
   }
   
 };

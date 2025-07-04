@@ -53,7 +53,9 @@ finyl_track::finyl_track(): meta(),
                             playing(false),
                             loop_active(false),
                             loop_in(-1),
-                            loop_out(-1) {
+                            loop_out(-1),
+                            pitch_scale(1.0),
+                            key_shift_semitones(0) {
   std::fill(indxs, indxs + MAX_STEMS_SIZE, 0);
   for (auto&p : stretchers) {
     p = std::make_unique<rb>(gApp.audio->get_sample_rate(), 2, rb::OptionProcessRealTime | rb::OptionEngineFiner, 1.0);
@@ -285,6 +287,13 @@ void Audio::gain_effect(finyl_buffer& buf, double gain) {
 //stretcher keeps storing "reqd" number of samples of samples in its internal buffer until output buffer can be fully prepared, leaving unused samples in the internal buffer.
 //return new t.index. writes stretched samples to stem_buffer
 int Audio::make_stem_buffer_stretch(finyl_buffer& stem_buffer, finyl_track& t, rb& stretcher, finyl_stem& stem, int index, std::mutex& mutex) {
+  // Apply key shift by setting pitch scale on the stretcher
+  double pitch_scale = t.get_pitch_scale();
+  if (pitch_scale != stretcher.getPitchScale()) {
+    std::lock_guard<std::mutex> lock(mutex);
+    stretcher.setPitchScale(pitch_scale);
+  }
+  
   int available;
   while ((available = stretcher.available()) < period_size) {
     int reqd = int(ceil(double(period_size - available) / stretcher.getTimeRatio()));
