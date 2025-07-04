@@ -365,3 +365,32 @@ void toggle_mute0(Deck& deck) {
 void toggle_master(Deck &deck) {
   deck.master = !deck.master;
 }
+
+// Key shift functions
+void inc_key_shift(Deck& deck) {
+  if (deck.pTrack == nullptr) return;
+  deck.pTrack->inc_key_shift();
+  print_deck_name(deck);
+  printf("key shift +1 semitone, total: %d semitones\n", deck.pTrack->get_key_shift_semitones());
+}
+
+void dec_key_shift(Deck& deck) {
+  if (deck.pTrack == nullptr) return;
+  deck.pTrack->dec_key_shift();
+  print_deck_name(deck);
+  printf("key shift -1 semitone, total: %d semitones\n", deck.pTrack->get_key_shift_semitones());
+}
+
+void reset_key_shift(Deck& deck) {
+  if (deck.pTrack == nullptr) return;
+  deck.pTrack->reset_key_shift();
+  print_deck_name(deck);
+  printf("key shift reset to 0 semitones\n");
+}
+
+void set_key_shift_semitones(Deck& deck, int semitones) {
+  if (deck.pTrack == nullptr) return;
+  deck.pTrack->set_key_shift_semitones(semitones);
+  print_deck_name(deck);
+  printf("key shift set to %d semitones\n", semitones);
+}

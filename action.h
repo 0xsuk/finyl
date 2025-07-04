@@ -41,5 +41,12 @@ void sync_bpm(Deck& deck);
 void press_cue_velocity(Deck& deck, double velocity);
 void toggle_mute0(Deck& deck);
 void toggle_master(Deck& deck);
+
+// Key shift functions
+void inc_key_shift(Deck& deck);
+void dec_key_shift(Deck& deck);
+void reset_key_shift(Deck& deck);
+void set_key_shift_semitones(Deck& deck, int semitones);
+
 #endif
 

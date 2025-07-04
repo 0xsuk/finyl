@@ -624,6 +624,15 @@ void Controller::handle_key(char x) {
     case '%':
       adeck->pTrack->set_index(adeck->pTrack->get_refindex() - 3000);
       return;
+    case 'f':
+      inc_key_shift(*adeck);
+      return;
+    case 'F':
+      dec_key_shift(*adeck);
+      return;
+    case 'r':
+      reset_key_shift(*adeck);
+      return;
 
     }
   }
@@ -685,6 +694,15 @@ void Controller::handle_key(char x) {
       return;
     case '&':
       bdeck->pTrack->set_index(bdeck->pTrack->get_refindex() - 3000);
+      return;
+    case 'd':
+      inc_key_shift(*bdeck);
+      return;
+    case 'D':
+      dec_key_shift(*bdeck);
+      return;
+    case 'u':
+      reset_key_shift(*bdeck);
       return;
 
     }
