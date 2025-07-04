@@ -492,22 +492,36 @@ void align_key_to_other_deck(Deck& deck) {
   
   // Get the keys from both tracks
   std::string current_key = deck.pTrack->meta.musickey;
-  std::string target_key = other_deck->pTrack->meta.musickey;
+  std::string other_original_key = other_deck->pTrack->meta.musickey;
   
-  if (current_key.empty() || current_key == "-" || target_key.empty() || target_key == "-") {
+  if (current_key.empty() || current_key == "-" || other_original_key.empty() || other_original_key == "-") {
     print_deck_name(deck);
     printf("Key information not available for one or both tracks\n");
-    printf("Current track key: %s, Other track key: %s\n", current_key.c_str(), target_key.c_str());
+    printf("Current track key: %s, Other track key: %s\n", current_key.c_str(), other_original_key.c_str());
     return;
   }
   
-  // Calculate the key difference
-  int key_diff = calculate_key_difference(current_key, target_key);
+  // Calculate the other deck's current key (original key + current key shift)
+  int other_original_semitones = get_key_semitones_from_string(other_original_key);
+  int other_current_shift = other_deck->pTrack->get_key_shift_semitones();
+  int other_current_semitones = (other_original_semitones + other_current_shift) % 12;
+  if (other_current_semitones < 0) other_current_semitones += 12;
+  
+  // Calculate the key difference between current track and other deck's current key
+  int current_semitones = get_key_semitones_from_string(current_key);
+  int key_diff = other_current_semitones - current_semitones;
+  
+  // Find the shortest path around the circle of fifths
+  if (key_diff > 6) {
+    key_diff -= 12;
+  } else if (key_diff < -6) {
+    key_diff += 12;
+  }
   
   // Apply the key shift
   set_key_shift_semitones(deck, key_diff);
   
   print_deck_name(deck);
-  printf("Key align: %s -> %s (shift: %+d semitones)\n", 
-         current_key.c_str(), target_key.c_str(), key_diff);
+  printf("Key align: %s -> %s+%d semitones (shift: %+d semitones)\n", 
+         current_key.c_str(), other_original_key.c_str(), other_current_shift, key_diff);
 }
