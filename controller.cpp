@@ -34,6 +34,7 @@ MidiToAction xdj_xz[] = {
   {0xb4, 72, "DeckA-toggle_mute_gain0"},
   {0xb4, 70, "DeckA-toggle_delay"},
   {0x90, 17, "DeckA-toggle_master"},
+  {0x90, 31, "DeckA-key_align"},
 
   {0xb4, 18, "DeckB-gain"},
   {0xb4, 6, "DeckB-gain0_1"},
@@ -53,6 +54,7 @@ MidiToAction xdj_xz[] = {
   {0x96, 2, "DeckB-dec_speed"},
   {0xb4, 73, "DeckB-toggle_mute_gain0"},
   {0xb4, 71, "DeckB-toggle_delay"},
+  {0x91, 31, "DeckB-key_align"},
 
   {0xb4, 107, "inc_wave_range"},
   {0xb4, 105, "dec_wave_range"},
@@ -221,7 +223,7 @@ void Controller::handle_midi(int len, unsigned char buf[]) {
   //search func by action name from actionToFunc
   //call it
   
-  for (auto& ent: launchkey) {
+  for (auto& ent: xdj_xz) {
     if (ent.status == buf[0] && ent.control == buf[1]) {
       for (auto& atf: actionToFuncMap) {
         if (atf.base_action == ent.action_name) {
@@ -934,16 +936,16 @@ void Controller::run() {
     return;
   }
   
-  // std::thread([&]() {
+  std::thread([&]() {
     auto f = std::bind(&Controller::handle_midi, this, std::placeholders::_1, std::placeholders::_2);
     mp.handle(f);
-  // }).detach();
+  }).detach();
   
-  // auto mp2 = MidiParser();
-  // err = mp2.open_device("hw:2,0,0");
-  // if (err) {
-  //   return;
-  // }
-  // auto f = std::bind(&Controller::handle_midi, this, std::placeholders::_1, std::placeholders::_2);
-  // mp2.handle(f);
+  auto mp2 = MidiParser();
+  err = mp2.open_device("hw:2,0,0");
+  if (err) {
+    return;
+  }
+  auto f = std::bind(&Controller::handle_midi, this, std::placeholders::_1, std::placeholders::_2);
+  mp2.handle(f);
 }
